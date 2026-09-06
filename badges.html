@@ -1,0 +1,763 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merit Badges · Priyaan's Hub</title>
+<link rel="stylesheet" href="shared.css"><style>
+/* ---- page layout ---- */
+.tabs { margin: 0 0 1rem; }
+.tab:hover { color: var(--text); }
+a.btn:hover { text-decoration: none; }
+.sect { margin: 1.5rem 0 .75rem; }
+.sect h2 { margin: 0; }
+.min0 { min-width: 0; }
+.stat .num .of { font-size: 1rem; color: var(--muted); font-weight: 600; margin-left: .1rem; }
+.footnote { margin-top: 1.5rem; }
+
+/* ---- overview badge cards ---- */
+.badge-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.badge-grid > .card + .card { margin-top: 0; }
+.bcard { display: flex; flex-direction: column; gap: .6rem; }
+.bcard .top { display: flex; align-items: center; gap: .75rem; }
+.bcard .em { font-size: 1.7rem; width: 2.8rem; height: 2.8rem; display: grid; place-items: center; border-radius: 12px; background: var(--accent-soft); flex: none; }
+.bcard h3 { margin: 0; font-size: 1.05rem; }
+.bcard .meta { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; font-size: .8rem; color: var(--muted); margin-top: .15rem; }
+.pct { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.pct.ok { color: var(--ok); }
+.bcard .foot { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: auto; }
+.bcard.earned .em { background: var(--ok-soft); }
+.progress.ok > i { background: var(--ok); }
+.hidden-row { margin-top: 1rem; }
+
+/* ---- badge header ---- */
+.bhead { display: flex; gap: 1rem; align-items: flex-start; }
+.bhead .em { font-size: 2.1rem; width: 3.4rem; height: 3.4rem; display: grid; place-items: center; border-radius: 14px; background: var(--accent-soft); flex: none; }
+.bhead .info { flex: 1; min-width: 0; }
+.bhead h2 { margin: 0; font-size: 1.35rem; }
+.bhead .pct { font-size: 1.25rem; }
+.bhead .sub { color: var(--muted); font-size: .875rem; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .2rem; }
+.bhead .progress { margin: .6rem 0 .2rem; }
+.fields { display: grid; gap: .75rem; grid-template-columns: 1fr 1fr; margin-top: 1rem; }
+.actions { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-top: .9rem; }
+.actions .spacer { flex: 1; }
+.btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.confirm { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; font-size: .85rem; color: var(--danger); font-weight: 600; }
+
+/* ---- requirement list ---- */
+.reqs { display: flex; flex-direction: column; }
+.req { border-top: 1px solid var(--border); padding: .3rem 0; }
+.req:first-child { border-top: 0; }
+.kids .req { border-top-color: color-mix(in srgb, var(--border) 60%, transparent); }
+.req-row { display: flex; align-items: flex-start; gap: .25rem; }
+.reqs .check { flex: 1; margin: 0; font-size: 1rem; color: var(--text); font-weight: 400; }
+.req .num { font-weight: 700; color: var(--accent); margin-right: .4rem; font-variant-numeric: tabular-nums; }
+.req.parent > .req-row .check { cursor: default; }
+.req.parent > .req-row .check:hover { background: transparent; }
+.req.parent > .req-row .txt { font-weight: 600; }
+.req.parent > .req-row .check.done .txt { text-decoration: none; }
+.check input:disabled { cursor: default; opacity: .75; }
+.req .count { font-size: .78rem; color: var(--muted); font-weight: 500; margin-left: .35rem; white-space: nowrap; }
+.req .pill { margin-left: .35rem; vertical-align: middle; }
+.kids { margin-left: 1.65rem; border-left: 2px solid var(--border); padding-left: .25rem; margin-bottom: .2rem; }
+.kids .txt { font-size: .95rem; }
+.req-meta { display: flex; gap: .3rem; align-items: center; flex: none; padding-top: .4rem; }
+.pill.date { background: var(--ok-soft); color: var(--ok); }
+.note-btn { color: var(--muted); padding: .3rem .5rem; }
+.note-btn.has { color: var(--accent); }
+.note-box, .note-view { margin: 0 .7rem .45rem 2.6rem; }
+.note-box textarea { font-size: .9rem; min-height: 3.2rem; }
+.note-view { font-size: .875rem; color: var(--muted); white-space: pre-wrap; background: var(--surface-2); padding: .35rem .6rem; border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
+.sig, .print-only { display: none; }
+
+/* ---- add-custom form ---- */
+#addCard { margin-top: 1rem; }
+#addCard textarea { font-family: var(--mono); font-size: .85rem; min-height: 9rem; }
+.emoji-field { width: 5.5rem; flex: none; }
+.emoji-field .input { text-align: center; font-size: 1.2rem; }
+
+@media (max-width: 560px) {
+  .fields { grid-template-columns: 1fr; }
+  .kids { margin-left: .9rem; padding-left: .15rem; }
+  .note-box, .note-view { margin-left: 1.5rem; margin-right: .3rem; }
+  .req .count { display: block; margin-left: 0; }
+  .bhead .em { width: 2.8rem; height: 2.8rem; font-size: 1.7rem; }
+}
+
+/* ---- print: only the open badge checklist ---- */
+@media print {
+  @page { margin: 14mm; }
+  .tabs, .req-meta, .fields, .actions, .bhead, #overview { display: none !important; }
+  .print-only { display: block; }
+  .print-only.print-cols { display: flex; }
+  .print-head { border-bottom: 2px solid #000; margin-bottom: .75rem; padding-bottom: .5rem; }
+  .print-head h2 { font-size: 1.3rem; }
+  .print-cols { justify-content: space-between; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #555; border-bottom: 1px solid #999; padding-bottom: .2rem; margin-bottom: .25rem; }
+  .card { border: 0; padding: 0; }
+  .card + .card { margin-top: .75rem; }
+  .card-head .no-print { display: none; }
+  .req { break-inside: avoid; }
+  .reqs .check { padding: .25rem .3rem; color: #000; }
+  .check.done .txt { text-decoration: none; color: #000; }
+  .req .num { color: #000; }
+  .sig { display: block; flex: none; width: 11rem; min-height: 1.5rem; border-bottom: 1px solid #999; margin: .45rem 0 0 .75rem; }
+  .req.parent > .req-row .sig { visibility: hidden; }
+  .pill { border: 1px solid #999; background: none !important; color: #000 !important; }
+  .kids { border-left-color: #ccc; }
+  .note-view { background: none; border-left-color: #999; color: #333; }
+  .note-box textarea { border: 0; border-left: 3px solid #999; border-radius: 0; background: none; resize: none; color: #333; }
+  .empty { border-color: #999; color: #333; }
+}
+</style></head>
+<body data-app="badges">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <div class="title"><span class="emoji">🏕️</span><span class="name">Merit Badges</span></div>
+  <div class="spacer"></div>
+  <button class="btn btn-sm" id="btnExport" title="Download your badge progress as a JSON file">⬇ Export</button>
+  <button class="btn btn-sm" id="btnImport" title="Load badge progress from a JSON file">⬆ Import</button>
+</div></header>
+<main class="container">
+  <div class="tabs no-print" role="tablist" aria-label="Badges" id="tabs"></div>
+
+  <section id="overview" aria-label="Overview">
+    <div id="ovStats"></div>
+    <div id="ovGrid"></div>
+    <div class="card no-print" id="addCard" hidden>
+      <div class="card-head"><h2>Add a custom badge</h2><button class="btn btn-ghost btn-sm" data-action="toggle-add">Close</button></div>
+      <p class="muted small">Paste the requirements from the pamphlet or scouting.org, one per line. Numbered lines (<span class="kbd">1.</span>, <span class="kbd">2.</span>) are requirements; lettered lines (<span class="kbd">a.</span>, <span class="kbd">b.</span>) become parts of the requirement above them. A requirement that says "Do ONE of the following" or "Do TWO of the following" becomes a choice group automatically.</p>
+      <div class="row" style="align-items:flex-end">
+        <div class="field emoji-field"><label for="cbEmoji">Emoji</label><input class="input" id="cbEmoji" value="🎖️" maxlength="8" autocomplete="off"></div>
+        <div class="field" style="flex:2;min-width:10rem"><label for="cbName">Badge name</label><input class="input" id="cbName" placeholder="e.g. First Aid" autocomplete="off"></div>
+        <div class="field" style="flex:1;min-width:7rem"><label for="cbYear">Edition year (optional)</label><input class="input" id="cbYear" placeholder="2026" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      </div>
+      <div class="field" style="margin-top:.75rem"><label for="cbReqs">Requirements, one per line</label><textarea id="cbReqs" rows="8" placeholder="1. Do the following:
+a. First part of requirement 1
+b. Second part of requirement 1
+2. Do ONE of the following:
+a. Option one
+b. Option two
+3. A requirement with no parts"></textarea></div>
+      <div class="row between" style="margin-top:.75rem"><span class="small muted" id="cbPreview">Nothing parsed yet — paste requirements above</span><button class="btn btn-primary" data-action="add-badge">Add badge</button></div>
+    </div>
+    <div id="ovHidden"></div>
+    <p class="muted small footnote no-print">Progress is saved in this browser only. Use <b>Export</b> now and then to back it up, and <b>Import</b> to load it on another device.</p>
+  </section>
+
+  <section id="badge" hidden>
+    <div class="card" id="bHead"></div>
+    <div class="card" id="bList"></div>
+  </section>
+</main>
+<script src="shared.js"></script><script>
+(function () {
+  'use strict';
+  const KEY = 'ph.badges.v1';
+  const SCOUT = 'Priyaan Haldiya';
+
+  /* ===================== Official requirements (transcribed from the pamphlets) ===================== */
+  const BADGES = [
+    { id: 'kayaking', name: 'Kayaking', emoji: '🛶', edition: '2025', eagleRequired: false, reqs: [
+      { id: '1', text: "Do the following:", pick: null, children: [
+        { id: '1a', text: "Explain to your counselor the hazards you are most likely to encounter while participating in kayaking activities, including weather and water-related hazards, and what you should do to anticipate, help prevent, mitigate, and respond to these hazards." },
+        { id: '1b', text: "Review prevention, symptoms, and first-aid treatment for the following injuries or illnesses that can occur while kayaking: blisters, cold-water shock and hypothermia, heat-related illnesses, dehydration, sunburn, sprains, and strains." },
+        { id: '1c', text: "Review the Scouting America Safety Afloat policy. Explain to your counselor how this applies to kayaking." } ] },
+      { id: '2', text: "Before doing requirements 3 through 8, successfully complete the Scouting America swimmer test: Jump feetfirst into water over the head in depth. Level off and swim 75 yards in a strong manner using one or more of the following strokes: sidestroke, breaststroke, trudgen, or crawl; then swim 25 yards using an easy, resting backstroke. The 100 yards must be completed in one swim without stops and must include at least one sharp turn. After completing the swim, rest by floating.", pick: null, children: [] },
+      { id: '3', text: "Do the following:", pick: null, children: [
+        { id: '3a', text: "Review the characteristics of life jackets most appropriate for kayaking and understand why one must always be worn while paddling. Then demonstrate how to select and fit a life jacket for kayaking." },
+        { id: '3b', text: "Review the importance of safety equipment such as a signal device, extra paddle, sponge, bilge pump, and throw bag." } ] },
+      { id: '4', text: "Do the following:", pick: null, children: [
+        { id: '4a', text: "Name and point out the major parts of a kayak." },
+        { id: '4b', text: "Review the differences in the design between recreational, whitewater, and sea or touring kayaks. Include how length, width, stability, and rocker are involved in the design of each type." },
+        { id: '4c', text: "Review the advantages and disadvantages of the materials most commonly used to make kayaks. Explain the care, maintenance, and storage of a kayak." },
+        { id: '4d', text: "Using the trucker's hitch and bowline, demonstrate how to secure a kayak to a rack on a vehicle or a trailer, or to a rack on land." } ] },
+      { id: '5', text: "Discuss the following:", pick: null, children: [
+        { id: '5a', text: "Correct methods for the use of a kayak paddle." },
+        { id: '5b', text: "Parts of a paddle." },
+        { id: '5c', text: "Care and maintenance of a paddle." } ] },
+      { id: '6', text: "Using a properly equipped kayak with an open cockpit, a sit-on-top, or an inflatable kayak, do the following:", pick: null, children: [
+        { id: '6a', text: "Safely capsize and perform a wet exit." },
+        { id: '6b', text: "Reenter the kayak with assistance from a buddy boat." },
+        { id: '6c', text: "Demonstrate a kayak-over-kayak rescue." },
+        { id: '6d', text: "Demonstrate the HELP position." },
+        { id: '6e', text: "Capsize the kayak, swim it and the paddle to shore, and empty water from the kayak with assistance, if needed." } ] },
+      { id: '7', text: "As a solo paddler, use a properly equipped kayak to demonstrate the following:", pick: null, children: [
+        { id: '7a', text: "Forward stroke" },
+        { id: '7b', text: "Backstroke" },
+        { id: '7c', text: "Forward sweep" },
+        { id: '7d', text: "Reverse sweep" },
+        { id: '7e', text: "Draw stroke" },
+        { id: '7f', text: "Stern draw" } ] },
+      { id: '8', text: "As a solo paddler, use a properly equipped kayak to demonstrate the following:", pick: null, children: [
+        { id: '8a', text: "Paddle a straight line for 15 to 20 boat lengths using appropriate strokes while maintaining trim and balance of the kayak." },
+        { id: '8b', text: "Spin or pivot from a stationary position 180 degrees (half circle) to the right and left within two boat lengths." },
+        { id: '8c', text: "Move abeam to the right 10 feet and to the left 10 feet." },
+        { id: '8d', text: "Stop the boat in one boat length." },
+        { id: '8e', text: "While maintaining forward motion, turn the kayak 90 degrees to the right and left." },
+        { id: '8f', text: "Move the kayak backward three to four boat lengths using appropriate and effective reverse strokes." },
+        { id: '8g', text: "Paddle the kayak in a buoyed figure 8 course around markers three to four boat lengths apart." } ] }
+    ] },
+
+    { id: 'canoeing', name: 'Canoeing', emoji: '🚣', edition: '2024', eagleRequired: false, reqs: [
+      { id: '1', text: "Do the following:", pick: null, children: [
+        { id: '1a', text: "Review with your counselor the most likely hazards you may encounter while participating in canoeing activities and what you should do to anticipate, help prevent, mitigate, and respond to these hazards." },
+        { id: '1b', text: "Review prevention, symptoms, and first-aid treatment for the following injuries or illnesses that could occur while canoeing: blisters, cold-water shock and hypothermia, dehydration, heat-related illnesses, sunburn, sprains, and strains." },
+        { id: '1c', text: "Discuss the Scouting America Safety Afloat policy. Tell how it applies to canoeing activities." } ] },
+      { id: '2', text: "Before doing the following requirements, successfully complete the Scouting America swimmer test: Jump feetfirst into water over the head in depth. Level off and swim 75 yards in a strong manner using one or more of the following strokes: sidestroke, breaststroke, trudgen, or crawl; then swim 25 yards using an easy, resting backstroke. The 100 yards must be completed in one swim without stops and must include at least one sharp turn. After completing the swim, rest by floating.", pick: null, children: [] },
+      { id: '3', text: "Do the following:", pick: null, children: [
+        { id: '3a', text: "Name and point out the major parts of a canoe." },
+        { id: '3b', text: "Describe how the length and shape of a canoe affect its performance." } ] },
+      { id: '4', text: "Do the following:", pick: null, children: [
+        { id: '4a', text: "Name and point out the parts of a paddle." },
+        { id: '4b', text: "Demonstrate how to correctly size a paddle for a paddler in a sitting position and a kneeling position." } ] },
+      { id: '5', text: "Do the following:", pick: null, children: [
+        { id: '5a', text: "Review with your counselor the characteristics of life jackets most appropriate for canoeing and tell why a life jacket must always be worn while paddling." },
+        { id: '5b', text: "Demonstrate how to select and properly fit the correct size life jacket." },
+        { id: '5c', text: "Review the importance of safety and rescue equipment such as a sound signal device, extra paddle, sponge, bailer, bilge pump, rescue sling, ropes and throw bag." } ] },
+      { id: '6', text: "Review with your counselor the general care and maintenance of canoes, paddles, and other canoeing equipment.", pick: null, children: [] },
+      { id: '7', text: "With a companion, use a properly equipped canoe to demonstrate the following:", pick: null, children: [
+        { id: '7a', text: "Safely carry and launch the canoe from a dock or shore (both, if possible)." },
+        { id: '7b', text: "Safely land the canoe on a dock or shore (both, if possible) and return it to its proper storage location." },
+        { id: '7c', text: "Demonstrate kneeling and sitting positions in a canoe and explain the proper use for each position." },
+        { id: '7d', text: "Change places while afloat in the canoe." } ] },
+      { id: '8', text: "With a companion, use a properly equipped canoe to demonstrate the following:", pick: null, children: [
+        { id: '8a', text: "Safely exit the canoe in deep water without losing contact with the canoe. Reenter the canoe with the assistance of the other paddler without capsizing the boat." },
+        { id: '8b', text: "Safely perform a controlled capsize of the canoe and demonstrate how staying with a capsized canoe will support both paddlers." },
+        { id: '8c', text: "Swim, tow, or push a swamped canoe 50 feet to shallow water. In the shallow water, empty the swamped canoe and reenter it." },
+        { id: '8d', text: "In deep water, rescue a swamped canoe and its paddlers. After checking that those in the water do not need immediate assistance, empty the swamped canoe and help the paddlers safely reenter their boat without capsizing." },
+        { id: '8e', text: "Perform a canoe rescue of a conscious swimmer." },
+        { id: '8f', text: "Using a rescue (throw) bag from shore, lay the line within 3 feet of a conscious swimmer 30 feet away. Show how to repack the bag when done." } ] },
+      { id: '9', text: "Using a properly equipped canoe, demonstrate the following tandem maneuvers while paddling in unison on opposite sides and without changing sides. Each paddler must demonstrate these maneuvers in both the bow and stern and on both sides of the canoe while maintaining trim and balance of the canoe:", pick: null, children: [
+        { id: '9a', text: "Pivot (spin) the canoe 180 degrees (half circle) to the right from a stationary position, stop, and return to the starting position by pivoting to the left using draw and pushaway strokes or using forward and reverse sweeps staying within 2 boat lengths of the starting position." },
+        { id: '9b', text: "Move a canoe sideways (abeam) in one direction for 10 feet and then return to the starting position using the draw and pushaway strokes." },
+        { id: '9c', text: "While in forward motion, stop the canoe within two boat lengths using the backstroke." },
+        { id: '9d', text: "While in the stern position and without assistance from the bow paddler, paddle in a straight line 15-20 boat lengths using an appropriate steering stroke, e.g., the J-stroke or thumb-down rudder stroke with or without a stern pry." },
+        { id: '9e', text: "Move the canoe in a straight line 15-20 boat lengths with the bow paddler using as necessary the forward stroke, draw stroke or forward sweep and the stern paddler using an appropriate steering stroke, e.g., the J-stroke or thumb-down rudder stroke with or without a stern pry." },
+        { id: '9f', text: "While maintaining forward motion, turn the canoe 90° in an arc to the right in 5-10 boat lengths with the bow paddler using as necessary either the draw stroke or forward sweep and the stern paddler using only the forward stroke. Repeat the maneuver turning the canoe 90 degrees to the left." },
+        { id: '9g', text: "Move the canoe backward in a straight line 3-4 boat lengths using as necessary the back stroke, reverse sweep or draw stroke in the bow or the stern." },
+        { id: '9h', text: "Complete a figure of 8 course around markers 3-4 boat lengths apart using appropriate strokes including the draw stroke, and the forward and reverse sweeps." } ] }
+    ] },
+
+    { id: 'photography', name: 'Photography', emoji: '📷', edition: '2020', eagleRequired: false, reqs: [
+      { id: '1', text: "Safety. Do the following:", pick: null, children: [
+        { id: '1a', text: "Show your counselor your current Cyber Chip." },
+        { id: '1b', text: "Explain to your counselor the most likely hazards you may encounter while working with photography and what you should do to anticipate, mitigate, prevent, and respond to these hazards. Explain how you would prepare for exposure to environmental situations such as weather, sun, and water." } ] },
+      { id: '2', text: "Explain how the following elements and terms can affect the quality of a picture:", pick: null, children: [
+        { id: '2a', text: "Light—natural light (ambient/existing), low light (such as at night), and artificial light (such as from a flash)" },
+        { id: '2b', text: "Exposure—aperture (f-stops), shutter speed, ISO" },
+        { id: '2c', text: "Depth of field" },
+        { id: '2d', text: "Composition—rule of thirds, leading lines, framing, depth" },
+        { id: '2e', text: "Angle of view" },
+        { id: '2f', text: "Stop action and blur motion" },
+        { id: '2g', text: "Decisive moment (action or expression captured by the photographer)" } ] },
+      { id: '3', text: "Explain the basic parts and operation of a camera. Explain how an exposure is made when you take a picture.", pick: null, children: [] },
+      { id: '4', text: "Do TWO of the following, then share your work with your counselor.", pick: 2, children: [
+        { id: '4a', text: "Photograph one subject from two different angles or perspectives." },
+        { id: '4b', text: "Photograph one subject from two different light sources—artificial and natural." },
+        { id: '4c', text: "Photograph one subject with two different depths of field." },
+        { id: '4d', text: "Photograph one subject with two different compositional techniques." } ] },
+      { id: '5', text: "Photograph THREE of the following, then share your work with your counselor.", pick: 3, children: [
+        { id: '5a', text: "Close-up of a person" },
+        { id: '5b', text: "Two to three people interacting" },
+        { id: '5c', text: "Action shot" },
+        { id: '5d', text: "Animal shot" },
+        { id: '5e', text: "Nature shot" },
+        { id: '5f', text: "Picture of a person—candid, posed, or camera aware" } ] },
+      { id: '6', text: "Describe how software allows you to enhance your photograph after it is taken. Select a photo you have taken, then do ONE of the following, and share what you have done with your counselor.", pick: 1, children: [
+        { id: '6a', text: "Crop your photograph." },
+        { id: '6b', text: "Adjust the exposure or make a color correction." },
+        { id: '6c', text: "Show another way you could improve your picture for impact." } ] },
+      { id: '7', text: "Using images other than those created for requirements 4, 5, and 6, produce a visual story to document an event to photograph OR choose a topic that interests you to photograph. Do the following:", pick: null, children: [
+        { id: '7a', text: "Plan the images you need to photograph for your photo story." },
+        { id: '7b', text: "Share your plan with your counselor, and get your counselor's input and approval before you proceed." },
+        { id: '7c', text: "Select eight to 12 images that best tell your story. Arrange your images in order and mount the prints on a poster board, OR create an electronic presentation. Share your visual story with your counselor." } ] },
+      { id: '8', text: "Identify three career opportunities in photography. Pick one and explain to your counselor how to prepare for such a career. Discuss what education and training are required, and why this profession might interest you.", pick: null, children: [] }
+    ] },
+
+    { id: 'fingerprinting', name: 'Fingerprinting', emoji: '🔍', edition: '2022', eagleRequired: false, reqs: [
+      { id: '1', text: "Give a short history of fingerprinting. Tell the difference between civil and criminal identification.", pick: null, children: [] },
+      { id: '2', text: "Explain the difference between the automated fingerprint identification systems (AFIS) now used by some law enforcement agencies and the biometric fingerprint systems used to control access to places like buildings, airports, and computer rooms.", pick: null, children: [] },
+      { id: '3', text: "Do the following:", pick: null, children: [
+        { id: '3a', text: "Name the surfaces of the body where friction or papillary ridges are found." },
+        { id: '3b', text: "Name the two basic principles supporting the science of fingerprints and give a brief explanation of each principle." },
+        { id: '3c', text: "Explain what it takes to positively identify a person using fingerprints." } ] },
+      { id: '4', text: "Take a clear set of prints using ONE of the following methods.", pick: 1, children: [
+        { id: '4a', text: "Make both rolled and plain impressions. Make these on an 8-by-8-inch fingerprint identification card, available from your local police department or your counselor." },
+        { id: '4b', text: "Using clear adhesive tape, a pencil, and plain paper, record your own fingerprints or those of another person." } ] },
+      { id: '5', text: "Show your merit badge counselor you can identify the three basic types of fingerprint patterns and their subcategories. Using your own hand, identify the types of patterns you see.", pick: null, children: [] }
+    ] }
+  ];
+
+  /* ===================== State ===================== */
+  function validISO(s) { // 'YYYY-MM-DD' that is also a real calendar date
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00');
+    return !isNaN(d.getTime()) && PH.todayISO(d) === s;
+  }
+  function isObj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function blank() { return { version: 1, done: {}, notes: {}, counselors: {}, targetDates: {}, custom: [], hidden: [], summary: {} }; }
+  function cleanDone(v) {
+    return { date: isObj(v) && validISO(v.date) ? v.date : PH.todayISO(), by: isObj(v) && typeof v.by === 'string' ? v.by : '' };
+  }
+  function cleanBadge(b) {
+    if (!isObj(b) || typeof b.id !== 'string' || !b.id || typeof b.name !== 'string' || !Array.isArray(b.reqs)) return null;
+    const reqs = b.reqs.map(r => {
+      if (!isObj(r) || typeof r.id !== 'string' || typeof r.text !== 'string') return null;
+      const children = (Array.isArray(r.children) ? r.children : [])
+        .filter(c => isObj(c) && typeof c.id === 'string' && typeof c.text === 'string')
+        .map(c => ({ id: c.id, text: c.text }));
+      const pick = Number.isInteger(r.pick) && r.pick > 0 && r.pick < children.length ? r.pick : null;
+      return { id: r.id, text: r.text, children, pick };
+    }).filter(Boolean);
+    if (!reqs.length) return null;
+    return { id: b.id, name: b.name, emoji: typeof b.emoji === 'string' && b.emoji ? b.emoji : '🎖️',
+      edition: typeof b.edition === 'string' ? b.edition : '', eagleRequired: !!b.eagleRequired, custom: true, reqs };
+  }
+  function normalize(raw) {
+    const s = blank();
+    if (!isObj(raw)) return s;
+    if (isObj(raw.done)) Object.keys(raw.done).forEach(k => { if (k.indexOf(':') > 0) s.done[k] = cleanDone(raw.done[k]); });
+    if (isObj(raw.notes)) Object.keys(raw.notes).forEach(k => { if (typeof raw.notes[k] === 'string' && raw.notes[k].trim()) s.notes[k] = raw.notes[k]; });
+    if (isObj(raw.counselors)) Object.keys(raw.counselors).forEach(k => { if (typeof raw.counselors[k] === 'string' && raw.counselors[k]) s.counselors[k] = raw.counselors[k]; });
+    if (isObj(raw.targetDates)) Object.keys(raw.targetDates).forEach(k => { if (validISO(raw.targetDates[k])) s.targetDates[k] = raw.targetDates[k]; });
+    if (Array.isArray(raw.custom)) s.custom = raw.custom.map(cleanBadge).filter(Boolean);
+    if (Array.isArray(raw.hidden)) s.hidden = raw.hidden.filter(x => typeof x === 'string');
+    return s;
+  }
+  const stored = PH.load(KEY, null);
+  let state = normalize(stored);
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+
+  /* ===================== Data helpers ===================== */
+  function allBadges() { return BADGES.concat(state.custom); }
+  function shownBadges() { return allBadges().filter(b => state.hidden.indexOf(b.id) < 0); }
+  function findBadge(id) { return allBadges().filter(b => b.id === id)[0] || null; }
+  function k(bid, rid) { return bid + ':' + rid; }
+  function hasKids(r) { return !!(r.children && r.children.length); }
+  function reqStatus(b, r) {
+    if (hasKids(r)) {
+      const dates = r.children.map(c => state.done[k(b.id, c.id)]).filter(Boolean).map(d => d.date).sort();
+      const needed = r.pick || r.children.length;
+      const complete = dates.length >= needed;
+      return { needed, done: Math.min(dates.length, needed), complete, date: complete ? dates[dates.length - 1] : null };
+    }
+    const d = state.done[k(b.id, r.id)];
+    return { needed: 1, done: d ? 1 : 0, complete: !!d, date: d ? d.date : null };
+  }
+  function badgeStats(b) {
+    let done = 0, total = 0;
+    b.reqs.forEach(r => { const s = reqStatus(b, r); done += s.done; total += s.needed; });
+    const pct = total ? Math.round(done / total * 100) : 0;
+    return { done, total, left: total - done, pct, complete: total > 0 && done === total };
+  }
+  function leafIds(b) {
+    const out = [];
+    b.reqs.forEach(r => { if (hasKids(r)) r.children.forEach(c => out.push(c.id)); else out.push(r.id); });
+    return out;
+  }
+  function shortName(b) { return b.name.length > 16 ? b.name.slice(0, 15) + '…' : b.name; }
+  function buildSummary() {
+    const list = shownBadges();
+    let done = 0, total = 0, earned = 0;
+    const parts = [];
+    list.forEach(b => { const s = badgeStats(b); done += s.done; total += s.total; if (s.complete) earned++; parts.push({ n: shortName(b), pct: s.pct }); });
+    const headline = earned
+      ? earned + ' badge' + (earned > 1 ? 's' : '') + ' earned · ' + done + '/' + total + ' done'
+      : done + ' of ' + total + ' requirements done';
+    const line = arr => arr.map(p => p.n + ' ' + p.pct + '%').join(' · ');
+    let sub = line(parts);
+    if (sub.length > 72) sub = line(parts.filter(p => p.pct > 0));
+    if (!sub) sub = list.length ? 'Open to see all requirements' : 'No badges yet';
+    return { headline, sub };
+  }
+  function fmtLong(iso) { return PH.fmtDate(iso, { month: 'short', day: 'numeric', year: 'numeric' }); }
+  function fmtShort(iso) {
+    const thisYear = iso.slice(0, 4) === PH.todayISO().slice(0, 4);
+    return PH.fmtDate(iso, thisYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  /* ===================== Custom badge parsing ===================== */
+  const WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+  function parseReqs(text) {
+    const reqs = [], used = {};
+    const uniq = id => { let x = id, n = 2; while (used[x]) x = id + '_' + n++; used[x] = true; return x; };
+    let cur = null, child = null;
+    String(text || '').split(/\r?\n/).forEach(raw => {
+      const line = raw.trim();
+      if (!line) return;
+      let m;
+      if ((m = line.match(/^\(?(\d+)[.):]\s+(.*)$/))) {
+        cur = { id: uniq(m[1]), text: m[2].trim(), children: [], pick: null }; reqs.push(cur); child = null; return;
+      }
+      if (cur && (m = line.match(/^\(?([a-z])[.)]\s+(.*)$/i))) {
+        child = { id: uniq(cur.id + m[1].toLowerCase()), text: m[2].trim() }; cur.children.push(child); return;
+      }
+      if (child) child.text += ' ' + line;
+      else if (cur) cur.text += ' ' + line;
+      else { cur = { id: uniq('1'), text: line, children: [], pick: null }; reqs.push(cur); }
+    });
+    reqs.forEach(r => {
+      const m = r.text.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+of\s+the\s+following/i);
+      if (m && r.children.length) {
+        const n = WORDS[m[1].toLowerCase()] || parseInt(m[1], 10);
+        r.pick = n > 0 && n < r.children.length ? n : null;
+      }
+    });
+    return reqs;
+  }
+
+  /* ===================== Rendering ===================== */
+  const $ = s => document.querySelector(s);
+  const esc = PH.esc;
+  const ui = { filterLeft: false, openNotes: {}, confirm: null };
+
+  function currentId() {
+    const h = decodeURIComponent(location.hash.replace(/^#/, ''));
+    return findBadge(h) ? h : null;
+  }
+  function go(id) {
+    const h = '#' + (id || 'overview');
+    if (location.hash === h) render(); else location.hash = h;
+  }
+  function render() {
+    const active = document.activeElement;
+    const fkey = active && active.dataset ? active.dataset.fkey : null;
+    const id = currentId();
+    const b = id ? findBadge(id) : null;
+    renderTabs(id);
+    $('#overview').hidden = !!b;
+    $('#badge').hidden = !b;
+    if (b) { renderBadge(b); document.title = b.name + " · Merit Badges · Priyaan's Hub"; }
+    else { renderOverview(); document.title = "Merit Badges · Priyaan's Hub"; }
+    if (fkey) { const el = document.querySelector('[data-fkey="' + fkey.replace(/"/g, '') + '"]'); if (el) el.focus(); }
+  }
+
+  function renderTabs(cur) {
+    const items = [{ id: '', label: '🏠 Overview' }].concat(shownBadges().map(b => ({ id: b.id, label: b.emoji + ' ' + b.name })));
+    if (cur && !items.some(i => i.id === cur)) { const b = findBadge(cur); items.push({ id: b.id, label: b.emoji + ' ' + b.name }); }
+    $('#tabs').innerHTML = items.map(i =>
+      '<button class="tab" role="tab" aria-selected="' + (i.id === (cur || '')) + '" data-go="' + esc(i.id) + '" data-fkey="tab:' + esc(i.id) + '">' + esc(i.label) + '</button>').join('');
+  }
+
+  function renderOverview() {
+    const list = shownBadges();
+    let done = 0, total = 0, earned = 0, inProg = 0;
+    const cards = list.map(b => {
+      const s = badgeStats(b);
+      done += s.done; total += s.total;
+      if (s.complete) earned++; else if (s.done > 0) inProg++;
+      return badgeCard(b, s);
+    });
+    $('#ovStats').innerHTML =
+      '<div class="stats">' +
+        '<div class="stat"><div class="num">' + earned + '</div><div class="lbl">Badge' + (earned === 1 ? '' : 's') + ' earned</div></div>' +
+        '<div class="stat"><div class="num">' + done + '<span class="of">/' + total + '</span></div><div class="lbl">Requirements done</div></div>' +
+        '<div class="stat"><div class="num">' + inProg + '</div><div class="lbl">In progress</div></div>' +
+        '<div class="stat"><div class="num">' + (total - done) + '</div><div class="lbl">Still to do</div></div>' +
+      '</div>';
+    $('#ovGrid').innerHTML =
+      '<div class="row between sect"><h2>Your badges</h2><button class="btn btn-sm" data-action="toggle-add" aria-controls="addCard" aria-expanded="' + !$('#addCard').hidden + '">＋ Add a custom badge</button></div>' +
+      (cards.length
+        ? '<div class="badge-grid">' + cards.join('') + '</div>'
+        : '<div class="empty">No badges to show yet. Add a custom badge' + (state.hidden.length ? ', or bring back a hidden one below' : '') + '.</div>');
+    const hid = state.hidden.map(findBadge).filter(Boolean);
+    $('#ovHidden').innerHTML = hid.length
+      ? '<div class="row small muted hidden-row no-print"><span>Hidden:</span>' + hid.map(b =>
+          '<span class="row" style="gap:.2rem">' + esc(b.emoji + ' ' + b.name) + '<button class="btn btn-ghost btn-sm" data-action="unhide" data-id="' + esc(b.id) + '">Show</button></span>').join('') + '</div>'
+      : '';
+  }
+
+  function badgeCard(b, s) {
+    const label = s.complete ? 'Review →' : s.done ? 'Continue →' : 'Start →';
+    const extras = [];
+    if (state.counselors[b.id]) extras.push('Counselor: ' + esc(state.counselors[b.id]));
+    if (state.targetDates[b.id]) extras.push('Target: ' + esc(fmtLong(state.targetDates[b.id])));
+    return '<article class="card bcard' + (s.complete ? ' earned' : '') + '">' +
+      '<div class="top"><span class="em" aria-hidden="true">' + esc(b.emoji) + '</span><div class="min0"><h3>' + esc(b.name) + '</h3><div class="meta">' +
+        (b.edition ? '<span class="pill neutral">' + esc(b.edition) + ' edition</span>' : '') +
+        (b.eagleRequired ? '<span class="pill warn">Eagle required</span>' : '') +
+        (b.custom ? '<span class="pill neutral">Custom</span>' : '') +
+        (s.complete ? '<span class="pill ok">✓ Earned</span>' : '') +
+      '</div></div></div>' +
+      '<div class="row between small"><span class="muted">' + s.done + ' of ' + s.total + ' done</span><span class="pct' + (s.complete ? ' ok' : '') + '">' + s.pct + '%</span></div>' +
+      '<div class="progress' + (s.complete ? ' ok' : '') + '" role="progressbar" aria-valuenow="' + s.pct + '" aria-valuemin="0" aria-valuemax="100" aria-label="' + esc(b.name) + ' progress"><i style="width:' + s.pct + '%"></i></div>' +
+      (extras.length ? '<div class="meta">' + extras.join(' · ') + '</div>' : '') +
+      '<div class="foot"><span class="small muted">' + (s.complete ? 'All signed off' : s.left + ' left') + '</span><a class="btn btn-primary btn-sm" href="#' + esc(b.id) + '">' + label + '</a></div>' +
+    '</article>';
+  }
+
+  function renderBadge(b) {
+    const s = badgeStats(b);
+    $('#bHead').innerHTML = headHTML(b, s);
+    $('#bList').innerHTML = listHTML(b, s);
+  }
+
+  function headHTML(b, s) {
+    const counselor = state.counselors[b.id] || '';
+    const target = state.targetDates[b.id] || '';
+    let targetPill = '';
+    if (target && !s.complete) {
+      const d = PH.daysBetween(PH.todayISO(), target);
+      targetPill = d < 0 ? '<span class="pill danger">Target date passed (' + esc(fmtLong(target)) + ')</span>'
+        : d === 0 ? '<span class="pill warn">Target is today</span>'
+        : '<span class="pill neutral">' + d + ' day' + (d === 1 ? '' : 's') + ' to ' + esc(fmtLong(target)) + '</span>';
+    }
+    let danger;
+    if (ui.confirm === 'clear') {
+      danger = '<span class="confirm" role="alert">Clear every check mark for ' + esc(b.name) + '? Notes are kept. ' +
+        '<button class="btn btn-sm btn-danger" data-action="clear-yes">Yes, clear</button><button class="btn btn-ghost btn-sm" data-action="confirm-no" data-fkey="cancel">Cancel</button></span>';
+    } else if (ui.confirm === 'delete') {
+      danger = '<span class="confirm" role="alert">Delete this badge and all of its progress? ' +
+        '<button class="btn btn-sm btn-danger" data-action="delete-yes">Yes, delete</button><button class="btn btn-ghost btn-sm" data-action="confirm-no" data-fkey="cancel">Cancel</button></span>';
+    } else {
+      danger = '<button class="btn btn-ghost btn-sm" data-action="mark-all"' + (s.complete ? ' disabled' : '') + '>Mark all</button>' +
+        '<button class="btn btn-ghost btn-sm btn-danger" data-action="clear-all"' + (s.done ? '' : ' disabled') + '>Clear all</button>' +
+        (b.custom ? '<button class="btn btn-ghost btn-sm btn-danger" data-action="delete-badge">Delete badge</button>'
+          : state.hidden.indexOf(b.id) >= 0 ? '<button class="btn btn-ghost btn-sm" data-action="unhide" data-id="' + esc(b.id) + '">Unhide badge</button>'
+          : '<button class="btn btn-ghost btn-sm" data-action="hide-badge" title="Hide this badge from the overview (you can bring it back)">Hide badge</button>');
+    }
+    return '<div class="print-only print-head">' +
+        '<div class="row between"><h2>' + esc(b.emoji + ' ' + b.name) + ' Merit Badge</h2>' + (b.edition ? '<span>' + esc(b.edition) + ' requirements</span>' : '') + '</div>' +
+        '<div class="row between small"><span>Scout: <b>' + esc(SCOUT) + '</b></span><span>Counselor: <b>' + (counselor ? esc(counselor) : '____________________') + '</b></span>' +
+          (target ? '<span>Target: <b>' + esc(fmtLong(target)) + '</b></span>' : '') + '<span>Printed ' + esc(fmtLong(PH.todayISO())) + '</span></div>' +
+        (ui.filterLeft ? '<div class="small">Showing unfinished requirements only.</div>' : '') +
+      '</div>' +
+      '<div class="bhead">' +
+        '<span class="em" aria-hidden="true">' + esc(b.emoji) + '</span>' +
+        '<div class="info">' +
+          '<div class="row between"><h2>' + esc(b.name) + '</h2><span class="pct' + (s.complete ? ' ok' : '') + '">' + s.pct + '%</span></div>' +
+          '<div class="sub">' +
+            (b.edition ? '<span class="pill neutral">' + esc(b.edition) + ' edition</span>' : '') +
+            (b.eagleRequired ? '<span class="pill warn">Eagle required</span>' : '') +
+            (b.custom ? '<span class="pill neutral">Custom</span>' : '') +
+            (s.complete ? '<span class="pill ok">✓ Badge complete</span>' : '') +
+            '<span>' + s.done + ' of ' + s.total + ' requirements done' + (s.left ? ' · ' + s.left + ' left' : '') + '</span>' + targetPill +
+          '</div>' +
+          '<div class="progress' + (s.complete ? ' ok' : '') + '" role="progressbar" aria-valuenow="' + s.pct + '" aria-valuemin="0" aria-valuemax="100" aria-label="' + esc(b.name) + ' progress"><i style="width:' + s.pct + '%"></i></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fields no-print">' +
+        '<div class="field"><label for="fCounselor">Counselor</label><input class="input" id="fCounselor" data-field="counselor" data-fkey="f:counselor" value="' + esc(counselor) + '" placeholder="Counselor\'s name" autocomplete="off"></div>' +
+        '<div class="field"><label for="fTarget">Target date</label><input class="input" type="date" id="fTarget" data-field="target" data-fkey="f:target" value="' + esc(target) + '"></div>' +
+      '</div>' +
+      '<div class="actions no-print">' +
+        '<button class="btn btn-sm" data-action="filter" data-fkey="filter" aria-pressed="' + ui.filterLeft + '">What\'s left</button>' +
+        '<button class="btn btn-sm" data-action="print">🖨 Print checklist</button>' +
+        '<span class="spacer"></span>' + danger +
+      '</div>';
+  }
+
+  function listHTML(b, s) {
+    const rows = b.reqs.map(r => reqHTML(b, r, null)).filter(Boolean);
+    let body;
+    if (!rows.length) {
+      body = ui.filterLeft
+        ? '<div class="empty">🎉 Nothing left — every requirement in ' + esc(b.name) + ' is checked off.</div>'
+        : '<div class="empty">This badge has no requirements yet.</div>';
+    } else {
+      body = '<div class="print-only print-cols"><span>Requirement</span><span>Counselor initials / date</span></div><div class="reqs">' + rows.join('') + '</div>';
+    }
+    const hint = s.complete ? '🎉 All signed off' : ui.filterLeft ? 'Showing only what is left' : 'Check a box once your counselor signs it off';
+    return '<div class="card-head"><h2>Requirements</h2><span class="small muted no-print">' + hint + '</span></div>' + body;
+  }
+
+  function reqHTML(b, r, parentId) {
+    const st = reqStatus(b, r);
+    if (ui.filterLeft && st.complete) return '';
+    const key = k(b.id, r.id);
+    const kids = hasKids(r);
+    const num = parentId && r.id.indexOf(parentId) === 0 ? r.id.slice(parentId.length) : r.id;
+    const note = state.notes[key] || '';
+    const open = !!ui.openNotes[key];
+    const pill = kids && r.pick ? '<span class="pill">Choose ' + r.pick + ' of these</span>' : '';
+    const count = kids ? '<span class="count">' + st.done + ' of ' + st.needed + ' done</span>' : '';
+    const datePill = st.complete && st.date ? '<span class="pill date" title="Signed off ' + esc(st.date) + '">✓ ' + esc(fmtShort(st.date)) + '</span>' : '';
+    const noteBtn = '<button class="btn btn-ghost btn-sm note-btn' + (note ? ' has' : '') + '" data-note="' + esc(key) + '" data-fkey="note:' + esc(key) + '" aria-expanded="' + open + '" aria-label="' + (note ? 'Edit' : 'Add') + ' note for requirement ' + esc(r.id) + '">✎ Note' + (note ? ' •' : '') + '</button>';
+    const noteHTML = open
+      ? '<div class="note-box"><textarea data-notefor="' + esc(key) + '" data-fkey="ta:' + esc(key) + '" rows="2" placeholder="Notes for this requirement — what you did, who you talked to, dates…" aria-label="Note for requirement ' + esc(r.id) + '">' + esc(note) + '</textarea></div>'
+      : note ? '<div class="note-view">' + esc(note) + '</div>' : '';
+    const input = kids
+      ? '<input type="checkbox" disabled tabindex="-1"' + (st.complete ? ' checked' : '') + ' title="Checked automatically when the parts below are done">'
+      : '<input type="checkbox" data-chk="' + esc(key) + '" data-fkey="chk:' + esc(key) + '"' + (st.complete ? ' checked' : '') + '>';
+    const children = kids ? '<div class="kids">' + r.children.map(c => reqHTML(b, c, r.id)).join('') + '</div>' : '';
+    return '<div class="req' + (kids ? ' parent' : '') + (st.complete ? ' complete' : '') + '">' +
+      '<div class="req-row">' +
+        '<label class="check' + (st.complete ? ' done' : '') + '">' + input + '<span class="txt"><span class="num">' + esc(num) + '.</span>' + esc(r.text).replace(/\n/g, '<br>') + pill + count + '</span></label>' +
+        '<span class="sig" aria-hidden="true"></span>' +
+        '<div class="req-meta">' + datePill + noteBtn + '</div>' +
+      '</div>' + noteHTML + children + '</div>';
+  }
+
+  /* ===================== Actions ===================== */
+  function toggleDone(key, on) {
+    const b = findBadge(key.split(':')[0]);
+    const before = b ? badgeStats(b).complete : false;
+    if (on) state.done[key] = { date: PH.todayISO(), by: '' }; else delete state.done[key];
+    save(); render();
+    if (b && !before && badgeStats(b).complete) PH.toast('🎉 ' + b.name + ' — every requirement is signed off!', 2800);
+  }
+  function setNote(key, value) {
+    if (value.trim()) state.notes[key] = value; else delete state.notes[key];
+    save();
+    const btn = document.querySelector('[data-note="' + key + '"]');
+    if (btn) { btn.classList.toggle('has', !!value.trim()); btn.textContent = '✎ Note' + (value.trim() ? ' •' : ''); }
+  }
+  function saveField(input) {
+    const b = findBadge(currentId());
+    if (!b) return;
+    if (input.dataset.field === 'counselor') {
+      const v = input.value.trim();
+      if (v) state.counselors[b.id] = v; else delete state.counselors[b.id];
+    } else {
+      if (validISO(input.value)) state.targetDates[b.id] = input.value; else delete state.targetDates[b.id];
+    }
+    save();
+  }
+  function markAll(b) {
+    const today = PH.todayISO();
+    let n = 0;
+    leafIds(b).forEach(id => { const key = k(b.id, id); if (!state.done[key]) { state.done[key] = { date: today, by: '' }; n++; } });
+    save(); render();
+    PH.toast(n ? 'Marked ' + n + ' requirement' + (n === 1 ? '' : 's') + ' done' : 'Everything was already done');
+  }
+  function clearAll(b) {
+    Object.keys(state.done).forEach(key => { if (key.indexOf(b.id + ':') === 0) delete state.done[key]; });
+    ui.confirm = null; save(); render();
+    PH.toast('Cleared all check marks for ' + b.name);
+  }
+  function deleteBadge(b) {
+    state.custom = state.custom.filter(x => x.id !== b.id);
+    Object.keys(state.done).forEach(key => { if (key.indexOf(b.id + ':') === 0) delete state.done[key]; });
+    Object.keys(state.notes).forEach(key => { if (key.indexOf(b.id + ':') === 0) delete state.notes[key]; });
+    delete state.counselors[b.id]; delete state.targetDates[b.id];
+    state.hidden = state.hidden.filter(x => x !== b.id);
+    ui.confirm = null; save(); go(null);
+    PH.toast('Deleted ' + b.name);
+  }
+  function hideBadge(b) {
+    if (state.hidden.indexOf(b.id) < 0) state.hidden.push(b.id);
+    save(); go(null);
+    PH.toast(b.name + ' hidden — bring it back from the overview any time');
+  }
+  function unhide(id) {
+    state.hidden = state.hidden.filter(x => x !== id);
+    save(); render();
+  }
+  function previewParse() {
+    const reqs = parseReqs($('#cbReqs').value);
+    const kids = reqs.reduce((n, r) => n + r.children.length, 0);
+    const picks = reqs.filter(r => r.pick).length;
+    $('#cbPreview').textContent = reqs.length
+      ? reqs.length + ' requirement' + (reqs.length === 1 ? '' : 's') + ', ' + kids + ' sub-item' + (kids === 1 ? '' : 's') + (picks ? ', ' + picks + ' choice group' + (picks === 1 ? '' : 's') : '')
+      : 'Nothing parsed yet — paste requirements above';
+  }
+  function addCustom() {
+    const name = $('#cbName').value.trim();
+    const emoji = $('#cbEmoji').value.trim() || '🎖️';
+    const year = $('#cbYear').value.trim();
+    const reqs = parseReqs($('#cbReqs').value);
+    if (!name) { PH.toast('Give the badge a name first'); $('#cbName').focus(); return; }
+    if (!reqs.length) { PH.toast('Paste at least one requirement'); $('#cbReqs').focus(); return; }
+    const badge = { id: 'c_' + PH.uid(), name, emoji, edition: year, eagleRequired: false, custom: true, reqs };
+    state.custom.push(badge); save();
+    $('#cbName').value = ''; $('#cbReqs').value = ''; $('#cbYear').value = ''; $('#cbEmoji').value = '🎖️';
+    $('#addCard').hidden = true; previewParse();
+    PH.toast('Added ' + name);
+    go(badge.id);
+  }
+  function exportJSON() {
+    const out = Object.assign({ app: 'ph.badges', exported: new Date().toISOString() }, state);
+    PH.download('priyaan-merit-badges-' + PH.todayISO() + '.json', JSON.stringify(out, null, 2));
+    PH.toast('Progress exported');
+  }
+  function importJSON() {
+    PH.pickFile('application/json,.json').then(text => {
+      if (!text) return;
+      let obj;
+      try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+      if (isObj(obj) && isObj(obj.data) && typeof obj.data[KEY] === 'string') { // whole-hub backup file
+        try { obj = JSON.parse(obj.data[KEY]); } catch (e) { obj = null; }
+      }
+      if (!isObj(obj) || !isObj(obj.done)) { PH.toast('No badge progress found in that file (needs a "done" object)'); return; }
+      const inc = normalize(obj);
+      let n = 0, c = 0;
+      Object.keys(inc.done).forEach(key => { state.done[key] = inc.done[key]; n++; });
+      Object.keys(inc.notes).forEach(key => { state.notes[key] = inc.notes[key]; });
+      Object.keys(inc.counselors).forEach(id => { state.counselors[id] = inc.counselors[id]; });
+      Object.keys(inc.targetDates).forEach(id => { state.targetDates[id] = inc.targetDates[id]; });
+      inc.custom.forEach(b => { if (!findBadge(b.id)) { state.custom.push(b); c++; } });
+      inc.hidden.forEach(id => { if (state.hidden.indexOf(id) < 0 && findBadge(id)) state.hidden.push(id); });
+      save(); render();
+      PH.toast('Imported ' + n + ' check mark' + (n === 1 ? '' : 's') + (c ? ' and ' + c + ' custom badge' + (c === 1 ? '' : 's') : ''), 2600);
+    });
+  }
+
+  /* ===================== Events ===================== */
+  const main = document.querySelector('main');
+  main.addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.chk) { toggleDone(t.dataset.chk, t.checked); return; }
+    if (t.dataset.field) { saveField(t); render(); }
+  });
+  main.addEventListener('input', e => {
+    const t = e.target;
+    if (t.dataset.notefor) { setNote(t.dataset.notefor, t.value); return; }
+    if (t.dataset.field) { saveField(t); return; }
+    if (t.id === 'cbReqs') previewParse();
+  });
+  main.addEventListener('click', e => {
+    const tab = e.target.closest('[data-go]');
+    if (tab) { go(tab.dataset.go || null); return; }
+    const noteBtn = e.target.closest('[data-note]');
+    if (noteBtn) {
+      const key = noteBtn.dataset.note;
+      if (ui.openNotes[key]) delete ui.openNotes[key]; else ui.openNotes[key] = true;
+      render();
+      if (ui.openNotes[key]) { const ta = document.querySelector('[data-notefor="' + key + '"]'); if (ta) ta.focus(); }
+      return;
+    }
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const b = findBadge(currentId());
+    switch (btn.dataset.action) {
+      case 'toggle-add': {
+        const card = $('#addCard'); card.hidden = !card.hidden;
+        const opener = document.querySelector('[data-action="toggle-add"][aria-controls]');
+        if (opener) opener.setAttribute('aria-expanded', String(!card.hidden));
+        if (!card.hidden) { $('#cbName').focus(); card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        break;
+      }
+      case 'add-badge': addCustom(); break;
+      case 'unhide': unhide(btn.dataset.id); break;
+      case 'filter': ui.filterLeft = !ui.filterLeft; render(); break;
+      case 'print': if (b) { render(); window.print(); } break;
+      case 'mark-all': if (b) markAll(b); break;
+      case 'clear-all': ui.confirm = 'clear'; render(); focusCancel(); break;
+      case 'clear-yes': if (b) clearAll(b); break;
+      case 'delete-badge': ui.confirm = 'delete'; render(); focusCancel(); break;
+      case 'delete-yes': if (b && b.custom) deleteBadge(b); break;
+      case 'confirm-no': ui.confirm = null; render(); break;
+      case 'hide-badge': if (b) hideBadge(b); break;
+    }
+  });
+  function focusCancel() { const el = document.querySelector('[data-fkey="cancel"]'); if (el) el.focus(); }
+
+  $('#tabs').addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].indexOf(e.key) < 0) return;
+    const tabs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('.tab'));
+    let i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    if (e.key === 'ArrowRight') i = (i + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') i = (i - 1 + tabs.length) % tabs.length;
+    else i = e.key === 'Home' ? 0 : tabs.length - 1;
+    tabs[i].focus(); tabs[i].click();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && ui.confirm) { ui.confirm = null; render(); }
+  });
+  $('#btnExport').addEventListener('click', exportJSON);
+  $('#btnImport').addEventListener('click', importJSON);
+  window.addEventListener('hashchange', () => { ui.confirm = null; render(); });
+  window.addEventListener('beforeprint', () => { if (currentId()) render(); });
+
+  if (stored) save(); // refresh the hub summary against the current requirement totals
+  render();
+})();
+</script></body></html>
