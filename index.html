@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Priyaan's Hub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: .5rem 0 1.5rem; }
+  .hero h1 { font-size: 2rem; }
+  .hero .date { color: var(--muted); }
+  .apps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .app {
+    position: relative; display: flex; flex-direction: column; gap: .6rem; padding: 1.2rem 1.25rem 1.1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+    color: inherit; text-decoration: none; transition: transform .12s, border-color .12s, box-shadow .12s;
+    overflow: hidden;
+  }
+  .app::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--accent); }
+  .app:hover { transform: translateY(-2px); border-color: var(--accent); text-decoration: none; }
+  .app .top { display: flex; align-items: center; gap: .75rem; }
+  .app .emoji { font-size: 1.9rem; width: 3rem; height: 3rem; display: grid; place-items: center; border-radius: 12px; background: var(--accent-soft); }
+  .app h2 { margin: 0; font-size: 1.15rem; }
+  .app .desc { color: var(--muted); font-size: .925rem; margin: 0; flex: 1; }
+  .app .summary { display: flex; flex-direction: column; gap: .1rem; padding: .6rem .75rem; border-radius: var(--radius-sm); background: var(--surface-2); min-height: 3.4rem; justify-content: center; }
+  .app .summary .headline { font-weight: 700; color: var(--accent); }
+  .app .summary .sub { font-size: .825rem; color: var(--muted); }
+  .app .summary.none .headline { color: var(--muted); font-weight: 600; }
+  .app .open { align-self: flex-end; font-size: .85rem; font-weight: 700; color: var(--accent); }
+  .app[data-app="piano"]    { --accent:#7c5cff; --accent-soft:rgba(124,92,255,.15); }
+  .app[data-app="badges"]   { --accent:#2f8f4e; --accent-soft:rgba(47,143,78,.15); }
+  .app[data-app="math"]     { --accent:#2f6fed; --accent-soft:rgba(47,111,237,.15); }
+  .app[data-app="hindi"]    { --accent:#e0701f; --accent-soft:rgba(224,112,31,.17); }
+  .app[data-app="schedule"] { --accent:#0f9d9a; --accent-soft:rgba(15,157,154,.15); }
+  footer { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: .875rem; }
+  footer .spacer { flex: 1; }
+</style>
+</head>
+<body data-app="hub">
+<header class="topbar"><div class="inner">
+  <div class="title"><span class="emoji">🚀</span><span class="name">Priyaan's Hub</span></div>
+  <div class="spacer"></div>
+  <span class="muted small no-print" id="clock"></span>
+</div></header>
+
+<main class="container">
+  <section class="hero">
+    <div>
+      <h1 id="greet">Hi Priyaan 👋</h1>
+      <div class="date" id="today"></div>
+    </div>
+  </section>
+
+  <section class="apps" id="apps">
+    <a class="app" data-app="piano" href="piano.html">
+      <div class="top"><span class="emoji">🎹</span><h2>Piano Practice</h2></div>
+      <p class="desc">Log daily practice by piece, track minutes, and keep the streak alive. Grade 4 Trinity pieces are preloaded.</p>
+      <div class="summary none" data-key="ph.piano.v1"><span class="headline">No practice logged yet</span><span class="sub">Open to start your first session</span></div>
+      <span class="open">Open →</span>
+    </a>
+    <a class="app" data-app="badges" href="badges.html">
+      <div class="top"><span class="emoji">🏕️</span><h2>Merit Badges</h2></div>
+      <p class="desc">Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting. See what is signed off and what is left.</p>
+      <div class="summary none" data-key="ph.badges.v1"><span class="headline">Nothing checked off yet</span><span class="sub">Open to see all requirements</span></div>
+      <span class="open">Open →</span>
+    </a>
+    <a class="app" data-app="math" href="math.html">
+      <div class="top"><span class="emoji">🧮</span><h2>Math Worksheets</h2></div>
+      <p class="desc">Print Integrated Math 1 practice sheets with answer keys: equations, systems, exponents, and more.</p>
+      <div class="summary none" data-key="ph.math.v1"><span class="headline">No worksheets made yet</span><span class="sub">Pick topics and print</span></div>
+      <span class="open">Open →</span>
+    </a>
+    <a class="app" data-app="hindi" href="hindi.html">
+      <div class="top"><span class="emoji">📖</span><h2>Hindi Flashcards</h2></div>
+      <p class="desc">Vocabulary from the Malhar Class 6 and Class 7 chapters, in Devanagari with English meanings. Flip cards or take a quiz.</p>
+      <div class="summary none" data-key="ph.hindi.v1"><span class="headline">No words reviewed yet</span><span class="sub">Open to start</span></div>
+      <span class="open">Open →</span>
+    </a>
+    <a class="app" data-app="schedule" href="schedule.html">
+      <div class="top"><span class="emoji">📅</span><h2>Weekly Plan</h2></div>
+      <p class="desc">One week, every activity: piano, dance, Scouts, math, and Hindi, with checkboxes for each day.</p>
+      <div class="summary none" data-key="ph.schedule.v1"><span class="headline">This week is empty</span><span class="sub">Open to plan the week</span></div>
+      <span class="open">Open →</span>
+    </a>
+  </section>
+
+  <footer>
+    <span>Everything is saved in this browser only. Back up now and then.</span>
+    <span class="spacer"></span>
+    <button class="btn btn-sm" id="backup">⬇ Back up all data</button>
+    <button class="btn btn-sm" id="restore">⬆ Restore</button>
+  </footer>
+</main>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const now = new Date();
+  document.getElementById('today').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const h = now.getHours();
+  document.getElementById('greet').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + ', Priyaan 👋';
+
+  // Pull each app's summary from localStorage.
+  document.querySelectorAll('.summary[data-key]').forEach(el => {
+    const data = PH.load(el.dataset.key, null);
+    const s = data && data.summary;
+    if (s && s.headline) {
+      el.classList.remove('none');
+      el.querySelector('.headline').textContent = s.headline;
+      el.querySelector('.sub').textContent = s.sub || '';
+    }
+  });
+
+  // Backup / restore every ph.* key.
+  document.getElementById('backup').addEventListener('click', () => {
+    const out = {};
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('ph.')) out[k] = localStorage.getItem(k); }
+    PH.download('priyaan-hub-backup-' + PH.todayISO() + '.json', JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(), data: out }, null, 2));
+    PH.toast('Backup downloaded');
+  });
+  document.getElementById('restore').addEventListener('click', async () => {
+    const text = await PH.pickFile('application/json'); if (!text) return;
+    try {
+      const obj = JSON.parse(text); const data = obj.data || obj; let n = 0;
+      for (const k of Object.keys(data)) { if (k.startsWith('ph.')) { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } }
+      PH.toast('Restored ' + n + ' app' + (n === 1 ? '' : 's')); setTimeout(() => location.reload(), 600);
+    } catch (e) { PH.toast('That file could not be read'); }
+  });
+})();
+</script>
+</body>
+</html>
