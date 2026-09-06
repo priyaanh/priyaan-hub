@@ -1,0 +1,856 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piano Practice · Priyaan's Hub</title>
+<link rel="stylesheet" href="shared.css"><style>
+/* ---- layout ---- */
+main > * + * { margin-top: 1rem; }
+.grid-2 > .card { margin-top: 0; }
+.label-text { font-size: .85rem; color: var(--muted); font-weight: 600; display: block; margin-bottom: .25rem; }
+.card-head h2 { flex: none; white-space: nowrap; }
+.card-head .small { text-align: right; }
+
+/* ---- log form ---- */
+.log-form > * + * { margin-top: .8rem; }
+.form-grid { display: grid; gap: .75rem; grid-template-columns: 1fr; }
+@media (min-width: 560px) { .form-grid { grid-template-columns: minmax(9rem, 11rem) 1fr; } .form-grid .span { grid-column: 1 / -1; } }
+.quick { display: inline-flex; gap: .35rem; flex-wrap: wrap; }
+.stopwatch { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .6rem .8rem; background: var(--surface-2); border-radius: var(--radius-sm); }
+.sw-time { font-size: 1.5rem; font-weight: 700; min-width: 5ch; font-variant-numeric: tabular-nums; line-height: 1; }
+.stopwatch.running .sw-time { color: var(--accent); }
+.stopwatch .hint { flex: 1 1 10rem; }
+.rating { display: inline-flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+.rating button { width: 2.4rem; height: 2.4rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); font: inherit; font-weight: 700; cursor: pointer; color: var(--muted); }
+.rating button:hover { border-color: var(--accent); color: var(--text); }
+.rating button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rating button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.rating .rating-word { font-size: .85rem; color: var(--muted); font-weight: 600; margin-left: .3rem; min-width: 3.5rem; }
+.form-error { color: var(--danger); font-size: .875rem; font-weight: 600; }
+
+/* ---- today ---- */
+.today-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: .6rem; }
+.today-num .num { font-size: 2.6rem; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: var(--accent); }
+.today-num .unit { margin-left: .3rem; color: var(--muted); font-weight: 600; }
+.goal-field .input { width: 6rem; }
+.progress.done > i { background: var(--ok); }
+.today-msg { margin: .5rem 0 .75rem; }
+
+/* ---- 14-day chart ---- */
+.chart .plot { position: relative; height: 150px; border-bottom: 1px solid var(--border); }
+.chart .bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 4px; }
+.chart .bar { flex: 1; height: 100%; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: default; }
+.chart .bar i { display: block; width: 100%; max-width: 24px; min-height: 2px; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--accent) 55%, transparent); transition: height .3s; }
+.chart .bar.zero i { background: var(--border); border-radius: 0; }
+.chart .bar.today i { background: var(--accent); }
+.chart .bar b { font-size: .72rem; font-weight: 700; color: var(--text); margin-bottom: 3px; opacity: 0; transition: opacity .15s; }
+.chart .bar.today b, .chart .bar:hover b { opacity: 1; }
+.chart .goal-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--muted); opacity: .55; pointer-events: none; }
+.chart .goal-line span { position: absolute; left: 0; bottom: 2px; font-size: .7rem; font-weight: 600; color: var(--muted); background: var(--surface); padding: 0 .3rem; border-radius: 4px; }
+.chart .xlabels { display: flex; gap: 4px; margin-top: .3rem; }
+.chart .xlabels span { flex: 1; text-align: center; font-size: .72rem; color: var(--muted); }
+.chart .xlabels span.today { color: var(--text); font-weight: 800; }
+
+/* ---- pieces ---- */
+.check-inline { display: inline-flex; align-items: center; gap: .4rem; margin: 0; cursor: pointer; white-space: nowrap; }
+.check-inline input { accent-color: var(--accent); width: 1rem; height: 1rem; margin: 0; }
+.table .group-row th { background: var(--surface-2); color: var(--text); text-transform: none; letter-spacing: 0; font-size: .8rem; padding: .4rem .6rem; }
+.table th.n, .table td.n { text-align: right; }
+.table td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table td.when { white-space: nowrap; }
+.table tr.archived td { color: var(--muted); }
+.table tr.archived .name { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.table .actions { white-space: nowrap; text-align: right; }
+button.pill { border: 0; cursor: pointer; font: inherit; font-size: .75rem; font-weight: 700; }
+button.pill:hover { filter: brightness(.94); }
+button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pill.polishing { background: var(--warn-soft); color: var(--warn); }
+.pill.ready { background: var(--ok-soft); color: var(--ok); }
+.rename { display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; }
+.rename .input { width: auto; min-width: 12rem; flex: 1; padding: .35rem .5rem; }
+.add-piece { align-items: flex-end; margin-top: 1rem; }
+.add-piece .grow { flex: 1 1 14rem; }
+.add-piece select { width: auto; }
+.table .unit { display: none; }
+/* Phone: each piece becomes a two-line block (name + status / stats + actions) instead of a scrolling table. */
+@media (max-width: 640px) {
+  #pieces-table, #pieces-table tbody, #pieces-table tr, #pieces-table td, #pieces-table th { display: block; }
+  #pieces-table thead { display: none; }
+  #pieces-table tbody tr { display: grid; grid-template-columns: auto auto 1fr auto; column-gap: .6rem; row-gap: .25rem; align-items: center; padding: .6rem 0; border-bottom: 1px solid var(--border); }
+  #pieces-table tbody tr:last-child { border-bottom: 0; }
+  #pieces-table tbody tr.group-row { display: block; padding: 0; border: 0; margin-top: .35rem; }
+  #pieces-table tbody tr.group-row th { border-radius: var(--radius-sm); }
+  #pieces-table td { padding: 0; border: 0; }
+  #pieces-table td:nth-child(1) { grid-column: 1 / 4; font-weight: 600; }
+  #pieces-table td:nth-child(2) { grid-column: 4; justify-self: end; }
+  #pieces-table td:nth-child(3), #pieces-table td:nth-child(4), #pieces-table td:nth-child(5) { font-size: .85rem; color: var(--muted); text-align: left; }
+  #pieces-table td.when { white-space: normal; }
+  #pieces-table td:nth-child(6) { grid-column: 4; justify-self: end; }
+  #pieces-table .unit { display: inline; }
+}
+
+/* ---- history ---- */
+.hist-search { margin-bottom: .75rem; }
+.hist-day + .hist-day { margin-top: 1rem; }
+.hist-date { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-weight: 700; font-size: .9rem; padding-bottom: .25rem; border-bottom: 2px solid var(--border); }
+.list li { flex-wrap: wrap; }
+.hist-main { flex: 1 1 10rem; min-width: 0; }
+.hist-piece { font-weight: 600; }
+.hist-note { overflow-wrap: anywhere; }
+.hist-stars { color: var(--warn); font-size: .85rem; letter-spacing: .05em; white-space: nowrap; }
+.hist-actions { display: inline-flex; gap: .25rem; align-items: center; white-space: nowrap; }
+.more-wrap { text-align: center; margin-top: .75rem; }
+@media (max-width: 560px) {
+  .hist-main { flex-basis: 100%; }
+  .hist-actions { margin-left: auto; }
+}
+</style></head>
+<body data-app="piano">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <div class="title"><span class="emoji">🎹</span><span class="name">Piano Practice</span></div>
+  <div class="spacer"></div>
+  <button type="button" class="btn btn-sm" id="btn-export">⬇ Export</button>
+  <button type="button" class="btn btn-sm" id="btn-import">⬆ Import</button>
+</div></header>
+<main class="container">
+
+  <div class="grid-2">
+    <!-- Log a session -->
+    <section class="card" aria-labelledby="h-log">
+      <div class="card-head"><h2 id="h-log">Log a session</h2><span class="muted small">Trinity Grade 4</span></div>
+      <form class="log-form" id="log-form" novalidate>
+        <div class="form-grid">
+          <div class="field"><label for="f-date">Date</label><input class="input" type="date" id="f-date" required></div>
+          <div class="field"><label for="f-piece">Piece</label><select id="f-piece"></select></div>
+          <div class="field span" id="f-newpiece-wrap" hidden>
+            <label for="f-newpiece">New piece name</label>
+            <input class="input" type="text" id="f-newpiece" placeholder="Composer – Title" maxlength="80" autocomplete="off">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-min">Minutes</label>
+          <div class="row">
+            <input class="input" type="number" id="f-min" min="1" max="600" step="1" inputmode="numeric" placeholder="0">
+            <div class="quick" id="quick" role="group" aria-label="Add minutes">
+              <button type="button" class="btn btn-sm" data-add="5">+5</button>
+              <button type="button" class="btn btn-sm" data-add="10">+10</button>
+              <button type="button" class="btn btn-sm" data-add="15">+15</button>
+              <button type="button" class="btn btn-sm" data-add="30">+30</button>
+            </div>
+          </div>
+        </div>
+        <div class="stopwatch" id="stopwatch" role="group" aria-label="Stopwatch">
+          <output class="sw-time" id="sw-time" for="f-min">00:00</output>
+          <button type="button" class="btn btn-sm" id="sw-toggle">▶ Start</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="sw-reset">Reset</button>
+          <span class="muted small hint">Pause fills in the minutes above.</span>
+        </div>
+        <div class="field"><label for="f-note">Note <span class="muted">(optional)</span></label><input class="input" type="text" id="f-note" placeholder="e.g. bars 12–16 hands separately" maxlength="200"></div>
+        <div class="field">
+          <span class="label-text" id="rating-lbl">How did it go? <span class="muted">(optional)</span></span>
+          <div class="rating" role="radiogroup" aria-labelledby="rating-lbl" id="f-rating">
+            <button type="button" role="radio" aria-checked="false" data-rating="1" aria-label="1 – Rough">1</button>
+            <button type="button" role="radio" aria-checked="false" data-rating="2" aria-label="2 – Meh">2</button>
+            <button type="button" role="radio" aria-checked="false" data-rating="3" aria-label="3 – OK">3</button>
+            <button type="button" role="radio" aria-checked="false" data-rating="4" aria-label="4 – Good">4</button>
+            <button type="button" role="radio" aria-checked="false" data-rating="5" aria-label="5 – Great">5</button>
+            <span class="rating-word" id="rating-word" aria-live="polite"></span>
+          </div>
+        </div>
+        <div class="row between">
+          <button type="submit" class="btn btn-primary" id="btn-save">Save session</button>
+          <span class="form-error" id="f-error" role="alert"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- Today -->
+    <section class="card" aria-labelledby="h-today">
+      <div class="card-head"><h2 id="h-today">Today</h2><span class="muted small" id="today-date"></span></div>
+      <div class="today-top">
+        <div class="today-num"><span class="num" id="today-min">0</span><span class="unit">min</span></div>
+        <div class="field goal-field"><label for="goal">Daily goal (min)</label><input class="input" type="number" id="goal" min="5" max="600" step="5" inputmode="numeric"></div>
+      </div>
+      <div class="progress" role="progressbar" aria-label="Progress towards today's goal" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0" id="today-bar"><i style="width:0%"></i></div>
+      <p class="muted small today-msg" id="today-msg"></p>
+      <div id="today-list"></div>
+    </section>
+  </div>
+
+  <!-- Streaks -->
+  <section class="card" aria-labelledby="h-streak">
+    <div class="card-head"><h2 id="h-streak">Streaks</h2><span class="muted small">Any minutes logged count as a practice day</span></div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="s-current">0</div><div class="lbl">Current streak (days)</div></div>
+      <div class="stat"><div class="num" id="s-longest">0</div><div class="lbl">Longest streak</div></div>
+      <div class="stat"><div class="num" id="s-days">0</div><div class="lbl">Days practised</div></div>
+      <div class="stat"><div class="num" id="s-hours">0</div><div class="lbl">Total hours</div></div>
+    </div>
+  </section>
+
+  <!-- 14-day chart -->
+  <section class="card" aria-labelledby="h-chart">
+    <div class="card-head"><h2 id="h-chart">Last 14 days</h2><span class="muted small" id="chart-sum"></span></div>
+    <div id="chart"></div>
+  </section>
+
+  <!-- Pieces -->
+  <section class="card" aria-labelledby="h-pieces">
+    <div class="card-head">
+      <h2 id="h-pieces">Pieces</h2>
+      <label class="check-inline" for="show-archived"><input type="checkbox" id="show-archived"> Show archived</label>
+    </div>
+    <div class="table-wrap">
+      <table class="table" id="pieces-table">
+        <thead><tr><th>Piece</th><th>Status</th><th class="n">Minutes</th><th class="n">Sessions</th><th>Last practised</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody id="pieces-body"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="pieces-empty" hidden></div>
+    <form class="row add-piece" id="add-piece-form">
+      <div class="field grow"><label for="np-name">Add a piece</label><input class="input" type="text" id="np-name" placeholder="Composer – Title" maxlength="80" autocomplete="off"></div>
+      <div class="field"><label for="np-group">Group</label><select id="np-group"></select></div>
+      <button type="submit" class="btn">＋ Add</button>
+      <button type="button" class="btn btn-ghost" id="btn-add-g3">Add Grade 3 pieces</button>
+    </form>
+  </section>
+
+  <!-- History -->
+  <section class="card" aria-labelledby="h-hist">
+    <div class="card-head"><h2 id="h-hist">History</h2><span class="muted small" id="hist-count"></span></div>
+    <div class="field hist-search">
+      <label for="hist-search" class="sr-only">Filter history by piece or note</label>
+      <input class="input" type="search" id="hist-search" placeholder="Filter by piece or note…" autocomplete="off">
+    </div>
+    <div id="history"></div>
+  </section>
+
+</main>
+<script src="shared.js"></script><script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------- constants
+  const KEY = 'ph.piano.v1';
+  const NEW = '__new__';
+  const STATUSES = ['learning', 'polishing', 'ready'];
+  const STATUS_LABEL = { learning: 'Learning', polishing: 'Polishing', ready: 'Exam-ready' };
+  const RATING_WORDS = ['', 'Rough', 'Meh', 'OK', 'Good', 'Great'];
+  const GROUP_ORDER = ['Grade 4 pieces', 'Grade 4 exercises', 'Technique & other', 'Grade 3 pieces', 'My pieces'];
+  const PAGE = 40; // history rows per "Show more"
+
+  // Trinity College London, Piano Grade 4 Pieces & Exercises 2021–2023 (contents page).
+  const G4_PIECES = [
+    'WK Bach – Allegro in A major',
+    'Clementi – Andante con espressione',
+    'Cimarosa – Sonata in A minor',
+    'Kuhlau – Allegretto (from Sonatina in G major, op. 55 no. 2)',
+    'Lemoine – Étude no. 23 (from Études enfantines, op. 37)',
+    'R Schumann – Sicilienne (no. 11 from Album for the Young, op. 68)',
+    'Maykapar – Valse (no. 5 from Biriulki, op. 28)',
+    'Crosland – Lights in the Rearview',
+    'Knowles – Calypso',
+    'Mifsud – Remembrance',
+    'Kirnberger – Minuet in E major',
+    'Mozart – Allegretto (from The London Sketchbook, K. 15hh)',
+    'Burgmüller – Barcarolle, op. 100 no. 22',
+    'Elgar – Andantino (1st movt from Sonatina in G major, op. 36 no. 2)',
+    'Bertini – Study in E minor, op. 29 no. 14',
+    'Moore – Waltz mystique'
+  ];
+  // Technical work: the three Trinity exercise groups (one of 1a/1b, 2a/2b, 3a/3b is played in the exam).
+  const G4_EXERCISES = [
+    'Exercise 1 – Tone, balance & voicing (1a / 1b)',
+    'Exercise 2 – Co-ordination (2a / 2b)',
+    'Exercise 3 – Finger & wrist strength and flexibility (3a / 3b)'
+  ];
+  const TECHNIQUE = ['Scales & arpeggios', 'Hanon exercises', 'Sight reading', 'Aural / musical knowledge'];
+  // Trinity Piano Grade 3 2021–2023 (contents page). Optional, added on request.
+  const G3_PIECES = [
+    'Marais – Romance',
+    'Couperin – Les coucous bénévoles (The Benevolent Cuckoos)',
+    'Haydn – Andante (3rd movt from Sonata in G major, Hob XVI:8)',
+    'Diabelli – Rondino (no. 17 from Melodious Exercises, op. 149)',
+    'Loeschhorn – Study in D minor (no. 40 from Studies for the Piano, op. 65)',
+    'Donkin – An Autumn Leaf',
+    'Lynch – nDcvr Agnt',
+    'Tan – The Night of the Sleepy Panda',
+    'D Scarlatti – Sonata in G major',
+    'Donkin – Badlands'
+  ];
+
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+  const esc = PH.esc;
+  const today = () => PH.todayISO();
+
+  // ==== pure helpers (start) ====
+  /** Set of ISO dates that have at least one minute logged. */
+  function practicedDays(sessions) {
+    const set = new Set();
+    for (const s of sessions) if (s && s.minutes > 0) set.add(s.date);
+    return set;
+  }
+  /** Consecutive practice days ending today or yesterday. */
+  function currentStreak(days, t) {
+    let d = days.has(t) ? t : PH.addDays(t, -1);
+    if (!days.has(d)) return 0;
+    let n = 0;
+    while (days.has(d)) { n++; d = PH.addDays(d, -1); }
+    return n;
+  }
+  function longestStreak(days) {
+    let best = 0, run = 0, prev = null;
+    for (const d of Array.from(days).sort()) {
+      run = (prev && PH.daysBetween(prev, d) === 1) ? run + 1 : 1;
+      if (run > best) best = run;
+      prev = d;
+    }
+    return best;
+  }
+  function minutesByDate(sessions) {
+    const m = new Map();
+    for (const s of sessions) m.set(s.date, (m.get(s.date) || 0) + s.minutes);
+    return m;
+  }
+  /** Whole minutes from a stopwatch reading; 30 s or more rounds up. */
+  function roundMinutes(ms) {
+    const sec = Math.floor(ms / 1000);
+    return Math.floor(sec / 60) + (sec % 60 >= 30 ? 1 : 0);
+  }
+  function relDays(iso, t) {
+    const n = PH.daysBetween(iso, t);
+    if (n === 0) return 'today';
+    if (n === 1) return 'yesterday';
+    if (n < 0) return PH.fmtDate(iso);
+    if (n < 14) return n + ' days ago';
+    if (n < 60) { const w = Math.round(n / 7); return w + (w === 1 ? ' week ago' : ' weeks ago'); }
+    return PH.fmtDate(iso);
+  }
+  function clampGoal(n) { return Number.isFinite(n) && n > 0 ? Math.min(600, Math.max(5, Math.round(n))) : 30; }
+  // ==== pure helpers (end) ====
+
+  // ---------------------------------------------------------------- state
+  function makePieces(names, group) {
+    const t = Date.now();
+    return names.map((name, i) => ({ id: PH.uid(), name, group, status: 'learning', archived: false, createdAt: t + i }));
+  }
+  function defaultPieces() {
+    return makePieces(G4_PIECES, 'Grade 4 pieces')
+      .concat(makePieces(G4_EXERCISES, 'Grade 4 exercises'))
+      .concat(makePieces(TECHNIQUE, 'Technique & other'));
+  }
+  function normalisePiece(p) {
+    if (!p || typeof p !== 'object' || !p.name) return null;
+    return {
+      id: String(p.id || PH.uid()),
+      name: String(p.name).trim().slice(0, 80),
+      group: p.group ? String(p.group) : 'My pieces',
+      status: STATUSES.includes(p.status) ? p.status : 'learning',
+      archived: !!p.archived,
+      createdAt: Number(p.createdAt) || Date.now()
+    };
+  }
+  function normaliseSession(s) {
+    if (!s || typeof s !== 'object' || !s.pieceId) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s.date))) return null;
+    const minutes = Math.round(Number(s.minutes));
+    if (!(minutes > 0)) return null;
+    const rating = Math.round(Number(s.rating)) || 0;
+    return {
+      id: String(s.id || PH.uid()),
+      date: String(s.date),
+      pieceId: String(s.pieceId),
+      minutes: Math.min(minutes, 600),
+      note: s.note ? String(s.note).slice(0, 200) : '',
+      rating: rating >= 1 && rating <= 5 ? rating : 0,
+      createdAt: Number(s.createdAt) || Date.now()
+    };
+  }
+  /** Accepts anything (null, old versions, imported files) and returns a valid state. */
+  function migrate(raw) {
+    const src = raw && typeof raw === 'object' ? raw : null;
+    const st = { version: 1, pieces: [], sessions: [], settings: { dailyGoal: 30, lastPieceId: null }, summary: null };
+    if (src) {
+      st.pieces = (Array.isArray(src.pieces) ? src.pieces : []).map(normalisePiece).filter(Boolean);
+      st.sessions = (Array.isArray(src.sessions) ? src.sessions : []).map(normaliseSession).filter(Boolean);
+      const settings = src.settings && typeof src.settings === 'object' ? src.settings : {};
+      st.settings.dailyGoal = clampGoal(Number(settings.dailyGoal));
+      st.settings.lastPieceId = typeof settings.lastPieceId === 'string' ? settings.lastPieceId : null;
+    }
+    if (!src || (!st.pieces.length && !st.sessions.length)) st.pieces = defaultPieces();
+    // Sessions pointing at a piece we do not know: keep the history readable.
+    const ids = new Set(st.pieces.map(p => p.id));
+    for (const s of st.sessions) {
+      if (!ids.has(s.pieceId)) {
+        st.pieces.push({ id: s.pieceId, name: 'Unknown piece', group: 'My pieces', status: 'learning', archived: false, createdAt: Date.now() });
+        ids.add(s.pieceId);
+      }
+    }
+    return st;
+  }
+
+  let state = migrate(PH.load(KEY, null));
+  const ui = { rating: 0, showArchived: false, renamingId: null, confirmId: null, confirmTimer: null, search: '', histLimit: PAGE };
+  let renderedDay = null;
+
+  function computeSummary(st, t) {
+    const streak = currentStreak(practicedDays(st.sessions), t);
+    const byDate = minutesByDate(st.sessions);
+    const monday = PH.mondayOf(t);
+    let week = 0;
+    byDate.forEach((m, d) => { if (d >= monday && d <= t) week += m; });
+    return {
+      headline: streak > 0 ? '🔥 ' + streak + '-day streak' : 'No streak yet',
+      sub: (byDate.get(t) || 0) + ' min today · ' + week + ' min this week'
+    };
+  }
+  function persist() {
+    state.summary = computeSummary(state, today());
+    PH.save(KEY, state);
+  }
+
+  function pieceById(id) { return state.pieces.find(p => p.id === id) || null; }
+  function pieceName(id) { const p = pieceById(id); return p ? p.name : 'Unknown piece'; }
+  function groupRank(g) { const i = GROUP_ORDER.indexOf(g); return i < 0 ? 99 : i; }
+  function groupsOf(pieces) {
+    return Array.from(new Set(pieces.map(p => p.group))).sort((a, b) => groupRank(a) - groupRank(b) || a.localeCompare(b));
+  }
+  function addPiece(name, group) {
+    const p = makePieces([name.trim().slice(0, 80)], group || 'My pieces')[0];
+    state.pieces.push(p);
+    return p;
+  }
+  function stars(r) {
+    if (!r) return '';
+    return '<span class="hist-stars" aria-label="Rated ' + r + ' of 5" title="' + RATING_WORDS[r] + '">' + '★'.repeat(r) + '☆'.repeat(5 - r) + '</span>';
+  }
+
+  // ---------------------------------------------------------------- render
+  function render() {
+    renderedDay = today();
+    renderPieceSelect();
+    renderToday();
+    renderStreaks();
+    renderChart();
+    renderPieces();
+    renderHistory();
+  }
+
+  function renderPieceSelect() {
+    const sel = $('#f-piece');
+    const want = sel.value || state.settings.lastPieceId;
+    const active = state.pieces.filter(p => !p.archived);
+    let html = '';
+    for (const g of groupsOf(active)) {
+      html += '<optgroup label="' + esc(g) + '">' +
+        active.filter(p => p.group === g).map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join('') +
+        '</optgroup>';
+    }
+    html += '<option value="' + NEW + '">＋ Add piece…</option>';
+    sel.innerHTML = html;
+    if (want && Array.from(sel.options).some(o => o.value === want)) sel.value = want;
+    toggleNewPiece(false);
+
+    const gsel = $('#np-group');
+    const groups = groupsOf(state.pieces);
+    for (const g of GROUP_ORDER) if (!groups.includes(g)) groups.push(g);
+    const gwant = gsel.value || 'My pieces';
+    gsel.innerHTML = groups.map(g => '<option value="' + esc(g) + '">' + esc(g) + '</option>').join('');
+    gsel.value = groups.includes(gwant) ? gwant : groups[0];
+  }
+  function toggleNewPiece(focus) {
+    const isNew = $('#f-piece').value === NEW;
+    $('#f-newpiece-wrap').hidden = !isNew;
+    if (isNew && focus) $('#f-newpiece').focus();
+  }
+
+  function renderToday() {
+    const t = today();
+    const goal = state.settings.dailyGoal;
+    $('#today-date').textContent = PH.fmtDate(t, { weekday: 'long', month: 'long', day: 'numeric' });
+    const list = state.sessions.filter(s => s.date === t).sort((a, b) => a.createdAt - b.createdAt);
+    const total = list.reduce((n, s) => n + s.minutes, 0);
+    $('#today-min').textContent = total;
+    const goalEl = $('#goal');
+    if (document.activeElement !== goalEl) goalEl.value = goal;
+    const bar = $('#today-bar');
+    bar.setAttribute('aria-valuemax', goal);
+    bar.setAttribute('aria-valuenow', Math.min(total, goal));
+    bar.querySelector('i').style.width = Math.min(100, Math.round(total / goal * 100)) + '%';
+    bar.classList.toggle('done', total >= goal);
+    $('#today-msg').textContent = total === 0 ? 'Nothing logged yet today · goal ' + goal + ' min'
+      : total >= goal ? 'Goal of ' + goal + ' min reached 🎉' : (goal - total) + ' min to go';
+    $('#today-list').innerHTML = list.length
+      ? '<ul class="list">' + list.map(s =>
+          '<li><div class="hist-main"><div class="hist-piece">' + esc(pieceName(s.pieceId)) + '</div>' +
+          (s.note ? '<div class="hist-note muted small">' + esc(s.note) + '</div>' : '') + '</div>' +
+          stars(s.rating) + '<span class="pill">' + s.minutes + ' min</span></li>').join('') + '</ul>'
+      : '<div class="empty">No practice logged yet today. Even 10 minutes keeps the streak alive!</div>';
+  }
+
+  function renderStreaks() {
+    const days = practicedDays(state.sessions);
+    $('#s-current').textContent = currentStreak(days, today());
+    $('#s-longest').textContent = longestStreak(days);
+    $('#s-days').textContent = days.size;
+    const totalMin = state.sessions.reduce((n, s) => n + s.minutes, 0);
+    $('#s-hours').textContent = (totalMin / 60).toFixed(1).replace(/\.0$/, '');
+  }
+
+  function renderChart() {
+    const t = today(), goal = state.settings.dailyGoal, byDate = minutesByDate(state.sessions);
+    const days = [];
+    for (let i = 13; i >= 0; i--) { const d = PH.addDays(t, -i); days.push({ d, m: byDate.get(d) || 0 }); }
+    const scale = Math.max(goal, ...days.map(x => x.m)) * 1.25; // headroom for the value label
+    const total = days.reduce((n, x) => n + x.m, 0);
+    const hit = days.filter(x => x.m >= goal).length;
+    $('#chart-sum').textContent = total + ' min · goal met on ' + hit + ' of 14 days';
+    const bars = days.map(x => {
+      const h = x.m ? Math.max(1.5, x.m / scale * 100) : 0;
+      const cls = 'bar' + (x.d === t ? ' today' : '') + (x.m ? '' : ' zero');
+      return '<div class="' + cls + '" title="' + esc(PH.fmtDate(x.d)) + ' · ' + x.m + ' min"><b>' + x.m + '</b><i style="height:' + h.toFixed(1) + '%"></i></div>';
+    }).join('');
+    const labels = days.map(x =>
+      '<span class="' + (x.d === t ? 'today' : '') + '">' + 'SMTWTFS'[new Date(x.d + 'T00:00:00').getDay()] + '</span>').join('');
+    $('#chart').innerHTML =
+      '<div class="chart" role="img" aria-label="Minutes practised per day over the last 14 days: ' + total + ' minutes in total; the daily goal of ' + goal + ' minutes was met on ' + hit + ' days.">' +
+        '<div class="plot"><div class="goal-line" style="bottom:' + (goal / scale * 100).toFixed(1) + '%"><span>Goal ' + goal + '</span></div><div class="bars">' + bars + '</div></div>' +
+        '<div class="xlabels">' + labels + '</div>' +
+      '</div>';
+  }
+
+  function pieceStats() {
+    const m = new Map();
+    for (const s of state.sessions) {
+      const o = m.get(s.pieceId) || { min: 0, n: 0, last: '' };
+      o.min += s.minutes; o.n++; if (s.date > o.last) o.last = s.date;
+      m.set(s.pieceId, o);
+    }
+    return m;
+  }
+  function renderPieces() {
+    const t = today(), stats = pieceStats();
+    const shown = state.pieces.filter(p => ui.showArchived || !p.archived);
+    const table = $('#pieces-table'), empty = $('#pieces-empty');
+    table.hidden = !shown.length; empty.hidden = !!shown.length;
+    if (!shown.length) {
+      empty.textContent = state.pieces.length ? 'Every piece is archived. Tick "Show archived" to restore one, or add a new piece below.' : 'No pieces yet. Add one below.';
+    }
+    let rows = '';
+    for (const g of groupsOf(shown)) {
+      rows += '<tr class="group-row"><th colspan="6">' + esc(g) + '</th></tr>';
+      for (const p of shown.filter(x => x.group === g)) {
+        const st = stats.get(p.id) || { min: 0, n: 0, last: '' };
+        const nameCell = ui.renamingId === p.id
+          ? '<form class="rename" data-id="' + esc(p.id) + '"><label class="sr-only" for="rename-input">New name</label>' +
+            '<input class="input" id="rename-input" value="' + esc(p.name) + '" maxlength="80" required autocomplete="off">' +
+            '<button type="submit" class="btn btn-sm btn-primary">Save</button>' +
+            '<button type="button" class="btn btn-sm btn-ghost" data-act="rename-cancel">Cancel</button></form>'
+          : '<span class="name">' + esc(p.name) + '</span>';
+        const actions = p.archived
+          ? '<button type="button" class="btn btn-ghost btn-sm" data-act="unarchive">Restore</button>'
+          : '<button type="button" class="btn btn-ghost btn-sm" data-act="rename">Rename</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-act="archive">Archive</button>';
+        rows += '<tr data-id="' + esc(p.id) + '"' + (p.archived ? ' class="archived"' : '') + '>' +
+          '<td>' + nameCell + '</td>' +
+          '<td><button type="button" class="pill ' + p.status + '" data-act="status" aria-label="Status: ' + STATUS_LABEL[p.status] + '. Click to change">' + STATUS_LABEL[p.status] + '</button></td>' +
+          '<td class="n">' + st.min + '<span class="unit"> min</span></td>' +
+          '<td class="n">' + st.n + '<span class="unit"> ' + (st.n === 1 ? 'session' : 'sessions') + '</span></td>' +
+          '<td class="when muted">' + (st.last ? esc(relDays(st.last, t)) : '—') + '</td>' +
+          '<td class="actions">' + actions + '</td></tr>';
+      }
+    }
+    $('#pieces-body').innerHTML = rows;
+    if (ui.renamingId) { const inp = $('#rename-input'); if (inp) { inp.focus(); inp.select(); } }
+
+    const have = new Set(state.pieces.map(p => p.name.toLowerCase()));
+    const remaining = G3_PIECES.filter(n => !have.has(n.toLowerCase())).length;
+    const g3 = $('#btn-add-g3');
+    g3.disabled = remaining === 0;
+    g3.textContent = remaining === 0 ? 'Grade 3 pieces added' : 'Add Grade 3 pieces';
+  }
+
+  function dateHeading(d, t) {
+    const n = PH.daysBetween(d, t);
+    const opts = { weekday: 'short', month: 'short', day: 'numeric' };
+    if (d.slice(0, 4) !== t.slice(0, 4)) opts.year = 'numeric';
+    const f = PH.fmtDate(d, opts);
+    return n === 0 ? 'Today · ' + f : n === 1 ? 'Yesterday · ' + f : f;
+  }
+  function historyRow(s) {
+    const del = ui.confirmId === s.id
+      ? '<span class="small muted">Delete?</span>' +
+        '<button type="button" class="btn btn-danger btn-sm" data-act="del-yes">Yes</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-act="del-no">No</button>'
+      : '<button type="button" class="btn btn-ghost btn-sm" data-act="del" aria-label="Delete this session">Delete</button>';
+    return '<li data-id="' + esc(s.id) + '"><div class="hist-main"><div class="hist-piece">' + esc(pieceName(s.pieceId)) + '</div>' +
+      (s.note ? '<div class="hist-note muted small">' + esc(s.note) + '</div>' : '') + '</div>' +
+      stars(s.rating) + '<span class="pill">' + s.minutes + ' min</span><span class="hist-actions">' + del + '</span></li>';
+  }
+  function renderHistory() {
+    const t = today(), q = ui.search.trim().toLowerCase();
+    const all = state.sessions.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt - a.createdAt));
+    const list = q ? all.filter(s => pieceName(s.pieceId).toLowerCase().includes(q) || s.note.toLowerCase().includes(q)) : all;
+    $('#hist-count').textContent = list.length + ' session' + (list.length === 1 ? '' : 's') + (q ? ' match' : '');
+    const box = $('#history');
+    if (!list.length) {
+      box.innerHTML = '<div class="empty">' + (all.length ? 'No sessions match that filter.' : 'No sessions yet — every practice you log shows up here.') + '</div>';
+      return;
+    }
+    const shown = list.slice(0, ui.histLimit);
+    let html = '', cur = null;
+    for (const s of shown) {
+      if (s.date !== cur) {
+        if (cur !== null) html += '</ul></div>';
+        cur = s.date;
+        const dayTotal = list.filter(x => x.date === s.date).reduce((n, x) => n + x.minutes, 0);
+        html += '<div class="hist-day"><div class="hist-date"><span>' + esc(dateHeading(s.date, t)) + '</span><span class="muted">' + dayTotal + ' min</span></div><ul class="list">';
+      }
+      html += historyRow(s);
+    }
+    html += '</ul></div>';
+    if (list.length > shown.length) {
+      html += '<div class="more-wrap"><button type="button" class="btn btn-sm" data-act="more">Show ' + Math.min(PAGE, list.length - shown.length) + ' more</button></div>';
+    }
+    box.innerHTML = html;
+    if (ui.confirmId) { const yes = $('[data-act="del-yes"]', box); if (yes) yes.focus(); }
+  }
+
+  function renderRating() {
+    $$('#f-rating [data-rating]').forEach(b => {
+      const v = Number(b.dataset.rating);
+      b.setAttribute('aria-checked', String(v === ui.rating));
+      b.tabIndex = (ui.rating ? v === ui.rating : v === 1) ? 0 : -1;
+    });
+    $('#rating-word').textContent = ui.rating ? RATING_WORDS[ui.rating] : '';
+  }
+
+  // ---------------------------------------------------------------- stopwatch
+  const sw = { running: false, startedAt: 0, accMs: 0, timer: null };
+  function swElapsed() { return sw.accMs + (sw.running ? Date.now() - sw.startedAt : 0); }
+  function swRender() {
+    const sec = Math.floor(swElapsed() / 1000);
+    const mm = String(Math.floor(sec / 60)).padStart(2, '0'), ss = String(sec % 60).padStart(2, '0');
+    $('#sw-time').textContent = mm + ':' + ss;
+    $('#sw-toggle').textContent = sw.running ? '⏸ Pause' : (sw.accMs ? '▶ Resume' : '▶ Start');
+    $('#stopwatch').classList.toggle('running', sw.running);
+  }
+  function swToggle() {
+    if (sw.running) {
+      sw.accMs += Date.now() - sw.startedAt; sw.running = false;
+      clearInterval(sw.timer); sw.timer = null;
+      const mins = Math.min(600, roundMinutes(sw.accMs));
+      if (mins > 0) { $('#f-min').value = mins; PH.toast('Stopwatch: ' + mins + ' min filled in'); }
+      else PH.toast('Under 30 seconds so far — keep going!');
+    } else {
+      sw.running = true; sw.startedAt = Date.now();
+      sw.timer = setInterval(swRender, 250);
+    }
+    swRender();
+  }
+  function swReset() {
+    clearInterval(sw.timer); sw.timer = null;
+    sw.running = false; sw.accMs = 0; sw.startedAt = 0;
+    swRender();
+  }
+
+  // ---------------------------------------------------------------- actions
+  function showError(msg, focusEl) {
+    $('#f-error').textContent = msg || '';
+    if (focusEl) focusEl.focus();
+  }
+  function saveSession(e) {
+    e.preventDefault();
+    const date = $('#f-date').value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return showError('Pick a date.', $('#f-date'));
+    let pieceId = $('#f-piece').value;
+    let newName = '';
+    if (pieceId === NEW) {
+      newName = $('#f-newpiece').value.trim();
+      if (!newName) return showError('Type the name of the new piece.', $('#f-newpiece'));
+    } else if (!pieceById(pieceId)) {
+      return showError('Choose a piece.', $('#f-piece'));
+    }
+    const minutes = Math.round(Number($('#f-min').value));
+    if (!(minutes >= 1)) return showError('How many minutes did you practise?', $('#f-min'));
+
+    if (newName) {
+      const existing = state.pieces.find(p => p.name.toLowerCase() === newName.toLowerCase());
+      if (existing) { existing.archived = false; pieceId = existing.id; }
+      else pieceId = addPiece(newName, 'My pieces').id;
+      $('#f-newpiece').value = '';
+    }
+    state.sessions.push({
+      id: PH.uid(), date, pieceId, minutes: Math.min(minutes, 600),
+      note: $('#f-note').value.trim().slice(0, 200), rating: ui.rating || 0, createdAt: Date.now()
+    });
+    state.settings.lastPieceId = pieceId;
+    persist();
+    // Reset the parts that belong to this session; keep date and piece for the next one.
+    $('#f-min').value = ''; $('#f-note').value = ''; ui.rating = 0; renderRating(); swReset(); showError('');
+    $('#f-piece').value = pieceId;
+    render();
+    PH.toast('Saved · ' + minutes + ' min on ' + pieceName(pieceId));
+  }
+
+  function setGoal(v, writeBack) {
+    const g = clampGoal(Number(v));
+    if (writeBack) $('#goal').value = g;
+    if (g === state.settings.dailyGoal) return;
+    state.settings.dailyGoal = g;
+    persist(); renderToday(); renderChart();
+  }
+
+  function cycleStatus(p) {
+    p.status = STATUSES[(STATUSES.indexOf(p.status) + 1) % STATUSES.length];
+    persist(); renderPieces();
+    PH.toast(p.name.split(' – ')[0] + ': ' + STATUS_LABEL[p.status]);
+  }
+  function setArchived(p, on) {
+    p.archived = on;
+    if (on && state.settings.lastPieceId === p.id) state.settings.lastPieceId = null;
+    persist(); render();
+    PH.toast(on ? 'Archived — history kept' : 'Restored');
+  }
+  function renamePiece(p, name) {
+    name = name.trim().slice(0, 80);
+    if (name && name !== p.name) { p.name = name; persist(); }
+    ui.renamingId = null;
+    render();
+  }
+
+  function deleteSession(id) {
+    const i = state.sessions.findIndex(s => s.id === id);
+    if (i < 0) return;
+    state.sessions.splice(i, 1);
+    ui.confirmId = null;
+    persist(); render();
+    PH.toast('Session deleted');
+  }
+  function askDelete(id) {
+    ui.confirmId = id;
+    clearTimeout(ui.confirmTimer);
+    ui.confirmTimer = setTimeout(() => { if (ui.confirmId === id) { ui.confirmId = null; renderHistory(); } }, 6000);
+    renderHistory();
+  }
+
+  function exportJSON() {
+    PH.download('piano-practice-' + today() + '.json', JSON.stringify(state, null, 2));
+    PH.toast('Exported ' + state.sessions.length + ' sessions');
+  }
+  async function importJSON() {
+    const text = await PH.pickFile('application/json');
+    if (!text) return;
+    let obj;
+    try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.sessions)) { PH.toast('That file is not a piano log (no sessions list)'); return; }
+    state = migrate(obj);
+    ui.renamingId = null; ui.confirmId = null; ui.search = ''; $('#hist-search').value = ''; ui.histLimit = PAGE;
+    persist(); render();
+    PH.toast('Imported ' + state.sessions.length + ' sessions and ' + state.pieces.length + ' pieces');
+  }
+
+  // ---------------------------------------------------------------- wiring
+  function wire() {
+    $('#log-form').addEventListener('submit', saveSession);
+    $('#f-piece').addEventListener('change', () => { toggleNewPiece(true); showError(''); });
+    $('#quick').addEventListener('click', e => {
+      const b = e.target.closest('[data-add]'); if (!b) return;
+      const inp = $('#f-min');
+      inp.value = Math.min(600, (Math.round(Number(inp.value)) || 0) + Number(b.dataset.add));
+      showError('');
+    });
+    $('#f-rating').addEventListener('click', e => {
+      const b = e.target.closest('[data-rating]'); if (!b) return;
+      const v = Number(b.dataset.rating);
+      ui.rating = ui.rating === v ? 0 : v;
+      renderRating(); b.focus();
+    });
+    $('#f-rating').addEventListener('keydown', e => {
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+      e.preventDefault();
+      const dir = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : -1;
+      const base = ui.rating || (dir > 0 ? 0 : 6);
+      ui.rating = Math.min(5, Math.max(1, base + dir));
+      renderRating();
+      $('#f-rating [data-rating="' + ui.rating + '"]').focus();
+    });
+    $('#sw-toggle').addEventListener('click', swToggle);
+    $('#sw-reset').addEventListener('click', swReset);
+
+    $('#goal').addEventListener('input', e => { const n = Number(e.target.value); if (n >= 5 && n <= 600) setGoal(n, false); });
+    $('#goal').addEventListener('change', e => setGoal(e.target.value, true));
+
+    $('#show-archived').addEventListener('change', e => { ui.showArchived = e.target.checked; renderPieces(); });
+    $('#pieces-table').addEventListener('click', e => {
+      const b = e.target.closest('[data-act]'); if (!b) return;
+      const tr = b.closest('tr[data-id]'); const p = tr && pieceById(tr.dataset.id); if (!p) return;
+      switch (b.dataset.act) {
+        case 'status': cycleStatus(p); break;
+        case 'rename': ui.renamingId = p.id; renderPieces(); break;
+        case 'rename-cancel': ui.renamingId = null; renderPieces(); break;
+        case 'archive': setArchived(p, true); break;
+        case 'unarchive': setArchived(p, false); break;
+      }
+    });
+    $('#pieces-table').addEventListener('submit', e => {
+      const f = e.target.closest('form.rename'); if (!f) return;
+      e.preventDefault();
+      const p = pieceById(f.dataset.id); if (p) renamePiece(p, $('input', f).value);
+    });
+    $('#pieces-table').addEventListener('keydown', e => {
+      if (e.key === 'Escape' && e.target.id === 'rename-input') { ui.renamingId = null; renderPieces(); }
+    });
+    $('#add-piece-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const inp = $('#np-name'); const name = inp.value.trim();
+      if (!name) { inp.focus(); return; }
+      const dup = state.pieces.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (dup) { dup.archived = false; PH.toast('Already in your list' + (dup.archived ? '' : ' — restored')); }
+      else { addPiece(name, $('#np-group').value); PH.toast('Added ' + name); }
+      inp.value = '';
+      persist(); render();
+    });
+    $('#btn-add-g3').addEventListener('click', () => {
+      const have = new Set(state.pieces.map(p => p.name.toLowerCase()));
+      const missing = G3_PIECES.filter(n => !have.has(n.toLowerCase()));
+      if (!missing.length) { PH.toast('Grade 3 pieces are already in your list'); return; }
+      state.pieces.push(...makePieces(missing, 'Grade 3 pieces'));
+      persist(); render();
+      PH.toast('Added ' + missing.length + ' Grade 3 pieces');
+    });
+
+    $('#hist-search').addEventListener('input', e => { ui.search = e.target.value; ui.histLimit = PAGE; ui.confirmId = null; renderHistory(); });
+    $('#history').addEventListener('click', e => {
+      const b = e.target.closest('[data-act]'); if (!b) return;
+      const li = b.closest('li[data-id]'); const id = li ? li.dataset.id : null;
+      switch (b.dataset.act) {
+        case 'del': askDelete(id); break;
+        case 'del-yes': deleteSession(id); break;
+        case 'del-no': ui.confirmId = null; renderHistory(); break;
+        case 'more': ui.histLimit += PAGE; renderHistory(); break;
+      }
+    });
+
+    $('#btn-export').addEventListener('click', exportJSON);
+    $('#btn-import').addEventListener('click', importJSON);
+
+    // If the tab was left open past midnight, refresh "today" when it comes back.
+    window.addEventListener('focus', () => {
+      if (renderedDay && renderedDay !== today()) {
+        if ($('#f-date').value === renderedDay) $('#f-date').value = today();
+        $('#f-date').max = today();
+        persist(); render();
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------- boot
+  $('#f-date').value = today();
+  $('#f-date').max = today();
+  renderRating();
+  swRender();
+  wire();
+  persist(); // writes seeded pieces + summary on first visit
+  render();
+})();
+</script></body></html>
