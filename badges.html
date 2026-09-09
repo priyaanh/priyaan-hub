@@ -75,6 +75,23 @@ a.btn:hover { text-decoration: none; }
 .cat-row:first-child { border-top: 0; }
 .cat-name { min-width: 0; display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
 .cat-name b { font-weight: 600; }
+.cat-em { font-size: 1.25rem; width: 2rem; height: 2rem; display: inline-grid; place-items: center; border-radius: 9px; background: var(--surface-2); flex: none; }
+.cat-row.earned .cat-em { background: var(--ok-soft); }
+.cat-status { display: flex; flex-direction: column; gap: .25rem; align-items: flex-start; }
+.cat-status .cat-date { width: auto; padding: .2rem .4rem; font-size: .8rem; }
+.cat-tools select { width: auto; flex: 0 1 auto; padding: .45rem 1.8rem .45rem .6rem; }
+/* Trail to Eagle panel */
+.eagle { margin-bottom: 1rem; padding: .9rem 1rem; border-radius: var(--radius-sm); background: var(--surface-2); }
+.eagle h3 { margin: 0; font-size: 1rem; }
+.eagle .progress { margin: .55rem 0 .7rem; height: 10px; }
+.eagle-cols { display: grid; gap: .75rem 1.25rem; grid-template-columns: 1fr 1fr; }
+.eagle-cols .lbl { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin-bottom: .3rem; }
+.eagle-cols .lbl b { color: var(--text); text-transform: none; letter-spacing: 0; font-size: .95rem; margin-right: .3rem; }
+.chips { display: flex; gap: .3rem; flex-wrap: wrap; }
+.chips .pill { font-weight: 600; }
+.chips .pill.todo { background: var(--surface); color: var(--muted); border: 1px dashed var(--border); }
+.eagle .done-msg { color: var(--ok); font-weight: 700; }
+@media (max-width: 680px) { .eagle-cols { grid-template-columns: 1fr; } }
 .cat-row.earned .cat-name b { color: var(--ok); }
 .cat-row select { width: auto; padding: .3rem 1.6rem .3rem .5rem; font-size: .85rem; color: var(--muted); }
 .cat-row.earned select, .cat-row.progress select, .cat-row.want select { color: var(--text); }
@@ -163,6 +180,7 @@ b. Option two
     <div class="card no-print" id="catalog" aria-label="All merit badges">
       <div class="cat-tools">
         <input class="input" type="search" id="catSearch" placeholder="Search badges…" aria-label="Search all merit badges" autocomplete="off">
+        <select id="catCategory" aria-label="Category"><option value="">All categories</option></select>
         <div class="tabs" role="group" aria-label="Filter badges" id="catFilters">
           <button class="tab" data-catfilter="all" aria-pressed="true">All</button>
           <button class="tab" data-catfilter="eagle" aria-pressed="false">🦅 Eagle-required</button>
@@ -171,6 +189,7 @@ b. Option two
           <button class="tab" data-catfilter="offline" aria-pressed="false">📴 Offline</button>
         </div>
       </div>
+      <div id="eagle"></div>
       <div id="catList"></div>
       <p class="muted small cat-note" id="catNote"></p>
     </div>
@@ -458,7 +477,7 @@ b. Option two
   /* ===================== Rendering ===================== */
   const $ = s => document.querySelector(s);
   const esc = PH.esc;
-  const ui = { filterLeft: false, openNotes: {}, confirm: null, catFilter: 'all', catSearch: '', catAll: false };
+  const ui = { filterLeft: false, openNotes: {}, confirm: null, catFilter: 'all', catSearch: '', catCat: '', catAll: false };
 
   function currentId() {
     const h = decodeURIComponent(location.hash.replace(/^#/, ''));
@@ -525,6 +544,7 @@ b. Option two
     const q = ui.catSearch.trim().toLowerCase();
     return CAT.filter(c => {
       if (q && c.name.toLowerCase().indexOf(q) < 0) return false;
+      if (ui.catCat && c.cat !== ui.catCat) return false;
       const st = catStatus(c.id);
       switch (ui.catFilter) {
         case 'eagle': return !!c.eagle;
@@ -546,13 +566,17 @@ b. Option two
     else if (c.eagle === 'alt') pills += '<span class="pill neutral" title="Eagle: earn one of ' + esc(c.altGroup) + '">🦅 Eagle · 1 of ' + esc(c.altGroup) + '</span>';
     if (c.retired) pills += '<span class="pill warn" title="' + esc(c.retired) + '">Retired</span>';
     if (c.note) pills += '<span class="pill neutral">' + esc(c.note) + '</span>';
-    if (status === 'earned') pills += '<span class="pill date">✓ Earned' + (st && st.date ? ' ' + esc(fmtShort(st.date)) : '') + '</span>';
+    if (status === 'earned') pills += '<span class="pill date">✓ Earned' + (trackedDone || !(st && st.date) ? '' : ' ' + esc(fmtShort(st.date))) + '</span>';
+    if (c.cat && !ui.catCat) pills += '<span class="pill neutral cat-tag">' + esc(c.cat) + '</span>';
+    const dateInp = (status === 'earned' && !trackedDone)
+      ? '<input type="date" class="input cat-date" data-catdate="' + esc(c.id) + '" value="' + esc(st && st.date || '') + '" aria-label="Date ' + esc(c.name) + ' was earned" data-fkey="catdate:' + esc(c.id) + '">'
+      : '';
     const sel = trackedDone
       ? '<span class="pill ok">Checklist complete</span>'
       : '<select data-cat="' + esc(c.id) + '" aria-label="Status for ' + esc(c.name) + '" data-fkey="cat:' + esc(c.id) + '">' +
           '<option value=""' + (status ? '' : ' selected') + '>Not started</option>' +
           Object.keys(CAT_STATUS).map(v => '<option value="' + v + '"' + (status === v ? ' selected' : '') + '>' + CAT_STATUS[v] + '</option>').join('') +
-        '</select>';
+        '</select>' + dateInp;
     let links = '';
     if (c.pdf) {
       links += local
@@ -564,8 +588,8 @@ b. Option two
     if (tracked) links += '<button class="btn btn-sm btn-ghost" data-go="' + esc(tracked.id) + '">Checklist →</button>';
     else if (!c.retired) links += '<button class="btn btn-sm btn-ghost" data-action="track-cat" data-id="' + esc(c.id) + '" title="Add a requirement checklist for this badge">＋ Checklist</button>';
     return '<div class="cat-row' + (status ? ' ' + status : '') + '" data-catrow="' + esc(c.id) + '">' +
-      '<div class="cat-name"><b>' + esc(c.name) + '</b>' + pills + '</div>' +
-      '<div>' + sel + '</div>' +
+      '<div class="cat-name"><span class="cat-em" aria-hidden="true">' + esc(c.emoji || '🎖️') + '</span><b>' + esc(c.name) + '</b>' + pills + '</div>' +
+      '<div class="cat-status">' + sel + '</div>' +
       '<div class="cat-links">' + links + '</div></div>';
   }
   function renderCatalog() {
@@ -577,6 +601,12 @@ b. Option two
         (shown.length < rows.length ? '<div class="cat-more"><button class="btn btn-sm" data-action="cat-all">Show all ' + rows.length + '</button></div>' : '')
       : '<div class="empty">No badges match' + (ui.catSearch ? ' “' + esc(ui.catSearch) + '”' : '') + '.</div>';
     Array.prototype.slice.call(document.querySelectorAll('#catFilters .tab')).forEach(t => t.setAttribute('aria-pressed', String(t.dataset.catfilter === ui.catFilter)));
+    const catSel = $('#catCategory');
+    if (catSel && catSel.options.length <= 1 && CAT_URL.CATEGORIES) {
+      CAT_URL.CATEGORIES.forEach(cat => { const o = document.createElement('option'); o.value = cat; o.textContent = cat + ' (' + CAT.filter(c => c.cat === cat).length + ')'; catSel.appendChild(o); });
+    }
+    if (catSel) catSel.value = ui.catCat;
+    renderEagle();
     const nLocal = CAT.filter(c => c.pdf && LOCAL_PDFS.has(c.pdf)).length;
     const nEagle = CAT.filter(c => c.eagle).length;
     const mine = Object.keys(state.catalog).length;
@@ -587,6 +617,53 @@ b. Option two
           : 'Workbook PDFs open from the U.S. Scouting Service Project (needs internet). To have them work offline, open Terminal in this folder and run <code>node fetch_workbooks.js</code> once — it saves every workbook into <code>badges/pdf/</code> on this device. ') +
         'Workbooks are free study aids from USSSP, not the official pamphlets; <b>Requirements</b> shows the current wording and <b>Official</b> opens Scouting America\'s page.'
       : 'The badge list did not load (badges_catalog.js is missing).';
+  }
+  /** Set of badge ids counted as earned: catalog status "earned" or a completed tracked checklist. */
+  function earnedIds() {
+    const ids = new Set(Object.keys(state.catalog).filter(id => state.catalog[id].status === 'earned'));
+    allBadges().forEach(b => { if (badgeStats(b).complete) ids.add(b.id); });
+    return ids;
+  }
+  function catByName(name) { return CAT.filter(c => c.name === name)[0] || null; }
+  function renderEagle() {
+    const el = $('#eagle'); const E = CAT_URL.EAGLE;
+    if (!el || !E) return;
+    const earned = earnedIds();
+    const has = name => { const c = catByName(name); return !!(c && earned.has(c.id)); };
+    const usedAsRequired = new Set();
+    const reqChips = E.required.map(n => { const ok = has(n); if (ok) usedAsRequired.add(catByName(n).id); return chip(n, ok, catByName(n)); });
+    let reqDone = E.required.filter(has).length;
+    E.pickOne.forEach(group => {
+      const got = group.filter(has);
+      if (got.length) { reqDone++; usedAsRequired.add(catByName(got[0]).id); }
+      reqChips.push(chip(got.length ? got[0] : group.join(' / '), got.length > 0, got.length ? catByName(got[0]) : null, got.length ? '' : 'pick one'));
+    });
+    const reqTotal = E.required.length + E.pickOne.length;
+    const electives = CAT.filter(c => earned.has(c.id) && !usedAsRequired.has(c.id));
+    const elecDone = Math.min(E.electives, electives.length);
+    const total = Math.min(E.total, reqDone + elecDone);
+    const pct = Math.round(total / E.total * 100);
+    el.innerHTML = '<div class="eagle" aria-label="Trail to Eagle">' +
+      '<div class="row between"><h3>🦅 Trail to Eagle</h3><span class="pill' + (total >= E.total ? ' ok' : '') + '">' + total + ' of ' + E.total + ' merit badges</span></div>' +
+      '<div class="progress' + (total >= E.total ? ' ok' : '') + '" role="progressbar" aria-valuenow="' + total + '" aria-valuemin="0" aria-valuemax="' + E.total + '"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="eagle-cols">' +
+        '<div><div class="lbl"><b>' + reqDone + ' / ' + reqTotal + '</b> Eagle-required</div><div class="chips">' + reqChips.join('') + '</div></div>' +
+        '<div><div class="lbl"><b>' + elecDone + ' / ' + E.electives + '</b> Electives (any other badges)</div><div class="chips">' +
+          (electives.length ? electives.map(c => chip(c.name, true, c)).join('') : '<span class="pill todo">Any ' + E.electives + ' badges you choose</span>') +
+          (electives.length > E.electives ? '<span class="pill neutral">+' + (electives.length - E.electives) + ' extra</span>' : '') +
+        '</div></div>' +
+      '</div>' +
+      (total >= E.total ? '<p class="done-msg" style="margin:.7rem 0 0">All 21 merit badges for Eagle are done — on to the project and board of review!</p>' : '') +
+    '</div>';
+    function chip(label, ok, c, extra) {
+      const em = c && c.emoji ? c.emoji + ' ' : '';
+      return '<span class="pill ' + (ok ? 'ok' : 'todo') + '" title="' + (ok ? 'Earned' : 'Still to earn') + '">' + (ok ? '✓ ' : '') + esc(em + label) + (extra ? ' · ' + esc(extra) : '') + '</span>';
+    }
+  }
+  function setCatDate(id, iso) {
+    const st = state.catalog[id]; if (!st || st.status !== 'earned') return;
+    st.date = validISO(iso) ? iso : '';
+    save(); render();
   }
   function setCatStatus(id, status) {
     if (!CAT_STATUS[status]) { delete state.catalog[id]; }
@@ -842,6 +919,8 @@ b. Option two
     const t = e.target;
     if (t.dataset.chk) { toggleDone(t.dataset.chk, t.checked); return; }
     if (t.dataset.cat) { setCatStatus(t.dataset.cat, t.value); return; }
+    if (t.dataset.catdate) { setCatDate(t.dataset.catdate, t.value); return; }
+    if (t.id === 'catCategory') { ui.catCat = t.value; ui.catAll = false; renderCatalog(); return; }
     if (t.dataset.field) { saveField(t); render(); }
   });
   main.addEventListener('input', e => {
