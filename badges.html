@@ -91,6 +91,15 @@ a.btn:hover { text-decoration: none; }
 .chips .pill { font-weight: 600; }
 .chips .pill.todo { background: var(--surface); color: var(--muted); border: 1px dashed var(--border); }
 .eagle .done-msg { color: var(--ok); font-weight: 700; }
+.tab .cnt { color: var(--muted); font-weight: 600; font-size: .78em; margin-left: .2rem; }
+.tab[aria-pressed="true"] .cnt { color: var(--accent); }
+.cat-kbd { margin-left: auto; }
+/* in-page workbook viewer */
+.pdf-dlg { width: min(96vw, 1100px); height: 92vh; max-width: none; max-height: none; padding: 0; border: 0; border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: var(--shadow); overflow: hidden; }
+.pdf-dlg::backdrop { background: rgba(0, 0, 0, .55); }
+.pdf-bar { display: flex; gap: .5rem; align-items: center; padding: .5rem .75rem; border-bottom: 1px solid var(--border); height: 3rem; }
+.pdf-bar b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-dlg iframe { display: block; width: 100%; height: calc(100% - 3rem); border: 0; background: #525659; }
 @media (max-width: 680px) { .eagle-cols { grid-template-columns: 1fr; } }
 .cat-row.earned .cat-name b { color: var(--ok); }
 .cat-row select { width: auto; padding: .3rem 1.6rem .3rem .5rem; font-size: .85rem; color: var(--muted); }
@@ -181,13 +190,15 @@ b. Option two
       <div class="cat-tools">
         <input class="input" type="search" id="catSearch" placeholder="Search badges…" aria-label="Search all merit badges" autocomplete="off">
         <select id="catCategory" aria-label="Category"><option value="">All categories</option></select>
+        <select id="catSort" aria-label="Sort badges"><option value="az">A → Z</option><option value="eagle">Eagle first</option><option value="status">By status</option><option value="cat">By category</option></select>
         <div class="tabs" role="group" aria-label="Filter badges" id="catFilters">
-          <button class="tab" data-catfilter="all" aria-pressed="true">All</button>
-          <button class="tab" data-catfilter="eagle" aria-pressed="false">🦅 Eagle-required</button>
-          <button class="tab" data-catfilter="mine" aria-pressed="false">⭐ Mine</button>
-          <button class="tab" data-catfilter="earned" aria-pressed="false">✅ Earned</button>
-          <button class="tab" data-catfilter="offline" aria-pressed="false">📴 Offline</button>
+          <button class="tab" data-catfilter="all" data-label="All" aria-pressed="true">All</button>
+          <button class="tab" data-catfilter="eagle" data-label="🦅 Eagle-required" aria-pressed="false">🦅 Eagle-required</button>
+          <button class="tab" data-catfilter="mine" data-label="⭐ Mine" aria-pressed="false">⭐ Mine</button>
+          <button class="tab" data-catfilter="earned" data-label="✅ Earned" aria-pressed="false">✅ Earned</button>
+          <button class="tab" data-catfilter="offline" data-label="📴 Offline" aria-pressed="false">📴 Offline</button>
         </div>
+        <span class="muted small cat-kbd">Press <span class="kbd">/</span> to search</span>
       </div>
       <div id="eagle"></div>
       <div id="catList"></div>
@@ -200,6 +211,11 @@ b. Option two
     <div class="card" id="bHead"></div>
     <div class="card" id="bList"></div>
   </section>
+
+  <dialog id="pdfDlg" class="pdf-dlg no-print" aria-label="Workbook viewer">
+    <div class="pdf-bar"><b id="pdfTitle"></b><a class="btn btn-sm" id="pdfOpen" href="#" target="_blank" rel="noopener">Open in new tab ↗</a><button class="btn btn-sm" data-action="pdf-close">Close ✕</button></div>
+    <iframe id="pdfFrame" title="Workbook PDF"></iframe>
+  </dialog>
 </main>
 <script src="shared.js"></script><script src="badges_catalog.js"></script><script src="badges/pdf/manifest.js"></script><script>
 (function () {
@@ -382,7 +398,7 @@ b. Option two
     if (Array.isArray(raw.hidden)) s.hidden = raw.hidden.filter(x => typeof x === 'string');
     if (isObj(raw.catalog)) Object.keys(raw.catalog).forEach(id => {
       const v = raw.catalog[id];
-      if (isObj(v) && CAT_STATUS[v.status]) s.catalog[id] = { status: v.status, date: validISO(v.date) ? v.date : '' };
+      if (isObj(v) && CAT_STATUS[v.status]) s.catalog[id] = { status: v.status, date: validISO(v.date) ? v.date : '', started: validISO(v.started) ? v.started : '' };
     });
     return s;
   }
@@ -477,7 +493,7 @@ b. Option two
   /* ===================== Rendering ===================== */
   const $ = s => document.querySelector(s);
   const esc = PH.esc;
-  const ui = { filterLeft: false, openNotes: {}, confirm: null, catFilter: 'all', catSearch: '', catCat: '', catAll: false };
+  const ui = { filterLeft: false, openNotes: {}, confirm: null, catFilter: 'all', catSearch: '', catCat: '', catSort: 'az', catAll: false };
 
   function currentId() {
     const h = decodeURIComponent(location.hash.replace(/^#/, ''));
@@ -542,18 +558,33 @@ b. Option two
   function catStatus(id) { return state.catalog[id] || null; }
   function catRows() {
     const q = ui.catSearch.trim().toLowerCase();
-    return CAT.filter(c => {
-      if (q && c.name.toLowerCase().indexOf(q) < 0) return false;
+    const rows = CAT.filter(c => {
+      if (q && (c.name + ' ' + (c.cat || '') + (c.eagle ? ' eagle' : '') + (c.retired ? ' retired' : '')).toLowerCase().indexOf(q) < 0) return false;
       if (ui.catCat && c.cat !== ui.catCat) return false;
-      const st = catStatus(c.id);
-      switch (ui.catFilter) {
-        case 'eagle': return !!c.eagle;
-        case 'mine': return !!st || !!findBadge(c.id);
-        case 'earned': return (st && st.status === 'earned') || (findBadge(c.id) && badgeStats(findBadge(c.id)).complete);
-        case 'offline': return !!(c.pdf && LOCAL_PDFS.has(c.pdf));
-        default: return true;
-      }
+      return catMatchesFilter(c, ui.catFilter);
     });
+    const STATUS_RANK = { earned: 0, progress: 1, want: 2 };
+    const eagleRank = c => c.eagle === 'required' ? 0 : c.eagle === 'alt' ? 1 : 2;
+    const statusRank = c => { const st = effectiveStatus(c); return st in STATUS_RANK ? STATUS_RANK[st] : 3; };
+    const az = (a, b) => a.name.localeCompare(b.name);
+    if (ui.catSort === 'eagle') rows.sort((a, b) => eagleRank(a) - eagleRank(b) || az(a, b));
+    else if (ui.catSort === 'status') rows.sort((a, b) => statusRank(a) - statusRank(b) || az(a, b));
+    else if (ui.catSort === 'cat') rows.sort((a, b) => (a.cat || '').localeCompare(b.cat || '') || az(a, b));
+    return rows;
+  }
+  function effectiveStatus(c) {
+    const tracked = findBadge(c.id);
+    if (tracked && badgeStats(tracked).complete) return 'earned';
+    const st = catStatus(c.id); return st ? st.status : '';
+  }
+  function catMatchesFilter(c, f) {
+    switch (f) {
+      case 'eagle': return !!c.eagle;
+      case 'mine': return !!catStatus(c.id) || !!findBadge(c.id);
+      case 'earned': return effectiveStatus(c) === 'earned';
+      case 'offline': return !!(c.pdf && LOCAL_PDFS.has(c.pdf));
+      default: return true;
+    }
   }
   function catRowHTML(c) {
     const st = catStatus(c.id);
@@ -570,7 +601,9 @@ b. Option two
     if (c.cat && !ui.catCat) pills += '<span class="pill neutral cat-tag">' + esc(c.cat) + '</span>';
     const dateInp = (status === 'earned' && !trackedDone)
       ? '<input type="date" class="input cat-date" data-catdate="' + esc(c.id) + '" value="' + esc(st && st.date || '') + '" aria-label="Date ' + esc(c.name) + ' was earned" data-fkey="catdate:' + esc(c.id) + '">'
-      : '';
+      : (status === 'progress' && st)
+        ? '<label class="small muted" style="margin:0;display:flex;gap:.3rem;align-items:center">Started <input type="date" class="input cat-date" data-catstart="' + esc(c.id) + '" value="' + esc(st.started || '') + '" aria-label="Date ' + esc(c.name) + ' was started" data-fkey="catstart:' + esc(c.id) + '"></label>'
+        : '';
     const sel = trackedDone
       ? '<span class="pill ok">Checklist complete</span>'
       : '<select data-cat="' + esc(c.id) + '" aria-label="Status for ' + esc(c.name) + '" data-fkey="cat:' + esc(c.id) + '">' +
@@ -580,7 +613,7 @@ b. Option two
     let links = '';
     if (c.pdf) {
       links += local
-        ? '<a class="btn btn-sm btn-primary" href="' + esc(CAT_URL.localBase + c.pdf) + '" target="_blank" rel="noopener" title="Saved on this device — opens without internet">📄 Workbook · offline</a>'
+        ? '<a class="btn btn-sm btn-primary" href="' + esc(CAT_URL.localBase + c.pdf) + '" target="_blank" rel="noopener" data-pdf="' + esc(CAT_URL.localBase + c.pdf) + '" data-pdfname="' + esc(c.name) + '" title="Saved on this device — opens without internet">📄 Workbook · offline</a>'
         : '<a class="btn btn-sm" href="' + esc(CAT_URL.workbookBase + c.pdf) + '" target="_blank" rel="noopener" title="Free workbook PDF from the U.S. Scouting Service Project">📄 Workbook PDF</a>';
     }
     if (c.usssp) links += '<a class="btn btn-sm btn-ghost" href="' + esc(CAT_URL.requirementsBase + c.usssp + '.asp') + '" target="_blank" rel="noopener" title="Current requirements (USSSP)">Requirements</a>';
@@ -600,7 +633,12 @@ b. Option two
       ? shown.map(catRowHTML).join('') +
         (shown.length < rows.length ? '<div class="cat-more"><button class="btn btn-sm" data-action="cat-all">Show all ' + rows.length + '</button></div>' : '')
       : '<div class="empty">No badges match' + (ui.catSearch ? ' “' + esc(ui.catSearch) + '”' : '') + '.</div>';
-    Array.prototype.slice.call(document.querySelectorAll('#catFilters .tab')).forEach(t => t.setAttribute('aria-pressed', String(t.dataset.catfilter === ui.catFilter)));
+    Array.prototype.slice.call(document.querySelectorAll('#catFilters .tab')).forEach(t => {
+      t.setAttribute('aria-pressed', String(t.dataset.catfilter === ui.catFilter));
+      const n = CAT.filter(c => catMatchesFilter(c, t.dataset.catfilter)).length;
+      t.innerHTML = esc(t.dataset.label || t.textContent) + '<span class="cnt">' + n + '</span>';
+    });
+    const sortSel = $('#catSort'); if (sortSel) sortSel.value = ui.catSort;
     const catSel = $('#catCategory');
     if (catSel && catSel.options.length <= 1 && CAT_URL.CATEGORIES) {
       CAT_URL.CATEGORIES.forEach(cat => { const o = document.createElement('option'); o.value = cat; o.textContent = cat + ' (' + CAT.filter(c => c.cat === cat).length + ')'; catSel.appendChild(o); });
@@ -660,6 +698,21 @@ b. Option two
       return '<span class="pill ' + (ok ? 'ok' : 'todo') + '" title="' + (ok ? 'Earned' : 'Still to earn') + '">' + (ok ? '✓ ' : '') + esc(em + label) + (extra ? ' · ' + esc(extra) : '') + '</span>';
     }
   }
+  function setCatStart(id, iso) {
+    const st = state.catalog[id]; if (!st || st.status !== 'progress') return;
+    st.started = validISO(iso) ? iso : '';
+    save(); render();
+  }
+  function openPdf(url, name) {
+    const dlg = $('#pdfDlg');
+    if (!dlg || typeof dlg.showModal !== 'function' || window.innerWidth < 720) return false; // phones: let the link open normally
+    $('#pdfTitle').textContent = name + ' — workbook';
+    $('#pdfOpen').href = url;
+    $('#pdfFrame').src = url;
+    dlg.showModal();
+    return true;
+  }
+  function closePdf() { const dlg = $('#pdfDlg'); if (dlg && dlg.open) dlg.close(); const f = $('#pdfFrame'); if (f) f.removeAttribute('src'); }
   function setCatDate(id, iso) {
     const st = state.catalog[id]; if (!st || st.status !== 'earned') return;
     st.date = validISO(iso) ? iso : '';
@@ -669,7 +722,9 @@ b. Option two
     if (!CAT_STATUS[status]) { delete state.catalog[id]; }
     else {
       const prev = state.catalog[id];
-      state.catalog[id] = { status, date: status === 'earned' ? (prev && prev.status === 'earned' && prev.date ? prev.date : PH.todayISO()) : '' };
+      state.catalog[id] = { status,
+        date: status === 'earned' ? (prev && prev.status === 'earned' && prev.date ? prev.date : PH.todayISO()) : '',
+        started: prev && prev.started ? prev.started : (status === 'progress' ? PH.todayISO() : '') };
     }
     save(); render();
     const c = CAT.filter(x => x.id === id)[0];
@@ -920,7 +975,9 @@ b. Option two
     if (t.dataset.chk) { toggleDone(t.dataset.chk, t.checked); return; }
     if (t.dataset.cat) { setCatStatus(t.dataset.cat, t.value); return; }
     if (t.dataset.catdate) { setCatDate(t.dataset.catdate, t.value); return; }
+    if (t.dataset.catstart) { setCatStart(t.dataset.catstart, t.value); return; }
     if (t.id === 'catCategory') { ui.catCat = t.value; ui.catAll = false; renderCatalog(); return; }
+    if (t.id === 'catSort') { ui.catSort = t.value; renderCatalog(); return; }
     if (t.dataset.field) { saveField(t); render(); }
   });
   main.addEventListener('input', e => {
@@ -935,6 +992,9 @@ b. Option two
     if (tab) { go(tab.dataset.go || null); return; }
     const cf = e.target.closest('[data-catfilter]');
     if (cf) { ui.catFilter = cf.dataset.catfilter; ui.catAll = false; renderCatalog(); return; }
+    const pdfLink = e.target.closest('a[data-pdf]');
+    if (pdfLink && !e.metaKey && !e.ctrlKey && !e.shiftKey) { if (openPdf(pdfLink.dataset.pdf, pdfLink.dataset.pdfname)) { e.preventDefault(); return; } }
+    if (e.target.id === 'pdfDlg') { closePdf(); return; } // click on the backdrop
     const noteBtn = e.target.closest('[data-note]');
     if (noteBtn) {
       const key = noteBtn.dataset.note;
@@ -957,6 +1017,7 @@ b. Option two
       case 'add-badge': addCustom(); break;
       case 'unhide': unhide(btn.dataset.id); break;
       case 'cat-all': ui.catAll = true; renderCatalog(); break;
+      case 'pdf-close': closePdf(); break;
       case 'track-cat': trackFromCatalog(btn.dataset.id); break;
       case 'filter': ui.filterLeft = !ui.filterLeft; render(); break;
       case 'print': if (b) { render(); window.print(); } break;
@@ -984,7 +1045,10 @@ b. Option two
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && ui.confirm) { ui.confirm = null; render(); }
+    const typing = /^(input|textarea|select)$/i.test((e.target && e.target.tagName) || '');
+    if (e.key === '/' && !typing && !currentId()) { const inp = $('#catSearch'); if (inp) { e.preventDefault(); inp.focus(); inp.select(); } }
   });
+  $('#pdfDlg').addEventListener('close', () => { const f = $('#pdfFrame'); if (f) f.removeAttribute('src'); });
   $('#btnExport').addEventListener('click', exportJSON);
   $('#btnImport').addEventListener('click', importJSON);
   window.addEventListener('hashchange', () => { ui.confirm = null; render(); });
