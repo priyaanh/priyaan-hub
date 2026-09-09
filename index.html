@@ -33,6 +33,7 @@
   .app[data-app="math"]     { --accent:#2f6fed; --accent-soft:rgba(47,111,237,.15); }
   .app[data-app="hindi"]    { --accent:#e0701f; --accent-soft:rgba(224,112,31,.17); }
   .app[data-app="schedule"] { --accent:#0f9d9a; --accent-soft:rgba(15,157,154,.15); }
+  .app[data-app="calendar"] { --accent:#d64292; --accent-soft:rgba(214,66,146,.15); }
   footer { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: .875rem; }
   footer .spacer { flex: 1; }
 </style>
@@ -81,6 +82,12 @@
       <div class="top"><span class="emoji">📅</span><h2>Weekly Plan</h2></div>
       <p class="desc">One week, every activity: piano, dance, Scouts, math, and Hindi, with checkboxes for each day.</p>
       <div class="summary none" data-key="ph.schedule.v1"><span class="headline">This week is empty</span><span class="sub">Open to plan the week</span></div>
+      <span class="open">Open →</span>
+    </a>
+    <a class="app" data-app="calendar" href="calendar.html">
+      <div class="top"><span class="emoji">🗓️</span><h2>Calendar</h2></div>
+      <p class="desc">Priyaan's Google Calendar inside the hub: week, month, or agenda view, plus one-tap buttons to add piano, dance, Scouts, math, and Hindi time.</p>
+      <div class="summary none" data-key="ph.calendar.v1"><span class="headline">Google Calendar</span><span class="sub">Open to see this week</span></div>
       <span class="open">Open →</span>
     </a>
   </section>

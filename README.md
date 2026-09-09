@@ -9,6 +9,7 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 | 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys. Same generator also runs from the command line. |
 | 📖 Hindi Flashcards | `hindi.html` | Vocabulary from NCERT Malhar Class 6 and Class 7 chapters, with flashcards and quizzes. |
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day. |
+| 🗓️ Calendar | `calendar.html` | Priyaan's Google Calendar embedded (week / month / agenda), one-tap "add event" buttons for each activity, and an optional Google sign-in that lists the next 7 days inside the hub. |
 
 ## How it works
 
@@ -26,6 +27,10 @@ node test_im1.js        # self-test of every topic generator
 ```
 
 Output is a self-contained HTML file in `worksheets/` with the answer key on the last page. Open it and print.
+
+## Google Calendar
+
+`calendar.html` embeds Google's own calendar view for the address in its settings (default `priyaan.haldiya@gmail.com`). The embed shows events when that Google account is signed in on the device, or when the calendar is shared with the signed-in account. The **Add to the calendar** buttons open Google Calendar's event form prefilled (piano practice, Scouts, math, Hindi, …). Listing events *inside* the hub needs a free Google API client ID; the page walks through the 5-minute setup (Google Cloud project → enable Calendar API → OAuth client with `https://priyaanh.github.io` as an authorized origin). No calendar data is stored in the repository or on any server; sign-in happens in the browser only.
 
 ## Use it offline / add to the home screen
 
