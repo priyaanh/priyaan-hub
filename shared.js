@@ -43,3 +43,26 @@ window.PH = (function () {
   function rng(seed) { let a = seed >>> 0; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, uid, toast, download, pickFile, rng };
 })();
+
+/* Offline support on the hosted site: register the service worker (sw.js) and add the web-app manifest + iOS icon so the
+   hub can be added to a home screen and opened without internet. Does nothing over file:// (browsers do not allow it there). */
+(function () {
+  if (!/^https?:$/.test(location.protocol)) return;
+  var head = document.head;
+  function link(rel, href) { if (!document.querySelector('link[rel="' + rel + '"]')) { var l = document.createElement('link'); l.rel = rel; l.href = href; head.appendChild(l); } }
+  link('manifest', 'manifest.webmanifest');
+  link('apple-touch-icon', 'apple-touch-icon.png');
+  link('icon', 'icon.svg');
+  ['mobile-web-app-capable', 'apple-mobile-web-app-capable'].forEach(function (name) {
+    if (!document.querySelector('meta[name="' + name + '"]')) { var m = document.createElement('meta'); m.name = name; m.content = 'yes'; head.appendChild(m); }
+  });
+  if (!('serviceWorker' in navigator)) return;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      var sw = reg.installing;
+      if (sw) sw.addEventListener('statechange', function () {
+        if (sw.state === 'activated' && !navigator.serviceWorker.controller && window.PH) PH.toast('Ready to use offline', 2600);
+      });
+    }).catch(function () { /* offline support is optional */ });
+  });
+})();
