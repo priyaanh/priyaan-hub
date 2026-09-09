@@ -5,7 +5,7 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 | App | File | What it does |
 | --- | --- | --- |
 | 🎹 Piano Practice | `piano.html` | Log daily practice by piece, track minutes, keep a streak. Trinity Grade 4 (2021–2023) pieces preloaded. |
-| 🏕️ Merit Badges | `badges.html` | Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting. Shows what is signed off and what is left. |
+| 🏕️ Merit Badges | `badges.html` | Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting, plus a catalog of all 139 merit badges with status, Eagle-required markers, and a workbook PDF for each (offline after one download). |
 | 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys. Same generator also runs from the command line. |
 | 📖 Hindi Flashcards | `hindi.html` | Vocabulary from NCERT Malhar Class 6 and Class 7 chapters, with flashcards and quizzes. |
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day. |
@@ -27,10 +27,21 @@ node test_im1.js        # self-test of every topic generator
 
 Output is a self-contained HTML file in `worksheets/` with the answer key on the last page. Open it and print.
 
+## Merit badge workbooks offline
+
+The badges page lists every merit badge with three links: **Workbook PDF** (the free study workbook from the U.S. Scouting Service Project), **Requirements** (current wording), and **Official** (Scouting America's page). To make the workbooks open with no internet, run once in this folder:
+
+```bash
+node fetch_workbooks.js          # downloads all 138 workbooks (~70 MB) into badges/pdf/
+node fetch_workbooks.js kayak    # just the badges whose name contains "kayak"
+```
+
+The page then shows **Workbook · offline** and opens the local file. The PDFs stay on your device: USSSP allows local Scouting use but not re-publishing, so `badges/pdf/*.pdf` is ignored by git and only an empty `manifest.js` is in the repository. Re-run the script when workbooks are updated.
+
 ## Editing the content
 
 - Piano pieces: edit the default list near the top of the script in `piano.html`, or add pieces in the app.
-- Badge requirements: the `BADGES` constant in `badges.html`. Custom badges can also be added in the app.
+- Badge requirements: the `BADGES` constant in `badges.html`. Custom badges can also be added in the app (the catalog's **＋ Checklist** button pre-fills the form). The list of all badges is `badges_catalog.js`, one badge per line.
 - Hindi vocabulary: the `CARDS` and `CHAPTERS` constants in `hindi.html`, one entry per line.
 - Weekly template: use **Edit plan** in the app, or change the default template in `schedule.html`.
 

@@ -66,6 +66,27 @@ a.btn:hover { text-decoration: none; }
 .note-view { font-size: .875rem; color: var(--muted); white-space: pre-wrap; background: var(--surface-2); padding: .35rem .6rem; border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
 .sig, .print-only { display: none; }
 
+/* ---- all merit badges catalog ---- */
+#catalog { margin-top: 0; }
+.cat-tools { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: .5rem; }
+.cat-tools .input { flex: 1 1 13rem; width: auto; }
+.cat-tools .tabs { margin: 0; }
+.cat-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .35rem .8rem; align-items: center; padding: .5rem 0; border-top: 1px solid var(--border); }
+.cat-row:first-child { border-top: 0; }
+.cat-name { min-width: 0; display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+.cat-name b { font-weight: 600; }
+.cat-row.earned .cat-name b { color: var(--ok); }
+.cat-row select { width: auto; padding: .3rem 1.6rem .3rem .5rem; font-size: .85rem; color: var(--muted); }
+.cat-row.earned select, .cat-row.progress select, .cat-row.want select { color: var(--text); }
+.cat-links { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: flex-end; }
+.cat-links .btn { text-decoration: none; }
+.cat-note { margin: .75rem 0 0; }
+.cat-more { text-align: center; margin-top: .6rem; }
+@media (max-width: 680px) {
+  .cat-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .cat-links { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
 /* ---- add-custom form ---- */
 #addCard { margin-top: 1rem; }
 #addCard textarea { font-family: var(--mono); font-size: .85rem; min-height: 9rem; }
@@ -137,6 +158,22 @@ b. Option two
       <div class="row between" style="margin-top:.75rem"><span class="small muted" id="cbPreview">Nothing parsed yet — paste requirements above</span><button class="btn btn-primary" data-action="add-badge">Add badge</button></div>
     </div>
     <div id="ovHidden"></div>
+
+    <div class="row between sect no-print"><h2>All merit badges</h2><span class="muted small" id="catCount"></span></div>
+    <div class="card no-print" id="catalog" aria-label="All merit badges">
+      <div class="cat-tools">
+        <input class="input" type="search" id="catSearch" placeholder="Search badges…" aria-label="Search all merit badges" autocomplete="off">
+        <div class="tabs" role="group" aria-label="Filter badges" id="catFilters">
+          <button class="tab" data-catfilter="all" aria-pressed="true">All</button>
+          <button class="tab" data-catfilter="eagle" aria-pressed="false">🦅 Eagle-required</button>
+          <button class="tab" data-catfilter="mine" aria-pressed="false">⭐ Mine</button>
+          <button class="tab" data-catfilter="earned" aria-pressed="false">✅ Earned</button>
+          <button class="tab" data-catfilter="offline" aria-pressed="false">📴 Offline</button>
+        </div>
+      </div>
+      <div id="catList"></div>
+      <p class="muted small cat-note" id="catNote"></p>
+    </div>
     <p class="muted small footnote no-print">Progress is saved in this browser only. Use <b>Export</b> now and then to back it up, and <b>Import</b> to load it on another device.</p>
   </section>
 
@@ -145,11 +182,17 @@ b. Option two
     <div class="card" id="bList"></div>
   </section>
 </main>
-<script src="shared.js"></script><script>
+<script src="shared.js"></script><script src="badges_catalog.js"></script><script src="badges/pdf/manifest.js"></script><script>
 (function () {
   'use strict';
   const KEY = 'ph.badges.v1';
   const SCOUT = 'Priyaan Haldiya';
+  /* Every merit badge (badges_catalog.js) + which workbook PDFs exist on this device (badges/pdf/manifest.js). */
+  const CAT = (window.MB && Array.isArray(window.MB.CATALOG)) ? window.MB.CATALOG : [];
+  const CAT_URL = window.MB || {};
+  const LOCAL_PDFS = new Set(Array.isArray(window.PH_LOCAL_PDFS) ? window.PH_LOCAL_PDFS : []);
+  const CAT_STATUS = { want: 'Want to earn', progress: 'In progress', earned: 'Earned' };
+  const CAT_PAGE = 40; // rows shown before "Show all"
 
   /* ===================== Official requirements (transcribed from the pamphlets) ===================== */
   const BADGES = [
@@ -291,7 +334,7 @@ b. Option two
     return !isNaN(d.getTime()) && PH.todayISO(d) === s;
   }
   function isObj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
-  function blank() { return { version: 1, done: {}, notes: {}, counselors: {}, targetDates: {}, custom: [], hidden: [], summary: {} }; }
+  function blank() { return { version: 1, done: {}, notes: {}, counselors: {}, targetDates: {}, custom: [], hidden: [], catalog: {}, summary: {} }; }
   function cleanDone(v) {
     return { date: isObj(v) && validISO(v.date) ? v.date : PH.todayISO(), by: isObj(v) && typeof v.by === 'string' ? v.by : '' };
   }
@@ -318,6 +361,10 @@ b. Option two
     if (isObj(raw.targetDates)) Object.keys(raw.targetDates).forEach(k => { if (validISO(raw.targetDates[k])) s.targetDates[k] = raw.targetDates[k]; });
     if (Array.isArray(raw.custom)) s.custom = raw.custom.map(cleanBadge).filter(Boolean);
     if (Array.isArray(raw.hidden)) s.hidden = raw.hidden.filter(x => typeof x === 'string');
+    if (isObj(raw.catalog)) Object.keys(raw.catalog).forEach(id => {
+      const v = raw.catalog[id];
+      if (isObj(v) && CAT_STATUS[v.status]) s.catalog[id] = { status: v.status, date: validISO(v.date) ? v.date : '' };
+    });
     return s;
   }
   const stored = PH.load(KEY, null);
@@ -357,6 +404,7 @@ b. Option two
     let done = 0, total = 0, earned = 0;
     const parts = [];
     list.forEach(b => { const s = badgeStats(b); done += s.done; total += s.total; if (s.complete) earned++; parts.push({ n: shortName(b), pct: s.pct }); });
+    earned += catalogEarnedExtra(list);
     const headline = earned
       ? earned + ' badge' + (earned > 1 ? 's' : '') + ' earned · ' + done + '/' + total + ' done'
       : done + ' of ' + total + ' requirements done';
@@ -365,6 +413,11 @@ b. Option two
     if (sub.length > 72) sub = line(parts.filter(p => p.pct > 0));
     if (!sub) sub = list.length ? 'Open to see all requirements' : 'No badges yet';
     return { headline, sub };
+  }
+  /** Badges marked "Earned" in the catalog that are not also tracked checklists (so nothing is counted twice). */
+  function catalogEarnedExtra(list) {
+    const tracked = new Set(list.map(b => b.id));
+    return Object.keys(state.catalog).filter(id => state.catalog[id].status === 'earned' && !tracked.has(id)).length;
   }
   function fmtLong(iso) { return PH.fmtDate(iso, { month: 'short', day: 'numeric', year: 'numeric' }); }
   function fmtShort(iso) {
@@ -405,7 +458,7 @@ b. Option two
   /* ===================== Rendering ===================== */
   const $ = s => document.querySelector(s);
   const esc = PH.esc;
-  const ui = { filterLeft: false, openNotes: {}, confirm: null };
+  const ui = { filterLeft: false, openNotes: {}, confirm: null, catFilter: 'all', catSearch: '', catAll: false };
 
   function currentId() {
     const h = decodeURIComponent(location.hash.replace(/^#/, ''));
@@ -444,6 +497,8 @@ b. Option two
       if (s.complete) earned++; else if (s.done > 0) inProg++;
       return badgeCard(b, s);
     });
+    earned += catalogEarnedExtra(list);
+    inProg += Object.keys(state.catalog).filter(id => state.catalog[id].status === 'progress' && !findBadge(id)).length;
     $('#ovStats').innerHTML =
       '<div class="stats">' +
         '<div class="stat"><div class="num">' + earned + '</div><div class="lbl">Badge' + (earned === 1 ? '' : 's') + ' earned</div></div>' +
@@ -461,6 +516,98 @@ b. Option two
       ? '<div class="row small muted hidden-row no-print"><span>Hidden:</span>' + hid.map(b =>
           '<span class="row" style="gap:.2rem">' + esc(b.emoji + ' ' + b.name) + '<button class="btn btn-ghost btn-sm" data-action="unhide" data-id="' + esc(b.id) + '">Show</button></span>').join('') + '</div>'
       : '';
+    renderCatalog();
+  }
+
+  /* ===================== All merit badges (catalog) ===================== */
+  function catStatus(id) { return state.catalog[id] || null; }
+  function catRows() {
+    const q = ui.catSearch.trim().toLowerCase();
+    return CAT.filter(c => {
+      if (q && c.name.toLowerCase().indexOf(q) < 0) return false;
+      const st = catStatus(c.id);
+      switch (ui.catFilter) {
+        case 'eagle': return !!c.eagle;
+        case 'mine': return !!st || !!findBadge(c.id);
+        case 'earned': return (st && st.status === 'earned') || (findBadge(c.id) && badgeStats(findBadge(c.id)).complete);
+        case 'offline': return !!(c.pdf && LOCAL_PDFS.has(c.pdf));
+        default: return true;
+      }
+    });
+  }
+  function catRowHTML(c) {
+    const st = catStatus(c.id);
+    const tracked = findBadge(c.id);
+    const trackedDone = tracked && badgeStats(tracked).complete;
+    const status = trackedDone ? 'earned' : (st ? st.status : '');
+    const local = !!(c.pdf && LOCAL_PDFS.has(c.pdf));
+    let pills = '';
+    if (c.eagle === 'required') pills += '<span class="pill" title="Required for Eagle Scout">🦅 Eagle</span>';
+    else if (c.eagle === 'alt') pills += '<span class="pill neutral" title="Eagle: earn one of ' + esc(c.altGroup) + '">🦅 Eagle · 1 of ' + esc(c.altGroup) + '</span>';
+    if (c.retired) pills += '<span class="pill warn" title="' + esc(c.retired) + '">Retired</span>';
+    if (c.note) pills += '<span class="pill neutral">' + esc(c.note) + '</span>';
+    if (status === 'earned') pills += '<span class="pill date">✓ Earned' + (st && st.date ? ' ' + esc(fmtShort(st.date)) : '') + '</span>';
+    const sel = trackedDone
+      ? '<span class="pill ok">Checklist complete</span>'
+      : '<select data-cat="' + esc(c.id) + '" aria-label="Status for ' + esc(c.name) + '" data-fkey="cat:' + esc(c.id) + '">' +
+          '<option value=""' + (status ? '' : ' selected') + '>Not started</option>' +
+          Object.keys(CAT_STATUS).map(v => '<option value="' + v + '"' + (status === v ? ' selected' : '') + '>' + CAT_STATUS[v] + '</option>').join('') +
+        '</select>';
+    let links = '';
+    if (c.pdf) {
+      links += local
+        ? '<a class="btn btn-sm btn-primary" href="' + esc(CAT_URL.localBase + c.pdf) + '" target="_blank" rel="noopener" title="Saved on this device — opens without internet">📄 Workbook · offline</a>'
+        : '<a class="btn btn-sm" href="' + esc(CAT_URL.workbookBase + c.pdf) + '" target="_blank" rel="noopener" title="Free workbook PDF from the U.S. Scouting Service Project">📄 Workbook PDF</a>';
+    }
+    if (c.usssp) links += '<a class="btn btn-sm btn-ghost" href="' + esc(CAT_URL.requirementsBase + c.usssp + '.asp') + '" target="_blank" rel="noopener" title="Current requirements (USSSP)">Requirements</a>';
+    links += '<a class="btn btn-sm btn-ghost" href="' + esc(CAT_URL.officialBase + c.id + '/') + '" target="_blank" rel="noopener" title="Scouting America merit badge page">Official</a>';
+    if (tracked) links += '<button class="btn btn-sm btn-ghost" data-go="' + esc(tracked.id) + '">Checklist →</button>';
+    else if (!c.retired) links += '<button class="btn btn-sm btn-ghost" data-action="track-cat" data-id="' + esc(c.id) + '" title="Add a requirement checklist for this badge">＋ Checklist</button>';
+    return '<div class="cat-row' + (status ? ' ' + status : '') + '" data-catrow="' + esc(c.id) + '">' +
+      '<div class="cat-name"><b>' + esc(c.name) + '</b>' + pills + '</div>' +
+      '<div>' + sel + '</div>' +
+      '<div class="cat-links">' + links + '</div></div>';
+  }
+  function renderCatalog() {
+    const listEl = $('#catList'); if (!listEl) return;
+    const rows = catRows();
+    const shown = ui.catAll || rows.length <= CAT_PAGE ? rows : rows.slice(0, CAT_PAGE);
+    listEl.innerHTML = rows.length
+      ? shown.map(catRowHTML).join('') +
+        (shown.length < rows.length ? '<div class="cat-more"><button class="btn btn-sm" data-action="cat-all">Show all ' + rows.length + '</button></div>' : '')
+      : '<div class="empty">No badges match' + (ui.catSearch ? ' “' + esc(ui.catSearch) + '”' : '') + '.</div>';
+    Array.prototype.slice.call(document.querySelectorAll('#catFilters .tab')).forEach(t => t.setAttribute('aria-pressed', String(t.dataset.catfilter === ui.catFilter)));
+    const nLocal = CAT.filter(c => c.pdf && LOCAL_PDFS.has(c.pdf)).length;
+    const nEagle = CAT.filter(c => c.eagle).length;
+    const mine = Object.keys(state.catalog).length;
+    $('#catCount').textContent = CAT.length + ' badges · ' + nEagle + ' Eagle-required or alternates' + (mine ? ' · ' + mine + ' marked' : '');
+    $('#catNote').innerHTML = CAT.length
+      ? (nLocal
+          ? '📴 <b>' + nLocal + ' workbook' + (nLocal === 1 ? '' : 's') + ' saved on this device</b> — they open without internet. '
+          : 'Workbook PDFs open from the U.S. Scouting Service Project (needs internet). To have them work offline, open Terminal in this folder and run <code>node fetch_workbooks.js</code> once — it saves every workbook into <code>badges/pdf/</code> on this device. ') +
+        'Workbooks are free study aids from USSSP, not the official pamphlets; <b>Requirements</b> shows the current wording and <b>Official</b> opens Scouting America\'s page.'
+      : 'The badge list did not load (badges_catalog.js is missing).';
+  }
+  function setCatStatus(id, status) {
+    if (!CAT_STATUS[status]) { delete state.catalog[id]; }
+    else {
+      const prev = state.catalog[id];
+      state.catalog[id] = { status, date: status === 'earned' ? (prev && prev.status === 'earned' && prev.date ? prev.date : PH.todayISO()) : '' };
+    }
+    save(); render();
+    const c = CAT.filter(x => x.id === id)[0];
+    if (c) PH.toast(c.name + ': ' + (CAT_STATUS[status] || 'not started'));
+  }
+  function trackFromCatalog(id) {
+    const c = CAT.filter(x => x.id === id)[0]; if (!c) return;
+    const card = $('#addCard'); card.hidden = false;
+    const opener = document.querySelector('[data-action="toggle-add"][aria-controls]');
+    if (opener) opener.setAttribute('aria-expanded', 'true');
+    $('#cbName').value = c.name; $('#cbYear').value = ''; $('#cbEmoji').value = '🎖️';
+    if (!$('#cbReqs').value.trim()) $('#cbReqs').placeholder = 'Paste the requirements for ' + c.name + ' here (open its Requirements link, select all the numbered requirements, copy, paste).';
+    previewParse();
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#cbReqs').focus();
+    PH.toast('Paste the ' + c.name + ' requirements, then Add');
   }
 
   function badgeCard(b, s) {
@@ -683,6 +830,7 @@ b. Option two
       Object.keys(inc.targetDates).forEach(id => { state.targetDates[id] = inc.targetDates[id]; });
       inc.custom.forEach(b => { if (!findBadge(b.id)) { state.custom.push(b); c++; } });
       inc.hidden.forEach(id => { if (state.hidden.indexOf(id) < 0 && findBadge(id)) state.hidden.push(id); });
+      Object.keys(inc.catalog).forEach(id => { state.catalog[id] = inc.catalog[id]; });
       save(); render();
       PH.toast('Imported ' + n + ' check mark' + (n === 1 ? '' : 's') + (c ? ' and ' + c + ' custom badge' + (c === 1 ? '' : 's') : ''), 2600);
     });
@@ -693,6 +841,7 @@ b. Option two
   main.addEventListener('change', e => {
     const t = e.target;
     if (t.dataset.chk) { toggleDone(t.dataset.chk, t.checked); return; }
+    if (t.dataset.cat) { setCatStatus(t.dataset.cat, t.value); return; }
     if (t.dataset.field) { saveField(t); render(); }
   });
   main.addEventListener('input', e => {
@@ -700,10 +849,13 @@ b. Option two
     if (t.dataset.notefor) { setNote(t.dataset.notefor, t.value); return; }
     if (t.dataset.field) { saveField(t); return; }
     if (t.id === 'cbReqs') previewParse();
+    if (t.id === 'catSearch') { ui.catSearch = t.value; ui.catAll = false; renderCatalog(); }
   });
   main.addEventListener('click', e => {
     const tab = e.target.closest('[data-go]');
     if (tab) { go(tab.dataset.go || null); return; }
+    const cf = e.target.closest('[data-catfilter]');
+    if (cf) { ui.catFilter = cf.dataset.catfilter; ui.catAll = false; renderCatalog(); return; }
     const noteBtn = e.target.closest('[data-note]');
     if (noteBtn) {
       const key = noteBtn.dataset.note;
@@ -725,6 +877,8 @@ b. Option two
       }
       case 'add-badge': addCustom(); break;
       case 'unhide': unhide(btn.dataset.id); break;
+      case 'cat-all': ui.catAll = true; renderCatalog(); break;
+      case 'track-cat': trackFromCatalog(btn.dataset.id); break;
       case 'filter': ui.filterLeft = !ui.filterLeft; render(); break;
       case 'print': if (b) { render(); window.print(); } break;
       case 'mark-all': if (b) markAll(b); break;
