@@ -1,0 +1,436 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From a PDF · Priyaan's Hub</title>
+<link rel="stylesheet" href="shared.css"><style>
+main > * + * { margin-top: 1rem; }
+.drop { border: 2px dashed var(--border); border-radius: var(--radius); padding: 1.6rem 1rem; text-align: center; background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop .big { font-size: 2rem; line-height: 1; }
+.drop h3 { margin: .5rem 0 .2rem; }
+.file { display: flex; gap: .7rem; align-items: center; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.file .ic { font-size: 1.6rem; flex: none; }
+.file .fi { flex: 1; min-width: 0; }
+.file .fi .nm { font-weight: 600; overflow-wrap: anywhere; }
+.file .fi .sz { font-size: .8rem; color: var(--muted); }
+.opts { display: grid; gap: .9rem; grid-template-columns: 1fr; margin-top: 1rem; }
+@media (min-width: 760px) { .opts { grid-template-columns: auto auto 1fr; align-items: end; } }
+.tabs .tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); box-shadow: none; }
+.countbtns { display: flex; gap: .3rem; }
+.countbtns .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.gen-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
+.spin { display: inline-block; width: 1rem; height: 1rem; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: sp .7s linear infinite; vertical-align: -.15rem; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.note { font-size: .85rem; color: var(--muted); }
+.key-row { display: grid; gap: .6rem; grid-template-columns: 1fr; }
+@media (min-width: 720px) { .key-row { grid-template-columns: 1fr auto auto; align-items: end; } }
+/* problems */
+.plist { list-style: none; margin: 0; padding: 0; display: grid; gap: .8rem; grid-template-columns: 1fr; }
+@media (min-width: 780px) { .plist.two { grid-template-columns: 1fr 1fr; } }
+.prob { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .7rem .8rem; background: var(--surface); }
+.prob.right { border-color: var(--ok); background: var(--ok-soft); }
+.prob.wrong { border-color: var(--danger); background: var(--danger-soft); }
+.prob .qline { display: flex; gap: .55rem; line-height: 1.5; }
+.prob .n { font-weight: 800; color: var(--accent); min-width: 1.6rem; font-variant-numeric: tabular-nums; }
+.prob .qt { flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.prob .tag { font-size: .7rem; color: var(--muted); margin-top: .25rem; }
+.choices { display: grid; gap: .35rem; margin: .55rem 0 0; }
+.choice { display: flex; gap: .5rem; align-items: flex-start; text-align: left; padding: .45rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; color: inherit; width: 100%; }
+.choice:hover { border-color: var(--accent); background: var(--surface-2); }
+.choice .lt { font-weight: 700; color: var(--muted); flex: none; }
+.choice.pick { border-color: var(--accent); background: var(--accent-soft); }
+.choice.ok { border-color: var(--ok); background: var(--ok-soft); }
+.choice.no { border-color: var(--danger); background: var(--danger-soft); }
+.ans-row { display: flex; gap: .4rem; margin-top: .5rem; }
+.ans-row .input { flex: 1; min-width: 0; font-family: var(--mono); }
+.explain { margin-top: .45rem; font-size: .88rem; border-top: 1px dashed var(--border); padding-top: .4rem; }
+.explain b { color: var(--text); }
+.saved-row { display: flex; gap: .7rem; align-items: center; padding: .55rem 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.saved-row:first-child { border-top: 0; }
+.saved-row .meta { flex: 1; min-width: 12rem; }
+.saved-row .meta .t { font-weight: 600; }
+.saved-row .meta .s { font-size: .8rem; color: var(--muted); }
+#printFrame { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }
+details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.steps { margin: .5rem 0 0 1.1rem; padding: 0; font-size: .9rem; } .steps li { margin: .3rem 0; }
+</style></head>
+<body data-app="ai">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <div class="title"><span class="emoji">📄</span><span class="name">From a PDF</span></div>
+  <div class="spacer"></div>
+  <button class="btn btn-sm" id="exportBtn">↓ Export</button>
+  <button class="btn btn-sm" id="importBtn">↑ Import</button>
+</div></header>
+<main class="container">
+
+  <section class="card" id="setupCard" aria-labelledby="h-key">
+    <div class="card-head"><h2 id="h-key">Connect Claude</h2><span class="pill neutral" id="keyState">No key yet</span></div>
+    <p class="note">This page sends your PDF to Claude and gets practice problems back. It needs an Anthropic API key, which is stored <b>only in this browser</b> and never leaves it except in the request to Anthropic. Use a key with a spending limit, and don't add one on a shared computer.</p>
+    <div class="key-row" style="margin-top:.7rem">
+      <div class="field"><label for="keyIn">Anthropic API key</label><input class="input" id="keyIn" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"></div>
+      <button class="btn btn-primary" id="saveKey">Save key</button>
+      <button class="btn btn-ghost btn-danger" id="clearKey" hidden>Remove</button>
+    </div>
+    <details style="margin-top:.9rem"><summary>How to get a key (parent, about 3 minutes)</summary>
+      <ol class="steps">
+        <li>Go to <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> and sign in.</li>
+        <li>Add a small amount of credit under <b>Billing</b>, and set a monthly limit so it can never overspend.</li>
+        <li>Open <b>API keys → Create key</b>, copy it, and paste it above.</li>
+        <li>Each worksheet costs a few cents. The exact cost of every run is shown after it finishes.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="card" aria-labelledby="h-src">
+    <div class="card-head"><h2 id="h-src">1 · Pick the PDF</h2><span class="muted small">a chapter, a worksheet, notes, a study guide</span></div>
+    <div id="dropWrap">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a PDF or picture">
+        <div class="big">📄</div><h3>Drop a PDF here</h3>
+        <div class="note">or click to choose · PDF or a photo of a page · up to 20 MB</div>
+      </div>
+    </div>
+    <input type="file" id="fileIn" accept="application/pdf,image/png,image/jpeg,image/webp" hidden>
+    <div id="fileBox" hidden></div>
+
+    <div class="opts">
+      <div class="field"><label>Make</label>
+        <div class="tabs" id="kindTabs" role="group" aria-label="What to make">
+          <button class="tab" data-kind="worksheet">📝 Worksheet</button><button class="tab" data-kind="quiz">❓ Quiz</button>
+        </div>
+      </div>
+      <div class="field"><label>How many questions</label>
+        <div class="countbtns" id="countBtns">
+          <button class="btn btn-sm" data-count="5">5</button><button class="btn btn-sm" data-count="10">10</button>
+          <button class="btn btn-sm" data-count="15">15</button><button class="btn btn-sm" data-count="20">20</button>
+        </div>
+      </div>
+      <div class="field"><label for="focusIn">Anything to focus on? (optional)</label>
+        <input class="input" id="focusIn" placeholder="e.g. just the word problems, or section 2.3" maxlength="200"></div>
+    </div>
+
+    <div class="gen-actions">
+      <button class="btn btn-primary" id="genBtn">✨ Make it</button>
+      <span class="note" id="genNote"></span>
+    </div>
+  </section>
+
+  <section class="card" id="outCard" hidden aria-labelledby="h-out">
+    <div class="card-head"><h2 id="h-out">Result</h2>
+      <div class="row no-print" style="gap:.4rem">
+        <span class="pill" id="outMeta"></span>
+        <button class="btn btn-sm" id="answersBtn" aria-pressed="false">👁 Answers</button>
+        <button class="btn btn-sm" id="printBtn">🖨️ Print</button>
+        <button class="btn btn-sm" id="dlBtn">⬇ Download</button>
+      </div>
+    </div>
+    <p class="note" id="outSummary"></p>
+    <div class="row between no-print" id="quizBar" hidden><span class="score" id="scoreLbl"></span>
+      <button class="btn btn-sm btn-primary" id="finishBtn">Save score</button></div>
+    <ol class="plist" id="plist"></ol>
+  </section>
+
+  <section class="card" aria-labelledby="h-saved">
+    <div class="card-head"><h2 id="h-saved">Saved sets</h2><span class="muted small">kept in this browser, work offline</span></div>
+    <div id="saved"></div>
+  </section>
+</main>
+<iframe id="printFrame" title="Printable worksheet" aria-hidden="true"></iframe>
+<script src="shared.js"></script><script>
+(function () {
+  'use strict';
+  const KEY = 'ph.ai.v1', KEYKEY = 'ph.ai.key';           // the API key lives under its own key so Export never includes it
+  const API = 'https://api.anthropic.com/v1/messages';
+  const MODEL = 'claude-opus-5';                            // input $5 / output $25 per million tokens
+  const PRICE_IN = 5 / 1e6, PRICE_OUT = 25 / 1e6;
+  const MAX_BYTES = 20 * 1024 * 1024;
+  const $ = s => document.querySelector(s), $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
+  const esc = PH.esc;
+
+  /* ---------------- state ---------------- */
+  function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10 }, summary: { headline: '', sub: '' } }; }
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  function normalize(raw) {
+    const s = blank();
+    if (!isObj(raw)) return s;
+    const st = isObj(raw.settings) ? raw.settings : {};
+    if (st.kind === 'quiz' || st.kind === 'worksheet') s.settings.kind = st.kind;
+    if (isFinite(st.count)) s.settings.count = Math.min(20, Math.max(3, Math.round(st.count)));
+    if (Array.isArray(raw.sets)) s.sets = raw.sets.filter(isObj).map(x => ({
+      id: typeof x.id === 'string' && x.id ? x.id : PH.uid(),
+      date: typeof x.date === 'string' ? x.date : PH.todayISO(),
+      kind: x.kind === 'quiz' ? 'quiz' : 'worksheet',
+      title: typeof x.title === 'string' ? x.title : 'Practice set',
+      source: typeof x.source === 'string' ? x.source : '',
+      summary: typeof x.summary === 'string' ? x.summary : '',
+      score: isObj(x.score) && isFinite(x.score.right) ? { right: x.score.right, total: x.score.total } : null,
+      problems: Array.isArray(x.problems) ? x.problems.filter(isObj).map(p => ({
+        question: String(p.question || ''), answer: String(p.answer || ''), work: String(p.work || ''),
+        topic: String(p.topic || ''), choices: Array.isArray(p.choices) ? p.choices.map(String).slice(0, 6) : []
+      })).filter(p => p.question && p.answer) : []
+    })).filter(x => x.problems.length).slice(0, 60);
+    return s;
+  }
+  let state = normalize(PH.load(KEY, null));
+  let apiKey = '';
+  try { apiKey = localStorage.getItem(KEYKEY) || ''; } catch (e) {}
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+  function buildSummary() {
+    if (!state.sets.length) return { headline: '', sub: '' };
+    const s = state.sets[0], scored = state.sets.filter(x => x.score);
+    return { headline: state.sets.length + ' set' + (state.sets.length === 1 ? '' : 's') + ' from PDFs',
+      sub: (s.score ? 'Last: ' + s.score.right + '/' + s.score.total + ' · ' : '') + s.title.slice(0, 40) +
+        (scored.length > 1 ? ' · ' + scored.length + ' quizzes taken' : '') };
+  }
+
+  /* ---------------- file ---------------- */
+  let file = null;   // { name, size, mime, b64 }
+  function readFile(f) {
+    if (!f) return;
+    if (f.size > MAX_BYTES) { PH.toast('That file is ' + fmtSize(f.size) + ' — too big. Try up to 20 MB.', 3200); return; }
+    const okType = f.type === 'application/pdf' || /^image\/(png|jpeg|webp)$/.test(f.type);
+    if (!okType) { PH.toast('Pick a PDF or a photo (PNG or JPG)', 3000); return; }
+    const r = new FileReader();
+    r.onload = () => {
+      file = { name: f.name, size: f.size, mime: f.type, b64: String(r.result).split(',')[1] || '' };
+      renderFile();
+    };
+    r.onerror = () => PH.toast('Could not read that file');
+    r.readAsDataURL(f);
+  }
+  function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB'; }
+  function renderFile() {
+    $('#dropWrap').hidden = !!file; $('#fileBox').hidden = !file;
+    if (file) $('#fileBox').innerHTML = '<div class="file"><span class="ic">' + (file.mime === 'application/pdf' ? '📄' : '🖼️') + '</span>' +
+      '<span class="fi"><span class="nm">' + esc(file.name) + '</span><span class="sz">' + fmtSize(file.size) + '</span></span>' +
+      '<button class="btn btn-sm btn-ghost btn-danger" id="dropFile">Change</button></div>';
+    renderControls();
+  }
+
+  /* ---------------- Claude ---------------- */
+  const SCHEMA = {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Short title for the set, from the document, e.g. "Unit 3 · Solving Equations"' },
+      source_summary: { type: 'string', description: 'One sentence on what the document covers.' },
+      problems: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            question: { type: 'string', description: 'The question. Plain text; ^ for exponents (x^2), / for fractions.' },
+            choices: { type: 'array', items: { type: 'string' }, description: 'Exactly 4 options for a quiz; an empty array for a worksheet.' },
+            answer: { type: 'string', description: 'The correct answer. For multiple choice, the exact text of the right option.' },
+            work: { type: 'string', description: 'One to three short lines showing how to get it.' },
+            topic: { type: 'string', description: 'A 1-4 word label for the skill.' }
+          },
+          required: ['question', 'choices', 'answer', 'work', 'topic'], additionalProperties: false
+        }
+      }
+    },
+    required: ['title', 'source_summary', 'problems'], additionalProperties: false
+  };
+  function prompt(kind, count, focus) {
+    return 'You are making practice for Priyaan, a 7th grader in California. The attached document is his class material.\n\n' +
+      'Write ' + count + ' NEW practice ' + (kind === 'quiz' ? 'quiz questions' : 'problems') + ' that test the same skills as the document. ' +
+      'Do not copy its questions word for word: change the numbers, names and situations, and keep the same kind of thinking and the same level.\n\n' +
+      (kind === 'quiz'
+        ? 'Every question must be multiple choice with exactly 4 options in "choices". Put the exact text of the correct option in "answer". Make the three wrong options believable — the kinds of mistakes a student really makes, not silly ones.\n'
+        : 'These are for a printed worksheet, so "choices" must be an empty array and the student writes the answer. Put the final answer in "answer".\n') +
+      'Order the problems from easier to harder. Cover the range of skills in the document rather than repeating one. ' +
+      'Write the maths in plain text: ^ for exponents (x^2), / for fractions (2/3), * for multiply, and a plain minus sign. No LaTeX and no markdown. ' +
+      'Keep "work" to one to three short lines a student could follow.' +
+      (focus ? '\n\nThe parent asked you to focus on: ' + focus : '') +
+      '\n\nIf the document has no material that can be practised (for example it is a permission slip), return an empty "problems" array and say why in "source_summary".';
+  }
+  async function generate() {
+    if (!apiKey) { PH.toast('Add your Anthropic API key first'); $('#keyIn').focus(); return; }
+    if (!file) { PH.toast('Pick a PDF first'); return; }
+    const kind = state.settings.kind, count = state.settings.count, focus = $('#focusIn').value.trim();
+    setBusy(true, 'Reading the document and writing questions… this takes 20–60 seconds.');
+    const doc = file.mime === 'application/pdf'
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: file.b64 } }
+      : { type: 'image', source: { type: 'base64', media_type: file.mime, data: file.b64 } };
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: MODEL, max_tokens: 16000,
+          output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+          messages: [{ role: 'user', content: [doc, { type: 'text', text: prompt(kind, count, focus) }] }]
+        })
+      });
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const e = await res.json(); if (e && e.error && e.error.message) msg = e.error.message; } catch (err) {}
+        if (res.status === 401) msg = 'That API key was not accepted. Check it and save it again.';
+        if (res.status === 429) msg = 'Anthropic is rate-limiting or the account is out of credit. Try again in a minute.';
+        setBusy(false, '⚠️ ' + msg); return;
+      }
+      const data = await res.json();
+      if (data.stop_reason === 'refusal') { setBusy(false, '⚠️ Claude declined this document. Try a different one.'); return; }
+      const textBlock = (data.content || []).filter(b => b.type === 'text')[0];
+      let out; try { out = JSON.parse(textBlock.text); } catch (e) { setBusy(false, '⚠️ Could not read the response. Try again.'); return; }
+      const problems = (out.problems || []).filter(p => p && p.question && p.answer);
+      if (!problems.length) { setBusy(false, '⚠️ ' + (out.source_summary || 'Nothing practisable in that document.')); return; }
+      const set = { id: PH.uid(), date: PH.todayISO(), kind, title: out.title || file.name.replace(/\.[^.]+$/, ''),
+        source: file.name, summary: out.source_summary || '', score: null,
+        problems: problems.map(p => ({ question: String(p.question), answer: String(p.answer), work: String(p.work || ''),
+          topic: String(p.topic || ''), choices: Array.isArray(p.choices) ? p.choices.map(String) : [] })) };
+      state.sets.unshift(set); state.sets = state.sets.slice(0, 60); save();
+      const u = data.usage || {};
+      const cost = ((u.input_tokens || 0) * PRICE_IN + (u.output_tokens || 0) * PRICE_OUT);
+      setBusy(false, '✅ ' + set.problems.length + ' ' + (kind === 'quiz' ? 'questions' : 'problems') + ' · cost about ' + (cost < 0.005 ? 'a fifth of a cent' : cost < 0.10 ? Math.round(cost * 100) + ' cents' : '$' + cost.toFixed(2)));
+      show(set); renderSaved();
+    } catch (e) {
+      setBusy(false, '⚠️ ' + (navigator.onLine === false ? 'You are offline — saved sets below still work.' : 'Could not reach Anthropic: ' + e.message));
+    }
+  }
+  function setBusy(on, note) {
+    $('#genBtn').disabled = on;
+    $('#genBtn').innerHTML = on ? '<span class="spin"></span> Working…' : '✨ Make it';
+    $('#genNote').innerHTML = note ? esc(note).replace(/⚠️|✅/g, m => m) : '';
+  }
+
+  /* ---------------- showing a set ---------------- */
+  let cur = null, marks = {}, showAns = false;
+  function show(set) {
+    cur = set; marks = {}; showAns = false;
+    $('#answersBtn').setAttribute('aria-pressed', 'false');
+    $('#outCard').hidden = false;
+    renderOut();
+    $('#outCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function renderOut() {
+    if (!cur) return;
+    const quiz = cur.kind === 'quiz';
+    $('#outMeta').textContent = (quiz ? 'Quiz' : 'Worksheet') + ' · ' + cur.problems.length + ' questions';
+    $('#outSummary').textContent = cur.summary ? cur.summary + ' (from ' + cur.source + ')' : 'From ' + cur.source;
+    $('#quizBar').hidden = !quiz;
+    $('#plist').className = 'plist' + (quiz ? '' : ' two');
+    $('#plist').innerHTML = cur.problems.map((p, i) => {
+      const m = marks[i];
+      let inner = '<div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + esc(p.question) +
+        (p.topic ? '<div class="tag">' + esc(p.topic) + '</div>' : '') + '</div></div>';
+      if (quiz && p.choices.length) {
+        inner += '<div class="choices">' + p.choices.map((c, j) => {
+          let cls = '';
+          if (m) { if (c === p.answer) cls = ' ok'; else if (m.pick === j) cls = ' no'; }
+          return '<button class="choice' + cls + '" data-pick="' + i + ':' + j + '"' + (m ? ' disabled' : '') + '>' +
+            '<span class="lt">' + 'ABCD'[j] + '</span><span>' + esc(c) + '</span></button>';
+        }).join('') + '</div>';
+      } else if (quiz) {
+        inner += '<div class="ans-row"><input class="input" data-typed="' + i + '" placeholder="Your answer" value="' + esc(m ? m.typed : '') + '">' +
+          '<button class="btn btn-sm" data-checki="' + i + '">Check</button></div>';
+      }
+      if (m || showAns) inner += '<div class="explain"><b>Answer:</b> ' + esc(p.answer) + (p.work ? '<br><span class="muted">' + esc(p.work) + '</span>' : '') + '</div>';
+      return '<li class="prob' + (m ? (m.ok ? ' right' : ' wrong') : '') + '">' + inner + '</li>';
+    }).join('');
+    const done = Object.keys(marks).length, right = Object.keys(marks).filter(k => marks[k].ok).length;
+    $('#scoreLbl').textContent = right + ' right of ' + done + ' answered' + (done < cur.problems.length ? ' (' + cur.problems.length + ' total)' : '');
+  }
+  function sheetHTML() {
+    const rows = cur.problems.map((p, i) =>
+      '<li class="prob"><div class="q"><span class="n">' + (i + 1) + '.</span><span>' + esc(p.question) + '</span></div>' +
+      (p.choices.length ? '<div class="ch">' + p.choices.map((c, j) => '<span>' + 'ABCD'[j] + ') ' + esc(c) + '</span>').join('') + '</div>' : '<div class="work"></div>') +
+      '</li>').join('');
+    const key = cur.problems.map((p, i) => '<li><b>' + (i + 1) + '.</b> ' + esc(p.answer) + (p.work ? ' <span class="w">— ' + esc(p.work) + '</span>' : '') + '</li>').join('');
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(cur.title) + '</title><style>' +
+      '@page{size:letter;margin:.6in}*{box-sizing:border-box}body{margin:0;font:11.5pt/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#111;background:#fff}' +
+      '.page{max-width:8.5in;margin:0 auto;padding:.4in .5in}@media screen{body{background:#e9ebf0}.page{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.18);margin:20px auto}}' +
+      'header{border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:14px}h1{font-size:15pt;margin:0}.sub{color:#555;font-size:9.5pt;margin-top:3px}' +
+      '.nameline{display:flex;gap:1.4em;font-size:11pt;margin-top:8px}.blank{display:inline-block;min-width:2in;border-bottom:1px solid #111}' +
+      'ol.problems{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}li.prob{break-inside:avoid}' +
+      '.q{display:flex;gap:.5em}.q .n{font-weight:700;min-width:1.6em}.work{height:1.3in;border:1px solid #c4c4c4;border-radius:4px;margin-top:6px}' +
+      '.ch{display:grid;gap:2px;margin:6px 0 0 2em;font-size:10.5pt}' +
+      '.key{page-break-before:always;padding-top:.2in}.key h2{font-size:13pt;border-bottom:1px solid #111;padding-bottom:4px}' +
+      '.key ol{list-style:none;padding:0;columns:2;gap:24px}.key li{margin:0 0 5px;break-inside:avoid;font-size:10.5pt}.key .w{color:#555}' +
+      '</style></head><body><div class="page"><header><h1>' + esc(cur.title) + '</h1>' +
+      '<div class="sub">Made from ' + esc(cur.source) + ' · ' + cur.problems.length + ' questions</div>' +
+      '<div class="nameline"><span>Name: <span class="blank"></span></span><span>Date: <span class="blank"></span></span></div></header>' +
+      '<ol class="problems">' + rows + '</ol>' +
+      '<div class="key"><h2>Answer key</h2><ol>' + key + '</ol></div></div></body></html>';
+  }
+  function renderSaved() {
+    if (!state.sets.length) { $('#saved').innerHTML = '<div class="empty">Nothing yet. Pick a PDF above and press <b>Make it</b>.</div>'; return; }
+    $('#saved').innerHTML = state.sets.map(s => '<div class="saved-row">' +
+      '<div class="meta"><div class="t">' + (s.kind === 'quiz' ? '❓ ' : '📝 ') + esc(s.title) + '</div>' +
+      '<div class="s">' + esc(PH.fmtDate(s.date, { month: 'short', day: 'numeric' })) + ' · ' + s.problems.length + ' questions · ' + esc(s.source) + '</div></div>' +
+      (s.score ? '<span class="pill ' + (s.score.right / s.score.total >= 0.8 ? 'ok' : 'warn') + '">' + s.score.right + '/' + s.score.total + '</span>' : '') +
+      '<div class="row" style="gap:.3rem"><button class="btn btn-sm" data-open="' + esc(s.id) + '">Open</button>' +
+      '<button class="btn btn-sm btn-ghost btn-danger" data-del="' + esc(s.id) + '" aria-label="Delete">✕</button></div></div>').join('');
+  }
+  function renderControls() {
+    $$('#kindTabs .tab').forEach(t => { const on = t.dataset.kind === state.settings.kind; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
+    $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
+    $('#genBtn').disabled = !file;
+    $('#keyState').textContent = apiKey ? 'Key saved in this browser' : 'No key yet';
+    $('#keyState').className = 'pill ' + (apiKey ? 'ok' : 'neutral');
+    $('#clearKey').hidden = !apiKey;
+    if (apiKey && !$('#keyIn').value) $('#keyIn').value = '•'.repeat(20);
+  }
+  function renderAll() { renderControls(); renderFile(); renderSaved(); }
+
+  /* ---------------- events ---------------- */
+  $('#drop').addEventListener('click', () => $('#fileIn').click());
+  $('#drop').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#fileIn').click(); } });
+  ['dragenter', 'dragover'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.remove('over'); }));
+  $('#drop').addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; readFile(f); });
+  $('#fileIn').addEventListener('change', e => readFile(e.target.files[0]));
+  document.addEventListener('click', e => {
+    if (e.target.closest('#dropFile')) { file = null; $('#fileIn').value = ''; renderFile(); return; }
+    const kt = e.target.closest('[data-kind]');
+    if (kt) { state.settings.kind = kt.dataset.kind; save(); renderControls(); return; }
+    const cb = e.target.closest('[data-count]');
+    if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderControls(); return; }
+    if (e.target.closest('#genBtn')) { generate(); return; }
+    if (e.target.closest('#saveKey')) {
+      const v = $('#keyIn').value.trim();
+      if (!v || /^•+$/.test(v)) { PH.toast('Paste a key first'); return; }
+      apiKey = v; try { localStorage.setItem(KEYKEY, v); } catch (err) {}
+      $('#keyIn').value = '•'.repeat(20); renderControls(); PH.toast('Key saved in this browser'); return;
+    }
+    if (e.target.closest('#clearKey')) { apiKey = ''; try { localStorage.removeItem(KEYKEY); } catch (err) {} $('#keyIn').value = ''; renderControls(); PH.toast('Key removed'); return; }
+    const pick = e.target.closest('[data-pick]');
+    if (pick) { const [i, j] = pick.dataset.pick.split(':').map(Number);
+      marks[i] = { pick: j, ok: cur.problems[i].choices[j] === cur.problems[i].answer }; renderOut(); return; }
+    const ci = e.target.closest('[data-checki]');
+    if (ci) { const i = Number(ci.dataset.checki), inp = document.querySelector('[data-typed="' + i + '"]');
+      const typed = (inp.value || '').trim(); if (!typed) { PH.toast('Type an answer first'); return; }
+      const norm = s => s.toLowerCase().replace(/\s+/g, '').replace(/[−–]/g, '-').replace(/^[a-z]=/, '');
+      marks[i] = { typed, ok: norm(typed) === norm(cur.problems[i].answer) }; renderOut(); return; }
+    if (e.target.closest('#answersBtn')) { showAns = !showAns; $('#answersBtn').setAttribute('aria-pressed', String(showAns)); renderOut(); return; }
+    if (e.target.closest('#printBtn')) { const f = $('#printFrame'); f.srcdoc = sheetHTML();
+      f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (err) { PH.toast('Could not open the print dialog'); } }; return; }
+    if (e.target.closest('#dlBtn')) { PH.download(cur.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_') + '.html', sheetHTML(), 'text/html'); return; }
+    if (e.target.closest('#finishBtn')) {
+      const done = Object.keys(marks).length, right = Object.keys(marks).filter(k => marks[k].ok).length;
+      if (!done) { PH.toast('Answer a question first'); return; }
+      const s = state.sets.filter(x => x.id === cur.id)[0]; if (s) { s.score = { right, total: cur.problems.length }; s.date = PH.todayISO(); }
+      save(); renderSaved(); PH.toast('Saved ' + right + '/' + cur.problems.length); return;
+    }
+    const open = e.target.closest('[data-open]');
+    if (open) { const s = state.sets.filter(x => x.id === open.dataset.open)[0]; if (s) show(s); return; }
+    const del = e.target.closest('[data-del]');
+    if (del) { state.sets = state.sets.filter(x => x.id !== del.dataset.del); if (cur && cur.id === del.dataset.del) { cur = null; $('#outCard').hidden = true; } save(); renderSaved(); return; }
+    if (e.target.closest('#exportBtn')) { PH.download('priyaan-pdf-sets-' + PH.todayISO() + '.json', JSON.stringify(state, null, 2)); return; }
+    if (e.target.closest('#importBtn')) { importJSON(); return; }
+  });
+  async function importJSON() {
+    const text = await PH.pickFile('application/json'); if (!text) return;
+    let obj; try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+    if (isObj(obj) && isObj(obj.data) && typeof obj.data[KEY] === 'string') { try { obj = JSON.parse(obj.data[KEY]); } catch (e) { obj = null; } }
+    const inc = normalize(obj);
+    if (!inc.sets.length) { PH.toast('No sets in that file'); return; }
+    const have = {}; state.sets.forEach(s => have[s.id] = 1);
+    inc.sets.forEach(s => { if (!have[s.id]) state.sets.push(s); });
+    state.sets.sort((a, b) => b.date.localeCompare(a.date)); state.sets = state.sets.slice(0, 60);
+    save(); renderSaved(); PH.toast('Imported — ' + state.sets.length + ' sets');
+  }
+
+  renderAll();
+  if (state.sets.length) save();
+})();
+</script>
+</body></html>

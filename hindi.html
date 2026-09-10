@@ -1,0 +1,1133 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hindi Flashcards · Priyaan's Hub</title>
+<link rel="stylesheet" href="shared.css"><style>
+/* ---- layout ---- */
+main > * + * { margin-top: 1rem; }
+[lang="hi"] { line-height: 1.6; }
+.card-head .row { gap: .5rem; }
+
+/* ---- chapter picker ---- */
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .85rem; }
+.chip {
+  display: flex; flex-direction: column; gap: .3rem; flex: 1 1 12rem; max-width: 18rem; min-width: 0; text-align: left;
+  padding: .55rem .75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font: inherit; cursor: pointer; transition: background .12s, border-color .12s;
+}
+.chip:hover { border-color: var(--accent); background: var(--surface-2); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.chip .t { font-weight: 700; display: flex; gap: .45rem; align-items: baseline; }
+.chip .t .n { color: var(--muted); font-size: .8rem; font-weight: 700; min-width: 1.2rem; }
+.chip .m { font-size: .78rem; color: var(--muted); }
+.chip .progress { height: 4px; }
+.chip.due { flex: 1 1 100%; max-width: none; flex-direction: row; align-items: center; justify-content: space-between; }
+.chip.due .t { color: var(--accent); }
+@media (max-width: 560px) { .chip { flex-basis: 100%; max-width: none; } }
+
+/* ---- flashcards ---- */
+.flash-tools { margin-bottom: .25rem; }
+.flashcard { position: relative; height: clamp(215px, 42vw, 300px); perspective: 1200px; cursor: pointer; margin: .75rem 0 0; outline: none; -webkit-tap-highlight-color: transparent; }
+.flashcard:focus-visible .inner { outline: 2px solid var(--accent); outline-offset: 3px; }
+.flashcard .inner { position: absolute; inset: 0; transition: transform .4s; transform-style: preserve-3d; border-radius: var(--radius); }
+.flashcard.flipped .inner { transform: rotateY(180deg); }
+.face {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem;
+  padding: 1.4rem 1.5rem 1.8rem; text-align: center; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface-2);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden;
+}
+.face.back { transform: rotateY(180deg); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.face .word { font-size: clamp(2rem, 7vw, 3.2rem); font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
+.face.back .word { font-size: clamp(1.5rem, 5vw, 2.1rem); }
+.face .prompt-en { font-size: clamp(1.5rem, 5vw, 2.4rem); font-weight: 800; line-height: 1.25; }
+.face .tr { font-style: italic; color: var(--muted); }
+.face .en { font-size: 1.25rem; font-weight: 700; }
+.face .hint { color: var(--muted); }
+.face .tap { position: absolute; bottom: .55rem; left: 0; right: 0; font-size: .75rem; color: var(--muted); }
+.face .box { position: absolute; top: .6rem; right: .6rem; }
+@media (prefers-reduced-motion: reduce) { .flashcard .inner { transition: none; } }
+.rate { justify-content: center; margin-top: .85rem; }
+.rate .btn { min-width: 8.5rem; }
+.rate .btn-icon { min-width: 0; }
+.rate .kbd { margin-left: .15rem; }
+.deck-progress { display: flex; align-items: center; gap: .75rem; margin-top: .75rem; }
+.deck-progress .progress { flex: 1; }
+.deck-progress .pos { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.done-panel { text-align: center; padding: 2.2rem 1rem; border: 1px dashed var(--border); border-radius: var(--radius); margin-top: .75rem; }
+.done-panel .big { font-size: 2rem; }
+.speak-opt { margin-top: .5rem; padding: .35rem .5rem; }
+.speak-opt .txt { font-size: .875rem; color: var(--muted); }
+
+/* ---- quiz ---- */
+.q-head { display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.q-word { font-size: clamp(1.6rem, 6vw, 2.6rem); font-weight: 800; text-align: center; margin: .9rem 0 1.1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.q-opts { display: grid; gap: .55rem; grid-template-columns: 1fr; }
+@media (min-width: 620px) { .q-opts { grid-template-columns: 1fr 1fr; } }
+.q-opt {
+  display: flex; align-items: center; gap: .7rem; text-align: left; padding: .7rem .9rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 1.05rem; cursor: pointer; min-width: 0;
+}
+.q-opt:hover { border-color: var(--accent); background: var(--surface-2); }
+.q-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.q-opt .n { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--surface-2); font-size: .8rem; font-weight: 700; color: var(--muted); flex: none; }
+.q-opt .o { overflow-wrap: anywhere; }
+.q-opt.right { border-color: var(--ok); background: var(--ok-soft); }
+.q-opt.wrong { border-color: var(--danger); background: var(--danger-soft); }
+.q-opt:disabled { cursor: default; }
+.q-opt:disabled:not(.right):not(.wrong) { opacity: .55; }
+.q-feedback { margin-top: .85rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; font-weight: 700; }
+.q-feedback.ok { color: var(--ok); } .q-feedback.bad { color: var(--danger); }
+.q-feedback .ans { font-weight: 600; color: var(--text); }
+.q-score { text-align: center; padding: 1.25rem 1rem .5rem; }
+.q-score .big { font-size: 2.6rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
+.q-hist { font-size: .875rem; color: var(--muted); margin-top: .75rem; }
+.q-hist li { padding: .35rem 0; }
+
+/* ---- word list ---- */
+.wl-tools { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.wl-tools .input { width: auto; flex: 1 1 10rem; max-width: 16rem; }
+.table td.hi { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
+.table td.tr { font-style: italic; color: var(--muted); }
+.table td.actions { text-align: right; white-space: nowrap; }
+.table .btn-sm { padding: .25rem .55rem; }
+@media (max-width: 640px) { .table .hide-sm { display: none; } }
+.print-list { display: none; }
+
+/* ---- my words ---- */
+.mine-form { display: grid; gap: .6rem; grid-template-columns: 1fr; align-items: end; }
+@media (min-width: 720px) { .mine-form { grid-template-columns: 1fr 1fr 1fr 1fr auto; } }
+.mine-list .hi { font-weight: 700; font-size: 1.05rem; }
+.mine-list .txt { flex: 1; min-width: 0; }
+
+/* ---- print: only the word list ---- */
+@media print {
+  .stats, #picker, #flash, #quiz, #mine, .wl-tools, #wordlist .table-wrap, #wordlist .card-head .small { display: none !important; }
+  #wordlist { border: 0; padding: 0; box-shadow: none; }
+  .print-list { display: block; column-count: 2; column-gap: 2rem; font-size: 11pt; }
+  .print-list h2 { column-span: all; margin-bottom: .5rem; }
+  .print-list .sub { column-span: all; color: #555; margin-bottom: .75rem; }
+  .print-list .pi { break-inside: avoid; padding: .3rem 0; border-bottom: 1px solid #ddd; }
+  .print-list .pi b { font-size: 1.2em; }
+  .print-list .pi i { color: #555; }
+  .print-list .pi .h { color: #555; }
+}
+</style></head>
+<body data-app="hindi">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <div class="title"><span class="emoji">📖</span><span class="name">Hindi Flashcards</span></div>
+  <div class="spacer"></div>
+  <button type="button" class="btn btn-sm" id="btn-export">⬇ Export</button>
+  <button type="button" class="btn btn-sm" id="btn-import">⬆ Import</button>
+</div></header>
+<main class="container">
+
+  <section class="stats" aria-label="Progress">
+    <div class="stat"><div class="num" id="st-learned">0</div><div class="lbl">words learned</div></div>
+    <div class="stat"><div class="num" id="st-due">0</div><div class="lbl">due today</div></div>
+    <div class="stat"><div class="num" id="st-today">0</div><div class="lbl">reviewed today</div></div>
+    <div class="stat"><div class="num" id="st-streak">0</div><div class="lbl">day streak</div></div>
+  </section>
+
+  <!-- Chapter picker -->
+  <section class="card" id="picker" aria-labelledby="h-picker">
+    <div class="card-head"><h2 id="h-picker">Chapters</h2><span class="muted small"><span lang="hi">मल्हार</span> · NCERT</span></div>
+    <div class="tabs" role="tablist" aria-label="Class" id="cls-tabs">
+      <button type="button" class="tab" role="tab" data-cls="6" aria-selected="true">Class 6</button>
+      <button type="button" class="tab" role="tab" data-cls="7" aria-selected="false">Class 7</button>
+      <button type="button" class="tab" role="tab" data-cls="mine" aria-selected="false">My words</button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Chapters"></div>
+  </section>
+
+  <!-- Flashcards -->
+  <section class="card" id="flash" aria-labelledby="h-flash">
+    <div class="card-head"><h2 id="h-flash">Flashcards</h2><span class="muted small" id="deck-name" lang="hi"></span></div>
+    <div class="row between flash-tools">
+      <div class="tabs" role="tablist" aria-label="Direction" id="dir-tabs">
+        <button type="button" class="tab" role="tab" data-dir="hi-en" aria-selected="true"><span lang="hi">हिंदी</span> → English</button>
+        <button type="button" class="tab" role="tab" data-dir="en-hi" aria-selected="false">English → <span lang="hi">हिंदी</span></button>
+      </div>
+      <div class="row">
+        <button type="button" class="btn btn-sm" id="btn-shuffle">🔀 Shuffle</button>
+        <button type="button" class="btn btn-sm" id="btn-restart">↻ Restart</button>
+      </div>
+    </div>
+    <div id="flash-body"></div>
+    <label class="check speak-opt" id="speak-opt"><input type="checkbox" id="speak-auto"><span class="txt">Say each Hindi word aloud when it appears</span></label>
+  </section>
+
+  <!-- Quiz -->
+  <section class="card" id="quiz" aria-labelledby="h-quiz">
+    <div class="card-head"><h2 id="h-quiz">Quiz</h2><span class="muted small" id="quiz-sub"></span></div>
+    <div id="quiz-body"></div>
+  </section>
+
+  <!-- Word list -->
+  <section class="card" id="wordlist" aria-labelledby="h-list">
+    <div class="card-head"><h2 id="h-list">Word list</h2><span class="muted small" id="list-sub"></span></div>
+    <div class="wl-tools">
+      <input class="input" type="search" id="search" placeholder="Search all words…" aria-label="Search all words" autocomplete="off">
+      <button type="button" class="btn btn-sm" id="btn-print">🖨 Print list</button>
+    </div>
+    <div class="table-wrap" id="list-wrap"></div>
+    <div class="print-list" id="print-list"></div>
+  </section>
+
+  <!-- My words -->
+  <section class="card" id="mine" aria-labelledby="h-mine">
+    <div class="card-head"><h2 id="h-mine">My words</h2><span class="muted small">Add your own cards</span></div>
+    <form class="mine-form" id="mine-form" novalidate>
+      <div class="field"><label for="m-hi">Hindi</label><input class="input" id="m-hi" lang="hi" maxlength="60" placeholder="शब्द" autocomplete="off"></div>
+      <div class="field"><label for="m-tr">Transliteration</label><input class="input" id="m-tr" maxlength="60" placeholder="shabd" autocomplete="off"></div>
+      <div class="field"><label for="m-en">Meaning</label><input class="input" id="m-en" maxlength="80" placeholder="word" autocomplete="off"></div>
+      <div class="field"><label for="m-hint">Hint (optional)</label><input class="input" id="m-hint" lang="hi" maxlength="80" placeholder="वाक्य में प्रयोग / synonym" autocomplete="off"></div>
+      <button type="submit" class="btn btn-primary">＋ Add</button>
+    </form>
+    <ul class="list mine-list" id="mine-list"></ul>
+  </section>
+</main>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  'use strict';
+  const KEY = 'ph.hindi.v1';
+  const INTERVALS = [0, 1, 3, 7, 21]; // Leitner boxes 0–4 → days until the card is due again
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const esc = PH.esc;
+  const today = () => PH.todayISO();
+
+  /* ===================== Content: NCERT Malhar (मल्हार) Class 6 and 7 =====================
+     One entry per line so a parent can edit. A card's id is ch + ':' + hi, so keep `hi` stable. */
+  const CHAPTERS = [ // { id, cls, n, title, genre, author }
+    { id: 'c6-01', cls: 6, n: 1,  title: 'मातृभूमि', genre: 'कविता', author: 'सोहनलाल द्विवेदी' },
+    { id: 'c6-02', cls: 6, n: 2,  title: 'गोल', genre: 'संस्मरण', author: 'मेजर ध्यानचंद' },
+    { id: 'c6-03', cls: 6, n: 3,  title: 'पहली बूँद', genre: 'कविता', author: 'गोपालकृष्ण कौल' },
+    { id: 'c6-04', cls: 6, n: 4,  title: 'हार की जीत', genre: 'कहानी', author: 'सुदर्शन' },
+    { id: 'c6-05', cls: 6, n: 5,  title: 'रहीम के दोहे', genre: 'दोहा', author: 'अब्दुर्रहीम खानखाना' },
+    { id: 'c6-06', cls: 6, n: 6,  title: 'मेरी माँ', genre: 'आत्मकथा', author: 'रामप्रसाद ‘बिस्मिल’' },
+    { id: 'c6-07', cls: 6, n: 7,  title: 'जलाते चलो', genre: 'कविता', author: 'द्वारिका प्रसाद ‘माहेश्वरी’' },
+    { id: 'c6-08', cls: 6, n: 8,  title: 'सत्रिया और बिहू नृत्य', genre: 'निबंध', author: 'जया मेहता' },
+    { id: 'c6-09', cls: 6, n: 9,  title: 'मैया मैं नहिं माखन खायो', genre: 'पद', author: 'सूरदास' },
+    { id: 'c6-10', cls: 6, n: 10, title: 'परीक्षा', genre: 'कहानी', author: 'प्रेमचंद' },
+    { id: 'c6-11', cls: 6, n: 11, title: 'चेतक की वीरता', genre: 'कविता', author: 'श्यामनारायण पांडेय' },
+    { id: 'c6-12', cls: 6, n: 12, title: 'हिंद महासागर में छोटा-सा हिंदुस्तान', genre: 'यात्रा वृत्तांत', author: 'रामधारी सिंह ‘दिनकर’' },
+    { id: 'c6-13', cls: 6, n: 13, title: 'पेड़ की बात', genre: 'निबंध', author: 'जगदीशचंद्र बसु' },
+    { id: 'c7-01', cls: 7, n: 1,  title: 'माँ, कह एक कहानी', genre: 'कविता', author: 'मैथिलीशरण गुप्त' },
+    { id: 'c7-02', cls: 7, n: 2,  title: 'तीन बुद्धिमान', genre: 'लोककथा', author: '' },
+    { id: 'c7-03', cls: 7, n: 3,  title: 'फूल और काँटा', genre: 'कविता', author: 'अयोध्यासिंह उपाध्याय ‘हरिऔध’' },
+    { id: 'c7-04', cls: 7, n: 4,  title: 'पानी रे पानी', genre: 'निबंध', author: 'अनुपम मिश्र' },
+    { id: 'c7-05', cls: 7, n: 5,  title: 'नहीं होना बीमार', genre: 'कहानी', author: 'स्वयं प्रकाश' },
+    { id: 'c7-06', cls: 7, n: 6,  title: 'गिरिधर कविराय की कुंडलिया', genre: 'कुंडलिया', author: 'गिरिधर कविराय' },
+    { id: 'c7-07', cls: 7, n: 7,  title: 'वर्षा-बहार', genre: 'कविता', author: 'मुकुटधर पांडेय' },
+    { id: 'c7-08', cls: 7, n: 8,  title: 'बिरजू महाराज से साक्षात्कार', genre: 'साक्षात्कार', author: '' },
+    { id: 'c7-09', cls: 7, n: 9,  title: 'चिड़िया', genre: 'कविता', author: 'आरसी प्रसाद सिंह' },
+    { id: 'c7-10', cls: 7, n: 10, title: 'मीरा के पद', genre: 'पद', author: 'मीरा' }
+  ];
+
+  const CARDS = [ // { ch, hi, tr, en, hint }   hi = Devanagari, tr = romanisation, en = short meaning, hint = Hindi gloss
+    // ---- Class 6, 1: मातृभूमि ----
+    { ch: 'c6-01', hi: 'मातृभूमि', tr: 'mātṛbhūmi', en: 'motherland', hint: 'जन्मभूमि' },
+    { ch: 'c6-01', hi: 'सिंधु', tr: 'sindhu', en: 'ocean, sea', hint: 'समुद्र' },
+    { ch: 'c6-01', hi: 'नत', tr: 'nat', en: 'bowed, bent low', hint: 'झुका हुआ' },
+    { ch: 'c6-01', hi: 'चरण', tr: 'caraṇ', en: 'feet', hint: 'पैर' },
+    { ch: 'c6-01', hi: 'त्रिवेणी', tr: 'triveṇī', en: 'meeting of three rivers', hint: 'तीन नदियों का संगम' },
+    { ch: 'c6-01', hi: 'लहर', tr: 'lahar', en: 'wave', hint: 'मौज, तरंग' },
+    { ch: 'c6-01', hi: 'छटा', tr: 'chaṭā', en: 'beauty, splendour', hint: 'शोभा, सुंदरता' },
+    { ch: 'c6-01', hi: 'निराली', tr: 'nirālī', en: 'unique, wonderful', hint: 'अनोखी' },
+    { ch: 'c6-01', hi: 'छहर', tr: 'chahar', en: 'to spread, scatter', hint: 'बिखरना, फैलना' },
+    { ch: 'c6-01', hi: 'पुण्य-भूमि', tr: 'puṇya-bhūmi', en: 'holy land', hint: 'पवित्र भूमि' },
+    { ch: 'c6-01', hi: 'स्वर्ण-भूमि', tr: 'svarṇ-bhūmi', en: 'golden land', hint: 'सोने की भूमि' },
+    { ch: 'c6-01', hi: 'अमराइयाँ', tr: 'amarāiyā̃', en: 'mango groves', hint: 'आम के बाग' },
+    { ch: 'c6-01', hi: 'मलय पवन', tr: 'malay pavan', en: 'fragrant southern breeze', hint: 'मलय पर्वत से आती सुगंधित हवा' },
+    { ch: 'c6-01', hi: 'सँवारना', tr: 'sãvārnā', en: 'to adorn, groom', hint: 'सजाना' },
+    { ch: 'c6-01', hi: 'रघुपति', tr: 'raghupati', en: 'Lord Rama', hint: 'श्रीराम' },
+    { ch: 'c6-01', hi: 'वंशी', tr: 'vanśī', en: 'flute', hint: 'बाँसुरी' },
+    { ch: 'c6-01', hi: 'पुनीत', tr: 'punīt', en: 'holy, sacred', hint: 'पवित्र' },
+    { ch: 'c6-01', hi: 'सुयश', tr: 'suyaś', en: 'good fame', hint: 'अच्छी कीर्ति' },
+    // ---- Class 6, 2: गोल ----
+    { ch: 'c6-02', hi: 'संस्मरण', tr: 'sansmaraṇ', en: 'memoir', hint: 'यादों का लेखन' },
+    { ch: 'c6-02', hi: 'धक्का-मुक्की', tr: 'dhakkā-mukkī', en: 'jostling, pushing', hint: 'धक्का देना' },
+    { ch: 'c6-02', hi: 'नोंक-झोंक', tr: 'nõk-jhõk', en: 'bickering, squabble', hint: 'छोटी-सी कहा-सुनी' },
+    { ch: 'c6-02', hi: 'मुकाबला', tr: 'muqāblā', en: 'match, contest', hint: 'प्रतियोगिता' },
+    { ch: 'c6-02', hi: 'बदला', tr: 'badlā', en: 'revenge', hint: 'प्रतिशोध' },
+    { ch: 'c6-02', hi: 'झटपट', tr: 'jhaṭpaṭ', en: 'quickly', hint: 'तुरंत, जल्दी से' },
+    { ch: 'c6-02', hi: 'शर्मिंदा', tr: 'śarmindā', en: 'ashamed', hint: 'लज्जित' },
+    { ch: 'c6-02', hi: 'लगन', tr: 'lagan', en: 'dedication', hint: 'निष्ठा' },
+    { ch: 'c6-02', hi: 'साधना', tr: 'sādhnā', en: 'disciplined practice', hint: 'अभ्यास, तप' },
+    { ch: 'c6-02', hi: 'खेल भावना', tr: 'khel bhāvnā', en: 'sportsmanship', hint: 'खेल का सच्चा भाव' },
+    { ch: 'c6-02', hi: 'भर्ती', tr: 'bhartī', en: 'enrolment, recruitment', hint: 'दाखिला' },
+    { ch: 'c6-02', hi: 'दिलचस्पी', tr: 'dilcaspī', en: 'interest', hint: 'रुचि' },
+    { ch: 'c6-02', hi: 'छावनी', tr: 'chāvnī', en: 'army camp, cantonment', hint: 'सैनिकों के रहने का क्षेत्र' },
+    { ch: 'c6-02', hi: 'नौसिखिया', tr: 'nausikhiyā', en: 'beginner, novice', hint: 'नया सीखने वाला' },
+    { ch: 'c6-02', hi: 'निखार', tr: 'nikhār', en: 'polish, improvement', hint: 'सुधार, चमक' },
+    { ch: 'c6-02', hi: 'तरक्की', tr: 'taraqqī', en: 'promotion, progress', hint: 'उन्नति' },
+    { ch: 'c6-02', hi: 'जादूगर', tr: 'jādūgar', en: 'magician', hint: 'जादू करने वाला' },
+    { ch: 'c6-02', hi: 'श्रेय', tr: 'śrey', en: 'credit (for a deed)', hint: 'किसी काम का यश' },
+    // ---- Class 6, 3: पहली बूँद ----
+    { ch: 'c6-03', hi: 'पावस', tr: 'pāvas', en: 'rainy season', hint: 'वर्षा ऋतु' },
+    { ch: 'c6-03', hi: 'धरा', tr: 'dharā', en: 'earth', hint: 'धरती, पृथ्वी' },
+    { ch: 'c6-03', hi: 'अंकुर', tr: 'aṅkur', en: 'sprout, shoot', hint: 'बीज से निकला नया पौधा' },
+    { ch: 'c6-03', hi: 'अँगड़ाई', tr: 'ãgṛāī', en: 'a stretch (on waking)', hint: 'देह फैलाना' },
+    { ch: 'c6-03', hi: 'अधर', tr: 'adhar', en: 'lip', hint: 'होंठ' },
+    { ch: 'c6-03', hi: 'अमृत', tr: 'amṛt', en: 'nectar', hint: 'अमर करने वाला रस' },
+    { ch: 'c6-03', hi: 'वसुंधरा', tr: 'vasundharā', en: 'the earth', hint: 'धरती' },
+    { ch: 'c6-03', hi: 'रोमावलि', tr: 'romāvali', en: 'row of fine body hair', hint: 'रोओं की पंक्ति' },
+    { ch: 'c6-03', hi: 'दूब', tr: 'dūb', en: 'soft grass', hint: 'घास' },
+    { ch: 'c6-03', hi: 'पुलकना', tr: 'pulaknā', en: 'to thrill with joy', hint: 'आनंद से रोमांचित होना' },
+    { ch: 'c6-03', hi: 'स्वर्णिम', tr: 'svarṇim', en: 'golden', hint: 'सुनहरा' },
+    { ch: 'c6-03', hi: 'नगाड़ा', tr: 'nagāṛā', en: 'kettledrum', hint: 'बड़ा ढोल' },
+    { ch: 'c6-03', hi: 'तरुणाई', tr: 'taruṇāī', en: 'youth', hint: 'जवानी' },
+    { ch: 'c6-03', hi: 'अंबर', tr: 'ambar', en: 'sky', hint: 'आकाश' },
+    { ch: 'c6-03', hi: 'जलधर', tr: 'jaldhar', en: 'cloud', hint: 'बादल' },
+    { ch: 'c6-03', hi: 'अश्रु', tr: 'aśru', en: 'tear', hint: 'आँसू' },
+    { ch: 'c6-03', hi: 'शस्य-श्यामला', tr: 'śasya-śyāmlā', en: 'green with crops', hint: 'फसलों से हरी-भरी' },
+    // ---- Class 6, 4: हार की जीत ----
+    { ch: 'c6-04', hi: 'अर्पण', tr: 'arpaṇ', en: 'offering, dedication', hint: 'भेंट, समर्पण' },
+    { ch: 'c6-04', hi: 'खरहरा', tr: 'kharahrā', en: 'brush for grooming a horse', hint: 'घोड़े की सफ़ाई का ब्रश' },
+    { ch: 'c6-04', hi: 'घृणा', tr: 'ghṛṇā', en: 'hatred, disgust', hint: 'नफ़रत' },
+    { ch: 'c6-04', hi: 'कीर्ति', tr: 'kīrti', en: 'fame', hint: 'यश' },
+    { ch: 'c6-04', hi: 'अधीर', tr: 'adhīr', en: 'impatient, restless', hint: 'बेचैन' },
+    { ch: 'c6-04', hi: 'अभिलाषा', tr: 'abhilāṣā', en: 'longing, wish', hint: 'इच्छा' },
+    { ch: 'c6-04', hi: 'अस्तबल', tr: 'astabal', en: 'stable (for horses)', hint: 'घुड़साल' },
+    { ch: 'c6-04', hi: 'बाँका', tr: 'bā̃kā', en: 'handsome, dashing', hint: 'सजीला, सुंदर' },
+    { ch: 'c6-04', hi: 'बाहुबल', tr: 'bāhubal', en: 'physical strength', hint: 'भुजाओं की ताकत' },
+    { ch: 'c6-04', hi: 'रखवाली', tr: 'rakhvālī', en: 'guarding', hint: 'पहरा, देखभाल' },
+    { ch: 'c6-04', hi: 'मिथ्या', tr: 'mithyā', en: 'false', hint: 'झूठ' },
+    { ch: 'c6-04', hi: 'सहसा', tr: 'sahsā', en: 'suddenly', hint: 'अचानक' },
+    { ch: 'c6-04', hi: 'अपाहिज', tr: 'apāhij', en: 'disabled, crippled', hint: 'विकलांग' },
+    { ch: 'c6-04', hi: 'करुणा', tr: 'karuṇā', en: 'compassion, pity', hint: 'दया' },
+    { ch: 'c6-04', hi: 'लगाम', tr: 'lagām', en: 'reins', hint: 'घोड़े की रास' },
+    { ch: 'c6-04', hi: 'विस्मय', tr: 'vismay', en: 'astonishment', hint: 'आश्चर्य' },
+    { ch: 'c6-04', hi: 'प्रयोजन', tr: 'prayojan', en: 'purpose', hint: 'उद्देश्य' },
+    { ch: 'c6-04', hi: 'प्रकट', tr: 'prakaṭ', en: 'revealed, expressed', hint: 'ज़ाहिर' },
+    // ---- Class 6, 5: रहीम के दोहे ----
+    { ch: 'c6-05', hi: 'दोहा', tr: 'dohā', en: 'couplet (two-line verse)', hint: 'दो पंक्तियों का छंद' },
+    { ch: 'c6-05', hi: 'लघु', tr: 'laghu', en: 'small', hint: 'छोटा' },
+    { ch: 'c6-05', hi: 'तरुवर', tr: 'taruvar', en: 'tree', hint: 'पेड़, वृक्ष' },
+    { ch: 'c6-05', hi: 'सरवर', tr: 'saravar', en: 'lake, pond', hint: 'सरोवर, तालाब' },
+    { ch: 'c6-05', hi: 'संपति', tr: 'sampati', en: 'wealth', hint: 'संपत्ति, धन' },
+    { ch: 'c6-05', hi: 'सुजान', tr: 'sujān', en: 'wise person', hint: 'सज्जन, बुद्धिमान' },
+    { ch: 'c6-05', hi: 'चिटकाय', tr: 'ciṭkāy', en: 'snapping (with a jerk)', hint: 'झटके से तोड़ना' },
+    { ch: 'c6-05', hi: 'गाँठ', tr: 'gā̃ṭh', en: 'knot', hint: 'बंधन' },
+    { ch: 'c6-05', hi: 'बिनु', tr: 'binu', en: 'without', hint: 'बिना' },
+    { ch: 'c6-05', hi: 'सून', tr: 'sūn', en: 'empty, worthless', hint: 'सूना, शून्य' },
+    { ch: 'c6-05', hi: 'ऊबरै', tr: 'ūbarai', en: 'is saved, survives', hint: 'उबरता है, बचता है' },
+    { ch: 'c6-05', hi: 'मानुष', tr: 'mānuṣ', en: 'human being', hint: 'मनुष्य' },
+    { ch: 'c6-05', hi: 'बिपदा', tr: 'bipdā', en: 'calamity, hard times', hint: 'विपत्ति, मुसीबत' },
+    { ch: 'c6-05', hi: 'जिह्वा', tr: 'jihvā', en: 'tongue', hint: 'जीभ' },
+    { ch: 'c6-05', hi: 'बावरी', tr: 'bāvrī', en: 'crazy, mad', hint: 'पागल' },
+    { ch: 'c6-05', hi: 'सरग', tr: 'sarag', en: 'heaven', hint: 'स्वर्ग' },
+    { ch: 'c6-05', hi: 'कसौटी', tr: 'kasauṭī', en: 'touchstone, test', hint: 'परख, जाँच' },
+    { ch: 'c6-05', hi: 'मीत', tr: 'mīt', en: 'friend', hint: 'मित्र' },
+    // ---- Class 6, 6: मेरी माँ ----
+    { ch: 'c6-06', hi: 'आत्मकथा', tr: 'ātmakathā', en: 'autobiography', hint: 'अपने जीवन की कहानी' },
+    { ch: 'c6-06', hi: 'उत्साह', tr: 'utsāh', en: 'enthusiasm', hint: 'जोश' },
+    { ch: 'c6-06', hi: 'दंड', tr: 'daṇḍ', en: 'punishment', hint: 'सज़ा' },
+    { ch: 'c6-06', hi: 'साहस', tr: 'sāhas', en: 'courage', hint: 'हिम्मत' },
+    { ch: 'c6-06', hi: 'अनुरोध', tr: 'anurodh', en: 'request', hint: 'आग्रह' },
+    { ch: 'c6-06', hi: 'प्रोत्साहन', tr: 'protsāhan', en: 'encouragement', hint: 'बढ़ावा, हौसला' },
+    { ch: 'c6-06', hi: 'दृढ़ता', tr: 'dṛṛhtā', en: 'firmness, resolve', hint: 'मज़बूती, अटलता' },
+    { ch: 'c6-06', hi: 'संकल्प', tr: 'saṅkalp', en: 'resolve, vow', hint: 'दृढ़ निश्चय' },
+    { ch: 'c6-06', hi: 'हस्ताक्षर', tr: 'hastākṣar', en: 'signature', hint: 'दस्तख़त' },
+    { ch: 'c6-06', hi: 'कदापि', tr: 'kadāpi', en: 'never, by no means', hint: 'कभी नहीं' },
+    { ch: 'c6-06', hi: 'नितांत', tr: 'nitānt', en: 'utterly, completely', hint: 'बिलकुल, पूर्णतः' },
+    { ch: 'c6-06', hi: 'परिश्रम', tr: 'pariśram', en: 'hard work', hint: 'मेहनत' },
+    { ch: 'c6-06', hi: 'प्रतिज्ञा', tr: 'pratigyā', en: 'vow, promise', hint: 'वचन, प्रण' },
+    { ch: 'c6-06', hi: 'जननी', tr: 'jananī', en: 'mother', hint: 'माँ, माता' },
+    { ch: 'c6-06', hi: 'ऋण', tr: 'ṛṇ', en: 'debt', hint: 'कर्ज़' },
+    { ch: 'c6-06', hi: 'स्मरण', tr: 'smaraṇ', en: 'memory, remembering', hint: 'याद' },
+    { ch: 'c6-06', hi: 'सांत्वना', tr: 'sāntvanā', en: 'consolation', hint: 'ढाढ़स, धीरज बँधाना' },
+    { ch: 'c6-06', hi: 'सदैव', tr: 'sadaiv', en: 'always', hint: 'हमेशा' },
+    // ---- Class 6, 7: जलाते चलो ----
+    { ch: 'c6-07', hi: 'दिया', tr: 'diyā', en: 'earthen lamp', hint: 'दीपक' },
+    { ch: 'c6-07', hi: 'स्नेह', tr: 'sneh', en: 'affection; oil for a lamp', hint: 'प्रेम; तेल' },
+    { ch: 'c6-07', hi: 'निहित', tr: 'nihit', en: 'contained in, inherent', hint: 'छिपा हुआ, समाया हुआ' },
+    { ch: 'c6-07', hi: 'अमावस', tr: 'amāvas', en: 'new-moon night', hint: 'अमावस्या, अँधेरी रात' },
+    { ch: 'c6-07', hi: 'पूर्णिमा', tr: 'pūrṇimā', en: 'full-moon night', hint: 'पूरे चाँद की रात' },
+    { ch: 'c6-07', hi: 'निशा', tr: 'niśā', en: 'night', hint: 'रात' },
+    { ch: 'c6-07', hi: 'विद्युत', tr: 'vidyut', en: 'electricity', hint: 'बिजली' },
+    { ch: 'c6-07', hi: 'तिमिर', tr: 'timir', en: 'darkness', hint: 'अंधकार' },
+    { ch: 'c6-07', hi: 'चुनौती', tr: 'cunautī', en: 'challenge', hint: 'ललकार' },
+    { ch: 'c6-07', hi: 'सरित', tr: 'sarit', en: 'river', hint: 'नदी' },
+    { ch: 'c6-07', hi: 'निरंतर', tr: 'nirantar', en: 'continuously', hint: 'लगातार' },
+    { ch: 'c6-07', hi: 'युग', tr: 'yug', en: 'era, age', hint: 'बहुत लंबा समय' },
+    { ch: 'c6-07', hi: 'शिला', tr: 'śilā', en: 'rock, stone slab', hint: 'चट्टान, पत्थर' },
+    { ch: 'c6-07', hi: 'अनगिनत', tr: 'anginat', en: 'countless', hint: 'असंख्य' },
+    { ch: 'c6-07', hi: 'साक्षी', tr: 'sākṣī', en: 'witness', hint: 'गवाह' },
+    { ch: 'c6-07', hi: 'ज्योति', tr: 'jyoti', en: 'flame, light', hint: 'लौ, प्रकाश' },
+    { ch: 'c6-07', hi: 'उजेला', tr: 'ujelā', en: 'light, brightness', hint: 'उजाला, प्रकाश' },
+    // ---- Class 6, 8: सत्रिया और बिहू नृत्य ----
+    { ch: 'c6-08', hi: 'नृत्य', tr: 'nṛtya', en: 'dance', hint: 'नाच' },
+    { ch: 'c6-08', hi: 'निबंध', tr: 'nibandh', en: 'essay', hint: 'लेख' },
+    { ch: 'c6-08', hi: 'परंपरा', tr: 'paramparā', en: 'tradition', hint: 'रीति, प्रथा' },
+    { ch: 'c6-08', hi: 'सगा', tr: 'sagā', en: 'real, blood-related', hint: 'अपना, खून का' },
+    { ch: 'c6-08', hi: 'कल्पना', tr: 'kalpanā', en: 'imagination', hint: 'ख़याल, सोच' },
+    { ch: 'c6-08', hi: 'ज़िक्र', tr: 'zikr', en: 'mention', hint: 'उल्लेख, चर्चा' },
+    { ch: 'c6-08', hi: 'पेचीदा', tr: 'pecīdā', en: 'complicated', hint: 'जटिल, कठिन' },
+    { ch: 'c6-08', hi: 'अनुमति', tr: 'anumati', en: 'permission', hint: 'इजाज़त' },
+    { ch: 'c6-08', hi: 'समृद्ध', tr: 'samṛddh', en: 'rich, prosperous', hint: 'संपन्न, धनी' },
+    { ch: 'c6-08', hi: 'कृषि', tr: 'kṛṣi', en: 'agriculture', hint: 'खेती' },
+    { ch: 'c6-08', hi: 'उत्सव', tr: 'utsav', en: 'festival, celebration', hint: 'त्योहार, समारोह' },
+    { ch: 'c6-08', hi: 'हतप्रभ', tr: 'hatprabh', en: 'stunned, dazed', hint: 'चकित, सन्न' },
+    { ch: 'c6-08', hi: 'मंत्रमुग्ध', tr: 'mantramugdh', en: 'spellbound', hint: 'मोहित, मुग्ध' },
+    { ch: 'c6-08', hi: 'आगमन', tr: 'āgaman', en: 'arrival', hint: 'आना' },
+    { ch: 'c6-08', hi: 'वाद्ययंत्र', tr: 'vādyayantra', en: 'musical instrument', hint: 'बाजा' },
+    { ch: 'c6-08', hi: 'पोशाक', tr: 'pośāk', en: 'costume, dress', hint: 'वेशभूषा, कपड़े' },
+    { ch: 'c6-08', hi: 'लज़ीज़', tr: 'lazīz', en: 'delicious', hint: 'स्वादिष्ट' },
+    { ch: 'c6-08', hi: 'साक्षात्कार', tr: 'sākṣātkār', en: 'interview', hint: 'भेंट-वार्ता' },
+    // ---- Class 6, 9: मैया मैं नहिं माखन खायो (Braj) ----
+    { ch: 'c6-09', hi: 'पद', tr: 'pad', en: 'devotional song, verse', hint: 'भक्ति गीत' },
+    { ch: 'c6-09', hi: 'मैया', tr: 'maiyā', en: 'mother', hint: 'माँ' },
+    { ch: 'c6-09', hi: 'नहिं', tr: 'nahĩ', en: 'not', hint: 'नहीं' },
+    { ch: 'c6-09', hi: 'माखन', tr: 'mākhan', en: 'butter', hint: 'मक्खन' },
+    { ch: 'c6-09', hi: 'भोर', tr: 'bhor', en: 'dawn', hint: 'सुबह, प्रातः' },
+    { ch: 'c6-09', hi: 'पठायो', tr: 'paṭhāyo', en: 'sent', hint: 'भेजा' },
+    { ch: 'c6-09', hi: 'पहर', tr: 'pahar', en: 'a watch of three hours', hint: 'तीन घंटे का समय' },
+    { ch: 'c6-09', hi: 'बंसीवट', tr: 'bansīvaṭ', en: 'banyan where Krishna played the flute', hint: 'एक वट वृक्ष' },
+    { ch: 'c6-09', hi: 'साँझ', tr: 'sā̃jh', en: 'evening', hint: 'शाम, संध्या' },
+    { ch: 'c6-09', hi: 'बहियन', tr: 'bahiyan', en: 'arms', hint: 'बाँहें' },
+    { ch: 'c6-09', hi: 'छीको', tr: 'chīko', en: 'hanging basket for food', hint: 'छींका, ऊँचा टँगा जाल' },
+    { ch: 'c6-09', hi: 'बिधि', tr: 'bidhi', en: 'way, manner', hint: 'विधि, तरीका' },
+    { ch: 'c6-09', hi: 'ग्वाल-बाल', tr: 'gvāl-bāl', en: 'cowherd boys', hint: 'गोप बालक' },
+    { ch: 'c6-09', hi: 'बरबस', tr: 'barbas', en: 'forcibly', hint: 'ज़बरदस्ती' },
+    { ch: 'c6-09', hi: 'भोरी', tr: 'bhorī', en: 'innocent, naive', hint: 'भोली' },
+    { ch: 'c6-09', hi: 'हिय', tr: 'hiy', en: 'heart', hint: 'हृदय, दिल' },
+    { ch: 'c6-09', hi: 'लकुटि', tr: 'lakuṭi', en: 'small stick', hint: 'लाठी' },
+    { ch: 'c6-09', hi: 'बिहँसि', tr: 'bihãsi', en: 'smiling, laughing', hint: 'हँसकर' },
+    // ---- Class 6, 10: परीक्षा ----
+    { ch: 'c6-10', hi: 'रियासत', tr: 'riyāsat', en: 'princely state', hint: 'राज्य' },
+    { ch: 'c6-10', hi: 'दीवान', tr: 'dīvān', en: 'chief minister of a state', hint: 'मंत्री, प्रधान अधिकारी' },
+    { ch: 'c6-10', hi: 'विनय', tr: 'vinay', en: 'humble request', hint: 'प्रार्थना, निवेदन' },
+    { ch: 'c6-10', hi: 'नेकनामी', tr: 'neknāmī', en: 'good reputation', hint: 'अच्छा नाम, यश' },
+    { ch: 'c6-10', hi: 'विज्ञापन', tr: 'vigyāpan', en: 'advertisement', hint: 'इश्तहार' },
+    { ch: 'c6-10', hi: 'सुयोग्य', tr: 'suyogya', en: 'well-qualified', hint: 'बहुत योग्य' },
+    { ch: 'c6-10', hi: 'उम्मीदवार', tr: 'ummīdvār', en: 'candidate', hint: 'प्रत्याशी' },
+    { ch: 'c6-10', hi: 'कर्तव्य', tr: 'kartavya', en: 'duty', hint: 'फ़र्ज़' },
+    { ch: 'c6-10', hi: 'तहलका', tr: 'tahalkā', en: 'sensation, uproar', hint: 'हलचल, खलबली' },
+    { ch: 'c6-10', hi: 'नसीब', tr: 'nasīb', en: 'fate, luck', hint: 'भाग्य, किस्मत' },
+    { ch: 'c6-10', hi: 'सादगी', tr: 'sādgī', en: 'simplicity', hint: 'सरलता' },
+    { ch: 'c6-10', hi: 'सदाचार', tr: 'sadācār', en: 'good conduct', hint: 'अच्छा आचरण' },
+    { ch: 'c6-10', hi: 'जौहरी', tr: 'jauharī', en: 'jeweller, judge of gems', hint: 'रत्नों का पारखी' },
+    { ch: 'c6-10', hi: 'पथिक', tr: 'pathik', en: 'traveller', hint: 'राहगीर, यात्री' },
+    { ch: 'c6-10', hi: 'सहानुभूति', tr: 'sahānubhūti', en: 'sympathy', hint: 'हमदर्दी' },
+    { ch: 'c6-10', hi: 'उदारता', tr: 'udārtā', en: 'generosity', hint: 'बड़ा दिल, दानशीलता' },
+    { ch: 'c6-10', hi: 'अकस्मात', tr: 'akasmāt', en: 'all of a sudden', hint: 'अचानक' },
+    { ch: 'c6-10', hi: 'आत्मबल', tr: 'ātmabal', en: 'inner strength', hint: 'मनोबल' },
+    // ---- Class 6, 11: चेतक की वीरता ----
+    { ch: 'c6-11', hi: 'रण', tr: 'raṇ', en: 'battle', hint: 'युद्ध' },
+    { ch: 'c6-11', hi: 'चौकड़ी', tr: 'caukṛī', en: 'gallop, bound', hint: 'छलाँग, कुलाँच' },
+    { ch: 'c6-11', hi: 'कोड़ा', tr: 'koṛā', en: 'whip', hint: 'चाबुक' },
+    { ch: 'c6-11', hi: 'अरि', tr: 'ari', en: 'enemy', hint: 'शत्रु' },
+    { ch: 'c6-11', hi: 'मस्तक', tr: 'mastak', en: 'forehead, head', hint: 'माथा' },
+    { ch: 'c6-11', hi: 'तनिक', tr: 'tanik', en: 'a little, slightly', hint: 'थोड़ा' },
+    { ch: 'c6-11', hi: 'बाग', tr: 'bāg', en: 'rein (of a horse)', hint: 'लगाम' },
+    { ch: 'c6-11', hi: 'पुतली', tr: 'putlī', en: 'pupil of the eye', hint: 'आँख की पुतली' },
+    { ch: 'c6-11', hi: 'कौशल', tr: 'kauśal', en: 'skill', hint: 'निपुणता' },
+    { ch: 'c6-11', hi: 'भाला', tr: 'bhālā', en: 'spear', hint: 'बरछा' },
+    { ch: 'c6-11', hi: 'निर्भीक', tr: 'nirbhīk', en: 'fearless', hint: 'निडर' },
+    { ch: 'c6-11', hi: 'सरपट', tr: 'sarpaṭ', en: 'at full gallop', hint: 'बहुत तेज़ दौड़' },
+    { ch: 'c6-11', hi: 'करवाल', tr: 'karvāl', en: 'sword', hint: 'तलवार' },
+    { ch: 'c6-11', hi: 'विकराल', tr: 'vikarāl', en: 'terrifying, monstrous', hint: 'भयानक' },
+    { ch: 'c6-11', hi: 'बज्र', tr: 'bajra', en: 'thunderbolt', hint: 'वज्र, बिजली' },
+    { ch: 'c6-11', hi: 'निषंग', tr: 'niṣaṅg', en: 'quiver (for arrows)', hint: 'तीर रखने का तरकश' },
+    { ch: 'c6-11', hi: 'हय', tr: 'hay', en: 'horse', hint: 'घोड़ा' },
+    // ---- Class 6, 12: हिंद महासागर में छोटा-सा हिंदुस्तान ----
+    { ch: 'c6-12', hi: 'यात्रा वृत्तांत', tr: 'yātrā vṛttānt', en: 'travelogue', hint: 'यात्रा का विवरण' },
+    { ch: 'c6-12', hi: 'रवाना', tr: 'ravānā', en: 'set out, departed', hint: 'प्रस्थान' },
+    { ch: 'c6-12', hi: 'अतएव', tr: 'ataev', en: 'therefore', hint: 'इसलिए' },
+    { ch: 'c6-12', hi: 'सर्वत्र', tr: 'sarvatra', en: 'everywhere', hint: 'हर जगह' },
+    { ch: 'c6-12', hi: 'पर्यटक', tr: 'paryaṭak', en: 'tourist', hint: 'सैलानी' },
+    { ch: 'c6-12', hi: 'दृष्टिपात', tr: 'dṛṣṭipāt', en: 'a glance', hint: 'नज़र डालना' },
+    { ch: 'c6-12', hi: 'तुच्छ', tr: 'tucch', en: 'insignificant, petty', hint: 'नगण्य, छोटा' },
+    { ch: 'c6-12', hi: 'चौकन्ना', tr: 'caukannā', en: 'alert, watchful', hint: 'सावधान' },
+    { ch: 'c6-12', hi: 'प्रवृत्ति', tr: 'pravṛtti', en: 'instinct, tendency', hint: 'स्वभाव, रुझान' },
+    { ch: 'c6-12', hi: 'निरापद', tr: 'nirāpad', en: 'safe', hint: 'सुरक्षित' },
+    { ch: 'c6-12', hi: 'द्वीप', tr: 'dvīp', en: 'island', hint: 'टापू' },
+    { ch: 'c6-12', hi: 'भूमध्य रेखा', tr: 'bhūmadhya rekhā', en: 'equator', hint: 'पृथ्वी के बीच की काल्पनिक रेखा' },
+    { ch: 'c6-12', hi: 'खानदान', tr: 'khāndān', en: 'family lineage', hint: 'वंश, कुल' },
+    { ch: 'c6-12', hi: 'रिवाज़', tr: 'rivāz', en: 'custom', hint: 'प्रथा, चलन' },
+    { ch: 'c6-12', hi: 'ऊख', tr: 'ūkh', en: 'sugarcane', hint: 'गन्ना' },
+    { ch: 'c6-12', hi: 'प्रलोभन', tr: 'pralobhan', en: 'temptation, lure', hint: 'लालच' },
+    { ch: 'c6-12', hi: 'चिरायु', tr: 'cirāyu', en: 'long-lived', hint: 'दीर्घजीवी' },
+    // ---- Class 6, 13: पेड़ की बात ----
+    { ch: 'c6-13', hi: 'सुकोमल', tr: 'sukomal', en: 'very tender, soft', hint: 'बहुत कोमल' },
+    { ch: 'c6-13', hi: 'अंश', tr: 'anś', en: 'part, portion', hint: 'भाग, हिस्सा' },
+    { ch: 'c6-13', hi: 'भेदना', tr: 'bhednā', en: 'to pierce through', hint: 'छेदना, पार करना' },
+    { ch: 'c6-13', hi: 'परीक्षण', tr: 'parīkṣaṇ', en: 'experiment, test', hint: 'जाँच, प्रयोग' },
+    { ch: 'c6-13', hi: 'औंधा', tr: 'aundhā', en: 'upside down', hint: 'उल्टा' },
+    { ch: 'c6-13', hi: 'तरल', tr: 'taral', en: 'liquid', hint: 'बहने वाला, द्रव' },
+    { ch: 'c6-13', hi: 'सूक्ष्मदर्शी', tr: 'sūkṣmadarśī', en: 'microscope', hint: 'बहुत छोटी चीज़ें दिखाने वाला यंत्र' },
+    { ch: 'c6-13', hi: 'संचार', tr: 'sañcār', en: 'circulation, flow', hint: 'प्रवाह' },
+    { ch: 'c6-13', hi: 'आहार', tr: 'āhār', en: 'food', hint: 'भोजन' },
+    { ch: 'c6-13', hi: 'श्वास', tr: 'śvās', en: 'breath', hint: 'साँस' },
+    { ch: 'c6-13', hi: 'विषाक्त', tr: 'viṣākt', en: 'poisonous', hint: 'ज़हरीला' },
+    { ch: 'c6-13', hi: 'विधाता', tr: 'vidhātā', en: 'the Creator', hint: 'ईश्वर, ब्रह्मा' },
+    { ch: 'c6-13', hi: 'अग्रसर', tr: 'agrasar', en: 'moving forward', hint: 'आगे बढ़ना' },
+    { ch: 'c6-13', hi: 'पल्लवित', tr: 'pallavit', en: 'sprouting leaves, flourishing', hint: 'हरा-भरा होना' },
+    { ch: 'c6-13', hi: 'ममता', tr: 'mamtā', en: 'motherly love', hint: 'माँ का प्रेम' },
+    { ch: 'c6-13', hi: 'प्रफुल्लित', tr: 'praphullit', en: 'delighted, blooming', hint: 'बहुत प्रसन्न' },
+    { ch: 'c6-13', hi: 'होड़', tr: 'hoṛ', en: 'race, competition', hint: 'प्रतिस्पर्धा' },
+    { ch: 'c6-13', hi: 'अभाव', tr: 'abhāv', en: 'lack, absence', hint: 'कमी' },
+    // ---- Class 7, 1: माँ, कह एक कहानी ----
+    { ch: 'c7-01', hi: 'चेटी', tr: 'ceṭī', en: 'maidservant', hint: 'दासी, सेविका' },
+    { ch: 'c7-01', hi: 'हठी', tr: 'haṭhī', en: 'stubborn', hint: 'ज़िद्दी' },
+    { ch: 'c7-01', hi: 'उपवन', tr: 'upvan', en: 'garden', hint: 'बाग़, बगीचा' },
+    { ch: 'c7-01', hi: 'तात', tr: 'tāt', en: 'father', hint: 'पिता' },
+    { ch: 'c7-01', hi: 'भ्रमण', tr: 'bhramaṇ', en: 'a stroll, wandering', hint: 'घूमना, टहलना' },
+    { ch: 'c7-01', hi: 'सुरभि', tr: 'surabhi', en: 'fragrance', hint: 'सुगंध, खुशबू' },
+    { ch: 'c7-01', hi: 'खग', tr: 'khag', en: 'bird', hint: 'पक्षी, पंछी' },
+    { ch: 'c7-01', hi: 'शर', tr: 'śar', en: 'arrow', hint: 'बाण, तीर' },
+    { ch: 'c7-01', hi: 'आखेटक', tr: 'ākheṭak', en: 'hunter', hint: 'शिकारी' },
+    { ch: 'c7-01', hi: 'आहत', tr: 'āhat', en: 'wounded', hint: 'घायल' },
+    { ch: 'c7-01', hi: 'रक्षक', tr: 'rakṣak', en: 'protector', hint: 'रक्षा करने वाला' },
+    { ch: 'c7-01', hi: 'भक्षक', tr: 'bhakṣak', en: 'devourer, one who eats', hint: 'खाने वाला' },
+    { ch: 'c7-01', hi: 'विवाद', tr: 'vivād', en: 'dispute', hint: 'झगड़ा, बहस' },
+    { ch: 'c7-01', hi: 'सदय', tr: 'saday', en: 'kind-hearted', hint: 'दयालु' },
+    { ch: 'c7-01', hi: 'निर्दय', tr: 'nirday', en: 'cruel, merciless', hint: 'क्रूर, निर्दयी' },
+    { ch: 'c7-01', hi: 'उभय', tr: 'ubhay', en: 'both', hint: 'दोनों' },
+    { ch: 'c7-01', hi: 'न्यायालय', tr: 'nyāyālay', en: 'court of law', hint: 'अदालत' },
+    { ch: 'c7-01', hi: 'निरपराध', tr: 'niraparādh', en: 'innocent', hint: 'बेकसूर, निर्दोष' },
+    // ---- Class 7, 2: तीन बुद्धिमान ----
+    { ch: 'c7-02', hi: 'लोककथा', tr: 'lokkathā', en: 'folk tale', hint: 'लोगों में प्रचलित कहानी' },
+    { ch: 'c7-02', hi: 'निर्धन', tr: 'nirdhan', en: 'poor', hint: 'गरीब' },
+    { ch: 'c7-02', hi: 'संचित', tr: 'sañcit', en: 'accumulated, saved up', hint: 'जमा किया हुआ' },
+    { ch: 'c7-02', hi: 'पैनी', tr: 'painī', en: 'sharp, keen', hint: 'तेज़' },
+    { ch: 'c7-02', hi: 'उन्नीस', tr: 'unnīs', en: 'inferior (literally nineteen)', hint: 'कम, पीछे' },
+    { ch: 'c7-02', hi: 'पश्चात्', tr: 'paścāt', en: 'after', hint: 'बाद में' },
+    { ch: 'c7-02', hi: 'चरवाहा', tr: 'carvāhā', en: 'shepherd, herder', hint: 'पशु चराने वाला' },
+    { ch: 'c7-02', hi: 'वीरान', tr: 'vīrān', en: 'desolate', hint: 'सुनसान, उजाड़' },
+    { ch: 'c7-02', hi: 'लाँघना', tr: 'lā̃ghnā', en: 'to cross over', hint: 'पार करना' },
+    { ch: 'c7-02', hi: 'छाला', tr: 'chālā', en: 'blister', hint: 'फफोला' },
+    { ch: 'c7-02', hi: 'मझला', tr: 'majhlā', en: 'middle (brother)', hint: 'बीच का' },
+    { ch: 'c7-02', hi: 'शंका', tr: 'śaṅkā', en: 'doubt, suspicion', hint: 'संदेह' },
+    { ch: 'c7-02', hi: 'रेवड़', tr: 'revaṛ', en: 'flock, herd', hint: 'भेड़-बकरियों का झुंड' },
+    { ch: 'c7-02', hi: 'आवभगत', tr: 'āvbhagat', en: 'hospitality', hint: 'स्वागत-सत्कार' },
+    { ch: 'c7-02', hi: 'अनुमान', tr: 'anumān', en: 'guess, inference', hint: 'अंदाज़ा' },
+    { ch: 'c7-02', hi: 'ज्यों की त्यों', tr: 'jyõ kī tyõ', en: 'exactly as it was', hint: 'जैसी थी वैसी' },
+    { ch: 'c7-02', hi: 'तीक्ष्ण', tr: 'tīkṣṇ', en: 'sharp, acute', hint: 'तेज़, पैनी' },
+    { ch: 'c7-02', hi: 'कोष', tr: 'koṣ', en: 'treasury, store', hint: 'भंडार' },
+    // ---- Class 7, 3: फूल और काँटा ----
+    { ch: 'c7-03', hi: 'मेह', tr: 'meh', en: 'rain', hint: 'वर्षा, बारिश' },
+    { ch: 'c7-03', hi: 'छेदना', tr: 'chednā', en: 'to pierce', hint: 'छेद करना' },
+    { ch: 'c7-03', hi: 'वर', tr: 'var', en: 'fine, excellent', hint: 'श्रेष्ठ, सुंदर' },
+    { ch: 'c7-03', hi: 'बसन', tr: 'basan', en: 'clothing', hint: 'वस्त्र, कपड़ा' },
+    { ch: 'c7-03', hi: 'कतरना', tr: 'katarnā', en: 'to clip, cut off', hint: 'काटना' },
+    { ch: 'c7-03', hi: 'भौंर', tr: 'bhaũr', en: 'bumblebee', hint: 'भँवरा' },
+    { ch: 'c7-03', hi: 'बेधना', tr: 'bedhnā', en: 'to pierce, wound', hint: 'छेदना, घायल करना' },
+    { ch: 'c7-03', hi: 'श्याम', tr: 'śyām', en: 'dark, black', hint: 'काला, साँवला' },
+    { ch: 'c7-03', hi: 'अनूठा', tr: 'anūṭhā', en: 'unique', hint: 'अनोखा' },
+    { ch: 'c7-03', hi: 'निज', tr: 'nij', en: 'one’s own', hint: 'अपना' },
+    { ch: 'c7-03', hi: 'कली', tr: 'kalī', en: 'bud', hint: 'अधखिला फूल' },
+    { ch: 'c7-03', hi: 'खटकना', tr: 'khaṭaknā', en: 'to irk, be a thorn in the eye', hint: 'बुरा लगना, चुभना' },
+    { ch: 'c7-03', hi: 'सोहना', tr: 'sohnā', en: 'to look beautiful', hint: 'सुशोभित होना' },
+    { ch: 'c7-03', hi: 'शीश', tr: 'śīś', en: 'head', hint: 'सिर' },
+    { ch: 'c7-03', hi: 'कुल', tr: 'kul', en: 'family, lineage', hint: 'वंश, खानदान' },
+    { ch: 'c7-03', hi: 'बड़प्पन', tr: 'baṛappan', en: 'greatness, nobility', hint: 'बड़ाई, महानता' },
+    { ch: 'c7-03', hi: 'कसर', tr: 'kasar', en: 'shortfall, deficiency', hint: 'कमी' },
+    // ---- Class 7, 4: पानी रे पानी ----
+    { ch: 'c7-04', hi: 'भूगोल', tr: 'bhūgol', en: 'geography', hint: 'पृथ्वी का अध्ययन' },
+    { ch: 'c7-04', hi: 'जल-चक्र', tr: 'jal-cakra', en: 'water cycle', hint: 'पानी का चक्र' },
+    { ch: 'c7-04', hi: 'भाप', tr: 'bhāp', en: 'steam, vapour', hint: 'वाष्प' },
+    { ch: 'c7-04', hi: 'बेवक्त', tr: 'bevaqt', en: 'at an odd time', hint: 'कुसमय, असमय' },
+    { ch: 'c7-04', hi: 'टंटा', tr: 'ṭaṇṭā', en: 'quarrel, fuss', hint: 'झगड़ा' },
+    { ch: 'c7-04', hi: 'हक', tr: 'haq', en: 'right, entitlement', hint: 'अधिकार' },
+    { ch: 'c7-04', hi: 'मजबूरी', tr: 'majbūrī', en: 'compulsion, helplessness', hint: 'लाचारी' },
+    { ch: 'c7-04', hi: 'अकाल', tr: 'akāl', en: 'famine, drought', hint: 'सूखा' },
+    { ch: 'c7-04', hi: 'बाढ़', tr: 'bāṛh', en: 'flood', hint: 'पानी का सैलाब' },
+    { ch: 'c7-04', hi: 'पहलू', tr: 'pahlū', en: 'aspect, side', hint: 'पक्ष' },
+    { ch: 'c7-04', hi: 'छुटकारा', tr: 'chuṭkārā', en: 'relief, escape', hint: 'मुक्ति' },
+    { ch: 'c7-04', hi: 'गुल्लक', tr: 'gullak', en: 'piggy bank', hint: 'पैसे जमा करने का बरतन' },
+    { ch: 'c7-04', hi: 'भंडार', tr: 'bhaṇḍār', en: 'store, reserve', hint: 'संग्रह, खजाना' },
+    { ch: 'c7-04', hi: 'रिसना', tr: 'risnā', en: 'to seep', hint: 'धीरे-धीरे टपकना' },
+    { ch: 'c7-04', hi: 'भूजल', tr: 'bhūjal', en: 'groundwater', hint: 'ज़मीन के नीचे का पानी' },
+    { ch: 'c7-04', hi: 'खजाना', tr: 'khazānā', en: 'treasure', hint: 'कोष' },
+    { ch: 'c7-04', hi: 'लालच', tr: 'lālac', en: 'greed', hint: 'लोभ' },
+    { ch: 'c7-04', hi: 'संग्रहण', tr: 'saṅgrahaṇ', en: 'collecting, storing', hint: 'जमा करना' },
+    // ---- Class 7, 5: नहीं होना बीमार ----
+    { ch: 'c7-05', hi: 'अवसर', tr: 'avsar', en: 'occasion, opportunity', hint: 'मौका' },
+    { ch: 'c7-05', hi: 'माहौल', tr: 'māhaul', en: 'atmosphere', hint: 'वातावरण' },
+    { ch: 'c7-05', hi: 'अभिवादन', tr: 'abhivādan', en: 'greeting', hint: 'नमस्कार' },
+    { ch: 'c7-05', hi: 'साबूदाना', tr: 'sābūdānā', en: 'sago, tapioca pearls', hint: 'खीर में डलने वाला हल्का दाना' },
+    { ch: 'c7-05', hi: 'ठाठ', tr: 'ṭhāṭh', en: 'luxury, style', hint: 'शान, आराम' },
+    { ch: 'c7-05', hi: 'काश', tr: 'kāś', en: 'if only', hint: 'ऐसा होता तो' },
+    { ch: 'c7-05', hi: 'बहाना', tr: 'bahānā', en: 'excuse, pretext', hint: 'झूठा कारण' },
+    { ch: 'c7-05', hi: 'रज़ाई', tr: 'razāī', en: 'quilt', hint: 'गद्देदार ओढ़ना' },
+    { ch: 'c7-05', hi: 'झपकी', tr: 'jhapkī', en: 'nap, doze', hint: 'हल्की नींद' },
+    { ch: 'c7-05', hi: 'कराहना', tr: 'karāhnā', en: 'to groan', hint: 'दर्द से आवाज़ निकालना' },
+    { ch: 'c7-05', hi: 'नब्ज़', tr: 'nabz', en: 'pulse', hint: 'नाड़ी' },
+    { ch: 'c7-05', hi: 'साबित', tr: 'sābit', en: 'proven', hint: 'सिद्ध' },
+    { ch: 'c7-05', hi: 'पुड़िया', tr: 'puṛiyā', en: 'small paper packet of medicine', hint: 'कागज़ में बँधी दवा' },
+    { ch: 'c7-05', hi: 'काढ़ा', tr: 'kāṛhā', en: 'herbal decoction', hint: 'जड़ी-बूटियों का गरम पेय' },
+    { ch: 'c7-05', hi: 'चहल-पहल', tr: 'cahal-pahal', en: 'hustle and bustle', hint: 'रौनक, हलचल' },
+    { ch: 'c7-05', hi: 'भुक्कड़', tr: 'bhukkaṛ', en: 'glutton', hint: 'पेटू, बहुत खाने वाला' },
+    { ch: 'c7-05', hi: 'कुढ़न', tr: 'kuṛhan', en: 'irritation, sulking', hint: 'चिढ़, जलन' },
+    { ch: 'c7-05', hi: 'विकार', tr: 'vikār', en: 'bad thought, flaw', hint: 'बुरा भाव, खोट' },
+    // ---- Class 7, 6: गिरिधर कविराय की कुंडलिया (Braj) ----
+    { ch: 'c7-06', hi: 'कुंडलिया', tr: 'kuṇḍaliyā', en: 'a six-line verse form', hint: 'छह पंक्तियों का छंद' },
+    { ch: 'c7-06', hi: 'बिचारे', tr: 'bicāre', en: 'having thought', hint: 'विचार करके, सोचकर' },
+    { ch: 'c7-06', hi: 'पाछे', tr: 'pāche', en: 'afterwards', hint: 'पीछे, बाद में' },
+    { ch: 'c7-06', hi: 'पछिताय', tr: 'pachitāy', en: 'regrets', hint: 'पश्चाताप करता है' },
+    { ch: 'c7-06', hi: 'बिगारे', tr: 'bigāre', en: 'spoils', hint: 'बिगाड़ता है' },
+    { ch: 'c7-06', hi: 'चित्त', tr: 'citt', en: 'mind, heart', hint: 'मन' },
+    { ch: 'c7-06', hi: 'चैन', tr: 'cain', en: 'peace, rest', hint: 'शांति, आराम' },
+    { ch: 'c7-06', hi: 'सन्मान', tr: 'sanmān', en: 'respect', hint: 'सम्मान, आदर' },
+    { ch: 'c7-06', hi: 'भावै', tr: 'bhāvai', en: 'pleases', hint: 'अच्छा लगता है' },
+    { ch: 'c7-06', hi: 'कछु', tr: 'kachu', en: 'some, anything', hint: 'कुछ' },
+    { ch: 'c7-06', hi: 'टरत', tr: 'ṭarat', en: 'goes away, is removed', hint: 'टलता है, दूर होता है' },
+    { ch: 'c7-06', hi: 'जिय', tr: 'jiy', en: 'heart', hint: 'जी, हृदय' },
+    { ch: 'c7-06', hi: 'माहिं', tr: 'māhĩ', en: 'in, within', hint: 'में, भीतर' },
+    { ch: 'c7-06', hi: 'बिसारि', tr: 'bisāri', en: 'forgetting', hint: 'भुलाकर' },
+    { ch: 'c7-06', hi: 'सुधि', tr: 'sudhi', en: 'awareness, care', hint: 'ख़बर, ध्यान' },
+    { ch: 'c7-06', hi: 'दुर्जन', tr: 'durjan', en: 'wicked person', hint: 'बुरा आदमी' },
+    { ch: 'c7-06', hi: 'खता', tr: 'khatā', en: 'fault, mistake', hint: 'गलती, दोष' },
+    { ch: 'c7-06', hi: 'परतीती', tr: 'partītī', en: 'faith, conviction', hint: 'प्रतीति, विश्वास' },
+    // ---- Class 7, 7: वर्षा-बहार ----
+    { ch: 'c7-07', hi: 'बहार', tr: 'bahār', en: 'bloom, splendour', hint: 'शोभा, रौनक' },
+    { ch: 'c7-07', hi: 'लुभाना', tr: 'lubhānā', en: 'to entice, charm', hint: 'मोहित करना' },
+    { ch: 'c7-07', hi: 'नभ', tr: 'nabh', en: 'sky', hint: 'आकाश' },
+    { ch: 'c7-07', hi: 'घनघोर', tr: 'ghanghor', en: 'dense, thunderous', hint: 'बहुत घना' },
+    { ch: 'c7-07', hi: 'मालिन', tr: 'mālin', en: 'woman gardener', hint: 'बाग की देखभाल करने वाली' },
+    { ch: 'c7-07', hi: 'ताल', tr: 'tāl', en: 'pond', hint: 'तालाब' },
+    { ch: 'c7-07', hi: 'जलचर', tr: 'jalcar', en: 'water creature', hint: 'पानी में रहने वाला जीव' },
+    { ch: 'c7-07', hi: 'लखना', tr: 'lakhnā', en: 'to see, behold', hint: 'देखना' },
+    { ch: 'c7-07', hi: 'पपीहा', tr: 'papīhā', en: 'rain bird (hawk-cuckoo)', hint: 'वर्षा में बोलने वाला पक्षी' },
+    { ch: 'c7-07', hi: 'ग्रीष्म', tr: 'grīṣm', en: 'summer', hint: 'गरमी की ऋतु' },
+    { ch: 'c7-07', hi: 'ताप', tr: 'tāp', en: 'heat', hint: 'गरमी' },
+    { ch: 'c7-07', hi: 'सौरभ', tr: 'saurabh', en: 'fragrance', hint: 'सुगंध' },
+    { ch: 'c7-07', hi: 'आमोद', tr: 'āmod', en: 'joy, delight', hint: 'आनंद, प्रसन्नता' },
+    { ch: 'c7-07', hi: 'कतार', tr: 'katār', en: 'row, line', hint: 'पंक्ति' },
+    { ch: 'c7-07', hi: 'मनहर', tr: 'manhar', en: 'charming', hint: 'मन को हरने वाला, मनोहर' },
+    { ch: 'c7-07', hi: 'भाँति', tr: 'bhā̃ti', en: 'manner, way', hint: 'तरह, प्रकार' },
+    { ch: 'c7-07', hi: 'शोभा', tr: 'śobhā', en: 'beauty, grace', hint: 'सुंदरता' },
+    // ---- Class 7, 8: बिरजू महाराज से साक्षात्कार ----
+    { ch: 'c7-08', hi: 'संघर्ष', tr: 'saṅgharṣ', en: 'struggle', hint: 'कठिन प्रयास' },
+    { ch: 'c7-08', hi: 'हवेली', tr: 'havelī', en: 'mansion', hint: 'बड़ा पुराना घर' },
+    { ch: 'c7-08', hi: 'देहांत', tr: 'dehānt', en: 'death, passing away', hint: 'मृत्यु' },
+    { ch: 'c7-08', hi: 'आर्थिक', tr: 'ārthik', en: 'financial', hint: 'धन से जुड़ा' },
+    { ch: 'c7-08', hi: 'उतार-चढ़ाव', tr: 'utār-caṛhāv', en: 'ups and downs', hint: 'घटना-बढ़ना' },
+    { ch: 'c7-08', hi: 'कर्ज़', tr: 'qarz', en: 'loan, debt', hint: 'उधार, ऋण' },
+    { ch: 'c7-08', hi: 'ज़री', tr: 'zarī', en: 'gold-thread embroidery', hint: 'सोने-चाँदी के तार का काम' },
+    { ch: 'c7-08', hi: 'गुज़ारा', tr: 'guzārā', en: 'livelihood, getting by', hint: 'जीवन-यापन' },
+    { ch: 'c7-08', hi: 'तालीम', tr: 'tālīm', en: 'training, education', hint: 'शिक्षा, प्रशिक्षण' },
+    { ch: 'c7-08', hi: 'शिष्य', tr: 'śiṣya', en: 'disciple, student', hint: 'चेला, विद्यार्थी' },
+    { ch: 'c7-08', hi: 'भेंट', tr: 'bheṇṭ', en: 'gift, offering', hint: 'उपहार' },
+    { ch: 'c7-08', hi: 'रस्म', tr: 'rasm', en: 'ritual, custom', hint: 'रीति, प्रथा' },
+    { ch: 'c7-08', hi: 'सामर्थ्य', tr: 'sāmarthya', en: 'capacity, ability', hint: 'क्षमता, शक्ति' },
+    { ch: 'c7-08', hi: 'घराना', tr: 'gharānā', en: 'school or lineage of an art', hint: 'कला की परंपरा वाला परिवार' },
+    { ch: 'c7-08', hi: 'मग्न', tr: 'magn', en: 'absorbed, engrossed', hint: 'लीन, डूबा हुआ' },
+    { ch: 'c7-08', hi: 'शैली', tr: 'śailī', en: 'style', hint: 'ढंग, तरीका' },
+    { ch: 'c7-08', hi: 'लय', tr: 'lay', en: 'rhythm', hint: 'ताल' },
+    { ch: 'c7-08', hi: 'तपस्या', tr: 'tapasyā', en: 'penance, austerity', hint: 'तप, कठिन साधना' },
+    // ---- Class 7, 9: चिड़िया ----
+    { ch: 'c7-09', hi: 'प्रीति', tr: 'prīti', en: 'love, affection', hint: 'प्रेम' },
+    { ch: 'c7-09', hi: 'बंदी', tr: 'bandī', en: 'prisoner, captive', hint: 'कैदी' },
+    { ch: 'c7-09', hi: 'मुक्ति', tr: 'mukti', en: 'freedom, liberation', hint: 'छुटकारा, आज़ादी' },
+    { ch: 'c7-09', hi: 'ज्ञात', tr: 'gyāt', en: 'known', hint: 'मालूम' },
+    { ch: 'c7-09', hi: 'खंजन', tr: 'khañjan', en: 'wagtail (a small bird)', hint: 'एक छोटा पक्षी' },
+    { ch: 'c7-09', hi: 'कपोत', tr: 'kapot', en: 'pigeon, dove', hint: 'कबूतर' },
+    { ch: 'c7-09', hi: 'चातक', tr: 'cātak', en: 'rain-loving cuckoo', hint: 'पपीहा' },
+    { ch: 'c7-09', hi: 'कोकिल', tr: 'kokil', en: 'cuckoo', hint: 'कोयल' },
+    { ch: 'c7-09', hi: 'काक', tr: 'kāk', en: 'crow', hint: 'कौआ' },
+    { ch: 'c7-09', hi: 'शुक', tr: 'śuk', en: 'parrot', hint: 'तोता' },
+    { ch: 'c7-09', hi: 'श्रम', tr: 'śram', en: 'labour, effort', hint: 'मेहनत' },
+    { ch: 'c7-09', hi: 'लोभ', tr: 'lobh', en: 'greed', hint: 'लालच' },
+    { ch: 'c7-09', hi: 'हड़पना', tr: 'haṛapnā', en: 'to grab, usurp', hint: 'छीन लेना' },
+    { ch: 'c7-09', hi: 'गगन', tr: 'gagan', en: 'sky', hint: 'आकाश' },
+    { ch: 'c7-09', hi: 'विचरण', tr: 'vicaraṇ', en: 'roaming about', hint: 'घूमना, भ्रमण' },
+    { ch: 'c7-09', hi: 'स्वच्छंद', tr: 'svacchand', en: 'free, unrestrained', hint: 'स्वतंत्र, आज़ाद' },
+    { ch: 'c7-09', hi: 'बेड़ी', tr: 'beṛī', en: 'shackle, fetter', hint: 'पैर की ज़ंजीर' },
+    { ch: 'c7-09', hi: 'द्रोह', tr: 'droh', en: 'hostility, malice', hint: 'शत्रुता, विद्रोह' },
+    // ---- Class 7, 10: मीरा के पद (Braj/Rajasthani) ----
+    { ch: 'c7-10', hi: 'नैनन', tr: 'nainan', en: 'eyes', hint: 'आँखों (में)' },
+    { ch: 'c7-10', hi: 'नंदलाल', tr: 'nandlāl', en: 'Krishna, son of Nand', hint: 'श्रीकृष्ण' },
+    { ch: 'c7-10', hi: 'मूरति', tr: 'mūrati', en: 'form, image', hint: 'मूर्ति, रूप' },
+    { ch: 'c7-10', hi: 'साँवरि', tr: 'sā̃vari', en: 'dark-complexioned', hint: 'साँवली' },
+    { ch: 'c7-10', hi: 'सुधा', tr: 'sudhā', en: 'nectar', hint: 'अमृत' },
+    { ch: 'c7-10', hi: 'उर', tr: 'ur', en: 'chest, heart', hint: 'हृदय, छाती' },
+    { ch: 'c7-10', hi: 'वैजंती माल', tr: 'vaijantī māl', en: 'garland of vaijayanti seeds', hint: 'वैजयंती के बीजों की माला' },
+    { ch: 'c7-10', hi: 'क्षुद्र', tr: 'kṣudra', en: 'tiny, small', hint: 'छोटी' },
+    { ch: 'c7-10', hi: 'घंटिका', tr: 'ghaṇṭikā', en: 'small bell', hint: 'छोटी घंटी' },
+    { ch: 'c7-10', hi: 'कटितट', tr: 'kaṭitaṭ', en: 'waist', hint: 'कमर' },
+    { ch: 'c7-10', hi: 'नूपुर', tr: 'nūpur', en: 'anklet', hint: 'पायल, घुँघरू' },
+    { ch: 'c7-10', hi: 'वछल', tr: 'vachal', en: 'loving, affectionate', hint: 'वत्सल, स्नेही' },
+    { ch: 'c7-10', hi: 'बदरिया', tr: 'badariyā', en: 'cloud', hint: 'बदली, बादल' },
+    { ch: 'c7-10', hi: 'सावन', tr: 'sāvan', en: 'Shravan, the monsoon month', hint: 'श्रावण मास' },
+    { ch: 'c7-10', hi: 'भनक', tr: 'bhanak', en: 'faint sound, inkling', hint: 'हल्की आवाज़, आहट' },
+    { ch: 'c7-10', hi: 'चहुँ दिश', tr: 'cahũ diś', en: 'all four directions', hint: 'चारों दिशाएँ' },
+    { ch: 'c7-10', hi: 'दामिन', tr: 'dāmin', en: 'lightning', hint: 'बिजली' },
+    { ch: 'c7-10', hi: 'गिरधर', tr: 'girdhar', en: 'Krishna, the mountain-holder', hint: 'श्रीकृष्ण' }
+  ];
+
+  const MINE = { id: 'mine', cls: 'mine', n: 0, title: 'My words', genre: '', author: '' };
+  const cardId = c => c.ch + ':' + c.hi;
+
+  /* ===================== State ===================== */
+  function isObj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function validISO(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s;
+  }
+  function nonneg(v) { const n = Math.round(Number(v)); return Number.isFinite(n) && n > 0 ? n : 0; }
+  function str(v, max) { return typeof v === 'string' ? v.trim().slice(0, max || 80) : ''; }
+  function blank() {
+    return { version: 1, progress: {}, quizzes: [], custom: [], days: {},
+      settings: { cls: 6, ch: 'c6-01', dir: 'hi-en', speak: false }, summary: { headline: '', sub: '' } };
+  }
+  /** Turn anything (old data, a hand-edited file, garbage) into a valid state object. */
+  function normalise(raw) {
+    const s = blank();
+    if (!isObj(raw)) return s;
+    if (isObj(raw.progress)) Object.keys(raw.progress).forEach(k => {
+      const p = raw.progress[k];
+      if (!isObj(p) || k.indexOf(':') < 1) return;
+      const box = Math.min(4, nonneg(p.box));
+      s.progress[k] = { box, due: validISO(p.due) ? p.due : today(), seen: nonneg(p.seen), right: nonneg(p.right), wrong: nonneg(p.wrong), last: validISO(p.last) ? p.last : '' };
+    });
+    if (Array.isArray(raw.quizzes)) s.quizzes = raw.quizzes
+      .filter(q => isObj(q) && validISO(q.date) && typeof q.ch === 'string')
+      .map(q => ({ date: q.date, ch: q.ch, right: nonneg(q.right), total: Math.max(1, nonneg(q.total)) })).slice(-200);
+    if (Array.isArray(raw.custom)) raw.custom.forEach(c => {
+      if (!isObj(c)) return;
+      const hi = str(c.hi, 60), en = str(c.en, 80);
+      if (hi && en && !s.custom.some(x => x.hi === hi)) s.custom.push({ hi, tr: str(c.tr, 60), en, hint: str(c.hint, 80) });
+    });
+    if (isObj(raw.days)) Object.keys(raw.days).forEach(d => { if (validISO(d) && nonneg(raw.days[d])) s.days[d] = nonneg(raw.days[d]); });
+    if (isObj(raw.settings)) {
+      const st = raw.settings;
+      if (String(st.cls) === '7') s.settings.cls = 7; else if (st.cls === 'mine') s.settings.cls = 'mine';
+      if (typeof st.ch === 'string' && (st.ch === 'mine' || st.ch === 'due' || CHAPTERS.some(c => c.id === st.ch))) s.settings.ch = st.ch;
+      if (st.dir === 'en-hi') s.settings.dir = 'en-hi';
+      s.settings.speak = st.speak === true;
+    }
+    // Keep the class tab in step with the selected chapter.
+    const chap = CHAPTERS.filter(c => c.id === s.settings.ch)[0];
+    if (chap) s.settings.cls = chap.cls; else if (s.settings.ch === 'mine') s.settings.cls = 'mine';
+    return s;
+  }
+  const stored = PH.load(KEY, null);
+  let state = normalise(stored);
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+
+  /* ===================== Card helpers ===================== */
+  function allCards() { return CARDS.concat(state.custom.map(c => ({ ch: 'mine', hi: c.hi, tr: c.tr, en: c.en, hint: c.hint }))); }
+  function chapterById(id) { if (id === 'mine') return MINE; return CHAPTERS.filter(c => c.id === id)[0] || null; }
+  function prog(c) { return state.progress[cardId(c)] || null; }
+  function isDue(c, t) { const p = prog(c); return !!p && p.due <= t; }
+  function dueCards() { const t = today(); return allCards().filter(c => isDue(c, t)); }
+  function cardsOf(chId) { return chId === 'due' ? dueCards() : allCards().filter(c => c.ch === chId); }
+  function classCards(cls) {
+    if (cls === 'mine') return allCards().filter(c => c.ch === 'mine');
+    return allCards().filter(c => { const ch = chapterById(c.ch); return ch && ch.cls === cls; });
+  }
+  function learnedCount(cards) { return cards.filter(c => { const p = prog(c); return p && p.box >= 3; }).length; }
+  function streak() {
+    let d = today(), n = 0;
+    if (!state.days[d]) d = PH.addDays(d, -1);
+    while (state.days[d]) { n++; d = PH.addDays(d, -1); }
+    return n;
+  }
+  function chapterTitle(id) { if (id === 'due') return 'Due today'; const ch = chapterById(id); return ch ? ch.title : ''; }
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  /** Leitner update. ok=true → box+1 (max 4); ok=false → box 0. Records one review for today's streak. */
+  function rate(c, ok) {
+    const id = cardId(c), t = today();
+    const p = state.progress[id] || { box: 0, due: t, seen: 0, right: 0, wrong: 0, last: '' };
+    if (ok) { p.box = Math.min(4, p.box + 1); p.right++; } else { p.box = 0; p.wrong++; }
+    p.due = PH.addDays(t, INTERVALS[p.box]); p.seen++; p.last = t;
+    state.progress[id] = p;
+    state.days[t] = (state.days[t] || 0) + 1;
+  }
+
+  function buildSummary() {
+    const reviewed = Object.keys(state.progress).length;
+    if (!reviewed && !state.quizzes.length) return { headline: '', sub: '' };
+    const s = streak(), learned = learnedCount(allCards()), due = dueCards().length;
+    const headline = s >= 2 ? '🔥 ' + s + '-day streak' : learned ? plural(learned, 'word') + ' learned' : plural(reviewed, 'word') + ' reviewed';
+    const title = state.settings.ch === 'due' ? '' : chapterTitle(state.settings.ch);
+    return { headline, sub: due + ' due today' + (title ? ' · last: ' + title : '') };
+  }
+
+  /* ===================== Speech ===================== */
+  const canSpeak = typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance !== 'undefined';
+  function speak(text) {
+    if (!canSpeak || !text) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'hi-IN'; u.rate = 0.85;
+      const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+      const v = voices.filter(x => /^hi([-_]|$)/i.test(x.lang || ''))[0];
+      if (v) u.voice = v;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) { /* no voice available: stay silent */ }
+  }
+
+  /* ===================== Flashcards ===================== */
+  const deck = { cards: [], i: 0, flipped: false };
+  function buildDeck() {
+    const t = today();
+    const cards = cardsOf(state.settings.ch).slice();
+    const rank = c => { const p = prog(c); return !p ? 1 : p.due <= t ? 0 : 2; }; // due first, then new, then the rest
+    const dueOf = c => { const p = prog(c); return p ? p.due : ''; };
+    cards.sort((a, b) => rank(a) - rank(b) || dueOf(a).localeCompare(dueOf(b)));
+    deck.cards = cards; deck.i = 0; deck.flipped = false;
+  }
+  function currentCard() { return deck.i < deck.cards.length ? deck.cards[deck.i] : null; }
+  function boxPill(c) {
+    const p = prog(c);
+    if (!p) return '<span class="pill neutral">new</span>';
+    const cls = p.box >= 3 ? 'ok' : p.box >= 1 ? '' : 'warn';
+    return '<span class="pill ' + cls + '">box ' + p.box + '</span>';
+  }
+  function renderFlash() {
+    const ch = state.settings.ch;
+    $('#deck-name').textContent = chapterTitle(ch);
+    $$('#dir-tabs .tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.dir === state.settings.dir)));
+    const body = $('#flash-body'), n = deck.cards.length, c = currentCard();
+    $('#speak-opt').hidden = !canSpeak;
+    $('#speak-auto').checked = !!state.settings.speak;
+    if (!n) {
+      body.innerHTML = '<div class="done-panel"><div class="big">' + (ch === 'due' ? '🎉' : '📭') + '</div><p>' +
+        (ch === 'due' ? 'Nothing is due right now. Pick a chapter to learn new words.' : ch === 'mine' ? 'No words of your own yet. Add some below.' : 'This chapter has no cards yet.') + '</p></div>';
+      return;
+    }
+    const pos = '<div class="deck-progress"><span class="small muted pos" id="deck-pos">' + Math.min(deck.i + 1, n) + ' / ' + n + '</span>' +
+      '<div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + n + '" aria-valuenow="' + deck.i + '"><i style="width:' + Math.round(deck.i / n * 100) + '%"></i></div></div>';
+    if (!c) {
+      const learned = learnedCount(deck.cards);
+      body.innerHTML = pos + '<div class="done-panel"><div class="big">🎉</div><h3>Deck finished</h3><p class="muted">' +
+        learned + ' of ' + n + ' words are in box 3 or higher. Come back tomorrow for the ones that are due.</p>' +
+        '<button type="button" class="btn btn-primary" id="btn-again-deck">↻ Go again</button></div>';
+      return;
+    }
+    const hiEn = state.settings.dir === 'hi-en';
+    const front = hiEn
+      ? '<div class="word" lang="hi">' + esc(c.hi) + '</div>'
+      : '<div class="prompt-en">' + esc(c.en) + '</div>';
+    const back = '<div class="word" lang="hi">' + esc(c.hi) + '</div>' +
+      (c.tr ? '<div class="tr">' + esc(c.tr) + '</div>' : '') +
+      '<div class="en">' + esc(c.en) + '</div>' +
+      (c.hint ? '<div class="hint" lang="hi">' + esc(c.hint) + '</div>' : '');
+    body.innerHTML = pos +
+      '<div class="flashcard' + (deck.flipped ? ' flipped' : '') + '" id="fcard" tabindex="0" role="button" aria-pressed="' + deck.flipped + '" aria-label="Flashcard: press Space or Enter to flip">' +
+        '<div class="inner">' +
+          '<div class="face front">' + boxPill(c) + front + '<div class="tap">tap or press Space to flip</div></div>' +
+          '<div class="face back">' + back + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="row rate">' +
+        '<button type="button" class="btn btn-danger" id="btn-again">✗ Again <span class="kbd">1</span></button>' +
+        '<button type="button" class="btn btn-primary" id="btn-got">✓ Got it <span class="kbd">2</span></button>' +
+        (canSpeak ? '<button type="button" class="btn btn-icon" id="btn-speak" aria-label="Hear the word" title="Hear the word">🔊</button>' : '') +
+      '</div>';
+  }
+  function flip() {
+    const c = currentCard(); if (!c) return;
+    deck.flipped = !deck.flipped;
+    const el = $('#fcard'); if (el) { el.classList.toggle('flipped', deck.flipped); el.setAttribute('aria-pressed', String(deck.flipped)); }
+    // Say the word when the Hindi side comes into view (auto-speak is opt-in).
+    if (state.settings.speak && ((state.settings.dir === 'hi-en' && !deck.flipped) || (state.settings.dir === 'en-hi' && deck.flipped))) speak(c.hi);
+  }
+  function rateCurrent(ok) {
+    const c = currentCard(); if (!c) return;
+    rate(c, ok); deck.i++; deck.flipped = false;
+    save(); renderFlash(); renderStats(); renderChips(); renderList();
+    const nx = currentCard();
+    if (nx && state.settings.speak && state.settings.dir === 'hi-en') speak(nx.hi);
+  }
+
+  /* ===================== Quiz ===================== */
+  const quiz = { active: false, qs: [], i: 0, right: 0, answered: null, ch: '', result: null };
+  function quizPool() {
+    const ch = state.settings.ch;
+    let pool = cardsOf(ch);
+    const chap = ch === 'due' ? null : chapterById(ch);
+    let wide = chap ? classCards(chap.cls) : allCards();
+    if (wide.length < 8) wide = allCards();
+    if (pool.length < 8) pool = wide;
+    return { pool, wide };
+  }
+  function startQuiz() {
+    const { pool, wide } = quizPool();
+    if (pool.length < 4) { PH.toast('Not enough words for a quiz yet'); return; }
+    const picks = shuffle(pool.slice()).slice(0, 10);
+    quiz.qs = picks.map(c => {
+      const dir = Math.random() < 0.5 ? 'hi-en' : 'en-hi';
+      const key = dir === 'hi-en' ? 'en' : 'hi';
+      const used = {}; used[c[key]] = true;
+      const distractors = [];
+      shuffle(wide.slice()).forEach(x => { if (distractors.length < 3 && x !== c && x[key] && !used[x[key]]) { used[x[key]] = true; distractors.push(x); } });
+      return { card: c, dir, key, opts: shuffle([c].concat(distractors)) };
+    });
+    quiz.active = true; quiz.i = 0; quiz.right = 0; quiz.answered = null; quiz.ch = state.settings.ch; quiz.result = null;
+    renderQuiz();
+    const first = $('#quiz .q-opt'); if (first) first.focus();
+  }
+  function answer(k) {
+    if (!quiz.active || quiz.answered !== null) return;
+    const q = quiz.qs[quiz.i]; if (k < 0 || k >= q.opts.length) return;
+    quiz.answered = k;
+    const ok = q.opts[k] === q.card;
+    if (ok) quiz.right++;
+    rate(q.card, ok); save();
+    renderQuiz(); renderStats(); renderChips(); renderList();
+    const nb = $('#btn-next-q'); if (nb) nb.focus();
+  }
+  function nextQ() {
+    if (!quiz.active || quiz.answered === null) return;
+    quiz.i++; quiz.answered = null;
+    if (quiz.i >= quiz.qs.length) finishQuiz(); else { renderQuiz(); const f = $('#quiz .q-opt'); if (f) f.focus(); }
+  }
+  function finishQuiz() {
+    quiz.active = false;
+    quiz.result = { date: today(), ch: quiz.ch, right: quiz.right, total: quiz.qs.length };
+    state.quizzes.push(quiz.result); state.quizzes = state.quizzes.slice(-200);
+    save(); renderQuiz(); renderStats();
+  }
+  function encouragement(r, t) { // [Hindi cheer, English follow-up]
+    const f = r / t;
+    if (f === 1) return ['शाबाश!', 'Perfect score!'];
+    if (f >= 0.8) return ['बहुत अच्छा!', 'Great work.'];
+    if (f >= 0.5) return ['अच्छा!', 'Keep going, you are getting there.'];
+    return ['कोई बात नहीं।', 'Review the cards and try again.'];
+  }
+  function renderQuiz() {
+    const body = $('#quiz-body');
+    const { pool } = quizPool();
+    const chTitle = chapterTitle(state.settings.ch);
+    const chap = state.settings.ch === 'due' ? null : chapterById(state.settings.ch);
+    const fromWholeClass = pool.length !== cardsOf(state.settings.ch).length || cardsOf(state.settings.ch).length < 8;
+    $('#quiz-sub').innerHTML = '10 questions · ' + (fromWholeClass ? (chap && chap.cls !== 'mine' ? 'all of Class ' + chap.cls : 'all words') : '<span lang="hi">' + esc(chTitle) + '</span>');
+    if (quiz.active) {
+      const q = quiz.qs[quiz.i];
+      const prompt = q.dir === 'hi-en' ? '<div class="q-word" lang="hi">' + esc(q.card.hi) + '</div>' : '<div class="q-word">' + esc(q.card.en) + '</div>';
+      const opts = q.opts.map((o, i) => {
+        let cls = 'q-opt';
+        if (quiz.answered !== null) { if (o === q.card) cls += ' right'; else if (i === quiz.answered) cls += ' wrong'; }
+        const txt = q.dir === 'hi-en' ? esc(o.en) : '<span lang="hi">' + esc(o.hi) + '</span>';
+        return '<button type="button" class="' + cls + '" data-opt="' + i + '"' + (quiz.answered !== null ? ' disabled' : '') + '><span class="n">' + (i + 1) + '</span><span class="o">' + txt + '</span></button>';
+      }).join('');
+      let fb = '';
+      if (quiz.answered !== null) {
+        const ok = q.opts[quiz.answered] === q.card;
+        fb = '<div class="q-feedback ' + (ok ? 'ok' : 'bad') + '"><span>' + (ok ? '✓ Correct!' : '✗ Not quite. ') +
+          (ok ? '' : '<span class="ans"><span lang="hi">' + esc(q.card.hi) + '</span> = ' + esc(q.card.en) + '</span>') +
+          (q.card.tr ? ' <span class="muted small">(' + esc(q.card.tr) + ')</span>' : '') + '</span>' +
+          '<button type="button" class="btn btn-primary btn-sm" id="btn-next-q">' + (quiz.i + 1 < quiz.qs.length ? 'Next →' : 'See score') + ' <span class="kbd">↵</span></button></div>';
+      }
+      body.innerHTML = '<div class="q-head"><span class="muted small">Question ' + (quiz.i + 1) + ' of ' + quiz.qs.length + ' · ' + quiz.right + ' right</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm" id="btn-quit-q">Stop quiz</button></div>' +
+        '<div class="progress"><i style="width:' + Math.round(quiz.i / quiz.qs.length * 100) + '%"></i></div>' +
+        prompt + '<div class="q-opts" role="group" aria-label="Answers">' + opts + '</div>' + fb;
+      return;
+    }
+    let html = '';
+    if (quiz.result) {
+      const r = quiz.result, cheer = encouragement(r.right, r.total);
+      html += '<div class="q-score"><div class="big">' + r.right + ' / ' + r.total + '</div><p><span lang="hi">' + esc(cheer[0]) + '</span> ' + esc(cheer[1]) + '</p></div>';
+    }
+    html += '<div class="row"><button type="button" class="btn btn-primary" id="btn-start-q">' + (quiz.result ? '↻ Quiz again' : '▶ Start quiz') + '</button>' +
+      '<span class="muted small">Multiple choice, both directions. Keys <span class="kbd">1</span>–<span class="kbd">4</span> answer.</span></div>';
+    const recent = state.quizzes.slice(-5).reverse();
+    if (recent.length) {
+      html += '<ul class="list q-hist">' + recent.map(q => '<li><span>' + esc(PH.fmtDate(q.date)) + '</span><span lang="hi">' + esc(chapterTitle(q.ch) || q.ch) + '</span><span class="spacer" style="flex:1"></span><span class="pill ' + (q.right / q.total >= 0.8 ? 'ok' : q.right / q.total >= 0.5 ? '' : 'warn') + '">' + q.right + '/' + q.total + '</span></li>').join('') + '</ul>';
+    }
+    body.innerHTML = html;
+  }
+
+  /* ===================== Word list ===================== */
+  function renderList() {
+    const q = ($('#search').value || '').trim().toLowerCase();
+    let cards, searching = !!q;
+    if (searching) cards = allCards().filter(c => [c.hi, c.tr, c.en, c.hint].some(v => String(v || '').toLowerCase().indexOf(q) > -1));
+    else cards = cardsOf(state.settings.ch);
+    const title = chapterTitle(state.settings.ch);
+    const chap = state.settings.ch === 'due' ? null : chapterById(state.settings.ch);
+    $('#list-sub').innerHTML = searching ? plural(cards.length, 'match') + ' in all chapters' : '<span lang="hi">' + esc(title) + '</span> · ' + plural(cards.length, 'word');
+    const wrap = $('#list-wrap');
+    if (!cards.length) { wrap.innerHTML = '<div class="empty">' + (searching ? 'No words match “' + esc(q) + '”.' : 'No words here yet.') + '</div>'; }
+    else {
+      const rows = cards.map(c => {
+        const p = prog(c);
+        const chCol = searching ? '<td class="hide-sm small muted" lang="hi">' + esc(c.ch === 'mine' ? 'My words' : (chapterById(c.ch) || {}).title || '') + '</td>' : '';
+        const acts = (p ? '<button type="button" class="btn btn-sm" data-reset="' + esc(cardId(c)) + '" title="Forget progress for this word">reset</button>' : '') +
+          (c.ch === 'mine' ? ' <button type="button" class="btn btn-sm btn-danger" data-del="' + esc(c.hi) + '">delete</button>' : '');
+        return '<tr><td class="hi" lang="hi">' + esc(c.hi) + '</td><td class="tr hide-sm">' + esc(c.tr) + '</td><td>' + esc(c.en) + '</td>' +
+          '<td class="hide-sm muted" lang="hi">' + esc(c.hint) + '</td>' + chCol + '<td>' + boxPill(c) + (p ? '<div class="small muted">due ' + esc(PH.fmtDate(p.due, { month: 'short', day: 'numeric' })) + '</div>' : '') + '</td>' +
+          '<td class="actions">' + acts + '</td></tr>';
+      }).join('');
+      wrap.innerHTML = '<table class="table"><thead><tr><th lang="hi">शब्द</th><th class="hide-sm">Say it</th><th>Meaning</th><th class="hide-sm">Hint</th>' + (searching ? '<th class="hide-sm">Chapter</th>' : '') + '<th>Box</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+    // Print version: same words as a two-column list.
+    $('#print-list').innerHTML = '<h2>' + (searching ? 'Hindi words matching “' + esc(q) + '”' : '<span lang="hi">' + esc(title) + '</span>' + (chap && chap.cls !== 'mine' ? ' · ' + esc(chap.genre) + (chap.author ? ' · ' + esc(chap.author) : '') + ' · Class ' + chap.cls : '')) + '</h2>' +
+      '<div class="sub">Malhar (मल्हार) vocabulary · ' + plural(cards.length, 'word') + '</div>' +
+      cards.map(c => '<div class="pi"><b lang="hi">' + esc(c.hi) + '</b> <i>' + esc(c.tr) + '</i> — ' + esc(c.en) + (c.hint ? ' <span class="h" lang="hi">(' + esc(c.hint) + ')</span>' : '') + '</div>').join('');
+  }
+  function resetWord(id) {
+    if (!state.progress[id]) return;
+    delete state.progress[id];
+    save(); renderAll(); PH.toast('Progress reset');
+  }
+
+  /* ===================== My words ===================== */
+  function renderMine() {
+    const ul = $('#mine-list');
+    if (!state.custom.length) { ul.innerHTML = '<li class="muted small">Your own words show up here and under the “My words” tab above.</li>'; return; }
+    ul.innerHTML = state.custom.map(c => '<li><span class="txt"><span class="hi" lang="hi">' + esc(c.hi) + '</span>' + (c.tr ? ' <span class="muted small">' + esc(c.tr) + '</span>' : '') +
+      ' — ' + esc(c.en) + (c.hint ? ' <span class="muted small" lang="hi">(' + esc(c.hint) + ')</span>' : '') + '</span>' +
+      '<button type="button" class="btn btn-sm btn-danger" data-del="' + esc(c.hi) + '">Delete</button></li>').join('');
+  }
+  function addMine(e) {
+    e.preventDefault();
+    const hi = str($('#m-hi').value, 60), tr = str($('#m-tr').value, 60), en = str($('#m-en').value, 80), hint = str($('#m-hint').value, 80);
+    if (!hi || !en) { PH.toast('Hindi word and meaning are both needed'); (hi ? $('#m-en') : $('#m-hi')).focus(); return; }
+    if (state.custom.some(c => c.hi === hi)) { PH.toast('That word is already in My words'); return; }
+    state.custom.push({ hi, tr, en, hint });
+    $('#mine-form').reset();
+    state.settings.cls = 'mine'; state.settings.ch = 'mine'; quiz.active = false;
+    save(); buildDeck(); renderAll(); PH.toast('Added ' + hi);
+    $('#m-hi').focus();
+  }
+  function deleteMine(hi) {
+    const i = state.custom.findIndex(c => c.hi === hi); if (i < 0) return;
+    state.custom.splice(i, 1); delete state.progress['mine:' + hi];
+    save(); buildDeck(); renderAll(); PH.toast('Deleted ' + hi);
+  }
+
+  /* ===================== Picker, stats ===================== */
+  function renderStats() {
+    const cards = allCards();
+    $('#st-learned').textContent = learnedCount(cards);
+    $('#st-due').textContent = dueCards().length;
+    $('#st-today').textContent = state.days[today()] || 0;
+    $('#st-streak').textContent = streak();
+  }
+  function renderTabs() { $$('#cls-tabs .tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.cls === String(state.settings.cls)))); }
+  function renderChips() {
+    const cls = state.settings.cls, cur = state.settings.ch;
+    const due = dueCards().length;
+    const chapters = cls === 'mine' ? [MINE] : CHAPTERS.filter(c => c.cls === cls);
+    const dueChip = '<button type="button" class="chip due" data-ch="due" aria-pressed="' + (cur === 'due') + '"><span class="t">📅 Due today</span><span class="m">' + plural(due, 'word') + ' across all chapters</span></button>';
+    const chips = chapters.map(ch => {
+      const cards = cardsOf(ch.id), n = cards.length, learned = learnedCount(cards), pct = n ? Math.round(learned / n * 100) : 0;
+      return '<button type="button" class="chip" data-ch="' + ch.id + '" aria-pressed="' + (cur === ch.id) + '">' +
+        '<span class="t">' + (ch.n ? '<span class="n">' + ch.n + '</span>' : '') + '<span lang="hi">' + esc(ch.title) + '</span></span>' +
+        '<span class="m">' + (ch.genre ? '<span lang="hi">' + esc(ch.genre) + '</span> · ' : '') + plural(n, 'word') + ' · ' + pct + '% learned</span>' +
+        '<span class="progress" aria-hidden="true"><i style="width:' + pct + '%"></i></span></button>';
+    }).join('');
+    $('#chips').innerHTML = dueChip + chips;
+  }
+  function renderAll() { renderStats(); renderTabs(); renderChips(); renderFlash(); renderQuiz(); renderList(); renderMine(); }
+
+  function selectChapter(id) {
+    state.settings.ch = id;
+    if (id !== 'due') { const ch = chapterById(id); if (ch) state.settings.cls = ch.cls; }
+    quiz.active = false; quiz.result = null;
+    $('#search').value = '';
+    save(); buildDeck(); renderAll();
+  }
+
+  /* ===================== Backup file: export and restore ===================== */
+  function exportJSON() {
+    const out = Object.assign({ app: 'ph.hindi', exported: new Date().toISOString() }, state);
+    PH.download('priyaan-hindi-' + today() + '.json', JSON.stringify(out, null, 2));
+    PH.toast('Progress exported');
+  }
+  function importJSON() {
+    PH.pickFile('application/json,.json').then(text => {
+      if (!text) return;
+      let obj;
+      try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+      if (isObj(obj) && isObj(obj.data) && obj.data[KEY] != null) { // whole-hub backup file
+        const v = obj.data[KEY];
+        try { obj = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { obj = null; }
+      }
+      if (!isObj(obj) || !(isObj(obj.progress) || Array.isArray(obj.custom) || Array.isArray(obj.quizzes))) { PH.toast('No Hindi flashcard data found in that file'); return; }
+      const inc = normalise(obj);
+      let n = 0, c = 0;
+      Object.keys(inc.progress).forEach(k => {
+        const cur = state.progress[k], p = inc.progress[k];
+        if (!cur || (p.last || '') >= (cur.last || '')) { state.progress[k] = p; n++; }
+      });
+      inc.custom.forEach(w => { if (!state.custom.some(x => x.hi === w.hi)) { state.custom.push(w); c++; } });
+      inc.quizzes.forEach(q => { if (!state.quizzes.some(x => x.date === q.date && x.ch === q.ch && x.right === q.right && x.total === q.total)) state.quizzes.push(q); });
+      state.quizzes.sort((a, b) => a.date.localeCompare(b.date)); state.quizzes = state.quizzes.slice(-200);
+      Object.keys(inc.days).forEach(d => { state.days[d] = Math.max(state.days[d] || 0, inc.days[d]); });
+      save(); buildDeck(); renderAll();
+      PH.toast('Imported ' + plural(n, 'word') + (c ? ' and ' + plural(c, 'custom word') : ''), 2600);
+    });
+  }
+
+  /* ===================== Events ===================== */
+  $('#cls-tabs').addEventListener('click', e => {
+    const t = e.target.closest('.tab'); if (!t) return;
+    const cls = t.dataset.cls === 'mine' ? 'mine' : Number(t.dataset.cls);
+    if (cls === state.settings.cls) return;
+    const cur = state.settings.ch === 'due' ? null : chapterById(state.settings.ch);
+    const first = cls === 'mine' ? MINE : CHAPTERS.filter(c => c.cls === cls)[0];
+    if (!cur || cur.cls !== cls) selectChapter(first.id); else { state.settings.cls = cls; save(); renderTabs(); renderChips(); }
+  });
+  $('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) selectChapter(b.dataset.ch); });
+  $('#dir-tabs').addEventListener('click', e => {
+    const t = e.target.closest('.tab'); if (!t || t.dataset.dir === state.settings.dir) return;
+    state.settings.dir = t.dataset.dir; deck.flipped = false; save(); renderFlash();
+  });
+  $('#btn-shuffle').addEventListener('click', () => { shuffle(deck.cards); deck.i = 0; deck.flipped = false; renderFlash(); PH.toast('Shuffled'); });
+  $('#btn-restart').addEventListener('click', () => { buildDeck(); renderFlash(); });
+  $('#speak-auto').addEventListener('change', e => { state.settings.speak = e.target.checked; save(); if (e.target.checked) { const c = currentCard(); if (c) speak(c.hi); } });
+  $('#flash-body').addEventListener('click', e => {
+    if (e.target.closest('#fcard')) { flip(); return; }
+    if (e.target.closest('#btn-again')) { rateCurrent(false); return; }
+    if (e.target.closest('#btn-got')) { rateCurrent(true); return; }
+    if (e.target.closest('#btn-speak')) { const c = currentCard(); if (c) speak(c.hi); return; }
+    if (e.target.closest('#btn-again-deck')) { buildDeck(); renderFlash(); }
+  });
+  $('#quiz-body').addEventListener('click', e => {
+    const o = e.target.closest('.q-opt'); if (o) { answer(Number(o.dataset.opt)); return; }
+    if (e.target.closest('#btn-start-q')) { startQuiz(); return; }
+    if (e.target.closest('#btn-next-q')) { nextQ(); return; }
+    if (e.target.closest('#btn-quit-q')) { quiz.active = false; quiz.result = null; renderQuiz(); }
+  });
+  $('#search').addEventListener('input', renderList);
+  $('#btn-print').addEventListener('click', () => window.print());
+  $('#list-wrap').addEventListener('click', e => {
+    const r = e.target.closest('[data-reset]'); if (r) { resetWord(r.dataset.reset); return; }
+    const d = e.target.closest('[data-del]'); if (d) deleteMine(d.dataset.del);
+  });
+  $('#mine-form').addEventListener('submit', addMine);
+  $('#mine-list').addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (d) deleteMine(d.dataset.del); });
+  $('#btn-export').addEventListener('click', exportJSON);
+  $('#btn-import').addEventListener('click', importJSON);
+
+  document.addEventListener('keydown', e => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (/^(input|textarea|select)$/i.test(tag)) return;
+    const inNav = e.target && e.target.closest && e.target.closest('.tabs, .chips');
+    if (quiz.active) {
+      if (/^[1-4]$/.test(e.key)) { e.preventDefault(); answer(Number(e.key) - 1); return; }
+      if ((e.key === 'Enter' || e.key === ' ') && quiz.answered !== null && !(e.target && e.target.closest && e.target.closest('button'))) { e.preventDefault(); nextQ(); return; }
+      if (e.key === 'Enter' && quiz.answered !== null && e.target && e.target.id === 'btn-next-q') return; // native click handles it
+      return;
+    }
+    const onButton = /^(button|a)$/i.test(tag);
+    if ((e.key === ' ' || e.key === 'Enter') && (!onButton || (e.target && e.target.id === 'fcard'))) {
+      if (e.key === 'Enter' && !(e.target && e.target.id === 'fcard')) return;
+      e.preventDefault(); flip(); return;
+    }
+    if (inNav) return;
+    if (e.key === '1' || e.key === 'ArrowLeft') { e.preventDefault(); rateCurrent(false); }
+    else if (e.key === '2' || e.key === 'ArrowRight') { e.preventDefault(); rateCurrent(true); }
+  });
+  // Keep "due today" fresh if the tab stays open past midnight.
+  window.addEventListener('focus', () => { renderStats(); renderChips(); });
+
+  /* ===================== Go ===================== */
+  buildDeck();
+  renderAll();
+  if (stored) save(); // refresh the hub summary against today's dates
+})();
+</script>
+</body></html>

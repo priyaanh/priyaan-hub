@@ -6,9 +6,11 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 | --- | --- | --- |
 | 🎹 Piano Practice | `piano.html` | Log daily practice by piece, track minutes, keep a streak. Trinity Grade 4 (2021–2023) pieces preloaded. |
 | 🏕️ Merit Badges | `badges.html` | Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting, plus a catalog of all 139 merit badges by category with status and earned dates, a Trail to Eagle tracker (14 required + 7 electives), and a workbook PDF for each (offline after one download). |
-| 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys. Same generator also runs from the command line. |
+| 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys, from 11 topic generators covering CPM chapters 1-9. Pick topics, count, level and seed; practice on screen with instant checking, or print. The same generator runs from the command line. |
+| 📝 Lesson Quizzes | `quizzes.html` | A separate quiz for each CPM Integrated II lesson 1.1.1 to 1.3.4: polygons, predictions from data, tile patterns, area models, describing graphs, angle pairs, transversals and triangles. 199 questions, many with drawn diagrams; 10 per attempt, with explanations and a history. |
 | 📖 Hindi Flashcards | `hindi.html` | About 400 words from every chapter of NCERT Malhar (मल्हार) Class 6 and Class 7, in Devanagari with transliteration, meaning, and a Hindi hint. Flip flashcards in either direction, rate them Again / Got it for a Leitner spaced review (due cards come back after 1, 3, 7, 21 days), take a 10-question quiz per chapter, add your own words, and print a two-column word list. |
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day. |
+| 📄 From a PDF | `ai.html` | Drop in a chapter, worksheet or study guide and Claude writes fresh practice problems or a multiple-choice quiz from it. Print the worksheet with its answer key, or answer the quiz on screen. Needs your own Anthropic API key. |
 | 🗓️ Calendar | `calendar.html` | Priyaan's Google Calendar embedded (week / month / agenda), one-tap "add event" buttons for each activity, and an optional Google sign-in that lists the next 7 days inside the hub. |
 
 ## How it works
@@ -27,6 +29,12 @@ node test_im1.js        # self-test of every topic generator
 ```
 
 Output is a self-contained HTML file in `worksheets/` with the answer key on the last page. Open it and print.
+
+## Turning a PDF into practice
+
+`ai.html` sends a PDF (or a photo of a page) to Claude and asks for new problems that test the same skills, then shows them as a printable worksheet with an answer key or as an on-screen quiz. Everything it makes is saved in the browser, so old sets keep working offline.
+
+It calls the Claude API straight from the browser, so it needs an Anthropic API key, entered once on the page and kept in that browser's local storage only. It is never committed, never included in an export, and never sent anywhere except to Anthropic. Get one at [console.anthropic.com](https://console.anthropic.com/), set a monthly spending limit, and expect a few cents per worksheet - the exact cost of each run is shown when it finishes. The page uses `claude-opus-5` with a JSON schema so the questions always come back in a fixed shape.
 
 ## Google Calendar
 

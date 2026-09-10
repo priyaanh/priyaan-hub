@@ -1,0 +1,535 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson Quizzes · Priyaan's Hub</title>
+<link rel="stylesheet" href="shared.css"><style>
+/* ---- layout ---- */
+main > * + * { margin-top: 1rem; }
+.card-head h2 { flex: none; }
+.card-head .small { text-align: right; }
+.sub-title { color: var(--muted); font-size: .875rem; margin: -.4rem 0 .6rem; }
+
+/* ---- lesson picker ---- */
+.sect-head { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin: 1rem 0 .2rem; }
+.sect-head:first-child { margin-top: 0; }
+.lrow { display: grid; grid-template-columns: 3.3rem minmax(0, 1fr) auto auto auto; gap: .3rem .8rem; align-items: center; padding: .6rem 0; border-top: 1px solid var(--border); }
+.lrow .lid { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.lrow .lt { min-width: 0; }
+.lrow .lt b { display: block; font-weight: 600; }
+.lrow .lt .focus { font-size: .8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lrow .att { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.lrow .pill { justify-self: end; }
+.mix-row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; padding: .8rem .9rem; background: var(--surface-2); border-radius: var(--radius-sm); }
+.mix-row .grow { flex: 1 1 14rem; min-width: 0; }
+.mix-row b { display: block; }
+@media (max-width: 640px) {
+  .lrow { grid-template-columns: 3rem minmax(0, 1fr) auto; }
+  .lrow .lt .focus { white-space: normal; }
+  .lrow .att { grid-column: 2; }
+  .lrow .btn { grid-column: 3; justify-self: end; }
+}
+
+/* ---- quiz ---- */
+.q-meta { display: flex; justify-content: space-between; gap: 1rem; font-size: .85rem; color: var(--muted); font-weight: 600; margin-bottom: .4rem; }
+.q-svg { display: flex; justify-content: center; margin: 1rem auto .25rem; }
+.q-svg svg { max-width: 100%; }
+.q-text { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 .9rem; line-height: 1.45; }
+.q-text .pill { vertical-align: middle; margin-right: .25rem; }
+.choices { display: grid; gap: .5rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .choices { grid-template-columns: 1fr 1fr; } }
+.choice { display: flex; align-items: center; gap: .7rem; text-align: left; padding: .7rem .85rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; line-height: 1.35; cursor: pointer; transition: background .12s, border-color .12s; }
+.choice:hover { border-color: var(--accent); background: var(--surface-2); }
+.choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.choice[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.choice .key { flex: none; width: 1.6rem; height: 1.6rem; display: grid; place-items: center; border-radius: 6px; background: var(--surface-2); font-size: .78rem; font-weight: 700; color: var(--muted); font-family: var(--mono); }
+.choice[aria-checked="true"] .key { background: var(--accent); color: var(--accent-ink); }
+.choice.correct, .choice.correct:hover { border-color: var(--ok); background: var(--ok-soft); box-shadow: inset 0 0 0 1px var(--ok); }
+.choice.wrong, .choice.wrong:hover { border-color: var(--danger); background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger); }
+.choice:disabled { cursor: default; opacity: .7; }
+.choice.correct:disabled, .choice.wrong:disabled { opacity: 1; }
+.answer-row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.answer-row .input { max-width: 17rem; font-size: 1.05rem; }
+.feedback { margin-top: 1rem; padding: .8rem 1rem; border-radius: var(--radius-sm); border-left: 4px solid var(--ok); background: var(--ok-soft); }
+.feedback.bad { border-left-color: var(--danger); background: var(--danger-soft); }
+.feedback b { display: block; margin-bottom: .2rem; }
+.feedback b.good { color: var(--ok); } .feedback b.nope { color: var(--danger); }
+.q-actions { display: flex; gap: .5rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
+.q-actions .spacer { flex: 1; }
+.kbd-hint { white-space: nowrap; }
+@media (max-width: 560px) { .kbd-hint { display: none; } }
+.result { text-align: center; padding: .75rem 0 .5rem; }
+.result .big { font-size: 3rem; font-weight: 800; color: var(--accent); line-height: 1; letter-spacing: -.02em; }
+.result .line { color: var(--muted); margin: .4rem 0; display: flex; gap: .5rem; justify-content: center; align-items: center; flex-wrap: wrap; }
+.result-actions { justify-content: center; margin: .75rem 0 1rem; }
+.review { list-style: none; margin: .5rem 0 0; padding: 0; }
+.review li { display: flex; gap: .7rem; padding: .6rem 0; border-top: 1px solid var(--border); align-items: flex-start; }
+.review .mark { flex: none; font-weight: 800; width: 1.3rem; }
+.review li.ok .mark { color: var(--ok); } .review li.bad .mark { color: var(--danger); }
+.review .rq { font-weight: 600; }
+.review .ra { font-size: .85rem; color: var(--muted); margin-top: .15rem; }
+.review .ra .you.bad { color: var(--danger); text-decoration: line-through; }
+.review .ra .ans { color: var(--ok); font-weight: 600; }
+.review sup { font-size: .7em; }
+
+/* ---- history ---- */
+.table th.n, .table td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.table td.when { white-space: nowrap; }
+.table td.actions { white-space: nowrap; text-align: right; }
+.table .pill { margin-left: .3rem; }
+@media (max-width: 560px) { .table td.when { white-space: normal; } .table .hide-sm, .table th.hide-sm { display: none; } }
+</style></head>
+<body data-app="quiz">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <div class="title"><span class="emoji">📝</span><span class="name">Lesson Quizzes</span></div>
+  <div class="spacer"></div>
+  <button type="button" class="btn btn-sm" id="btn-export">⬇ Export</button>
+  <button type="button" class="btn btn-sm" id="btn-import">⬆ Import</button>
+</div></header>
+<main class="container">
+
+  <!-- Stats -->
+  <section class="card" aria-labelledby="h-stats">
+    <div class="card-head"><h2 id="h-stats">Progress</h2><span class="muted small" id="bank-title"></span></div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="s-taken">0</div><div class="lbl">Quizzes taken</div></div>
+      <div class="stat"><div class="num" id="s-avg">–</div><div class="lbl">Average score</div></div>
+      <div class="stat"><div class="num" id="s-mastered">0</div><div class="lbl">Lessons mastered (9+/10)</div></div>
+      <div class="stat"><div class="num" id="s-streak">0</div><div class="lbl">Day streak</div></div>
+    </div>
+  </section>
+
+  <!-- Lesson picker -->
+  <section class="card" id="picker" aria-labelledby="h-lessons">
+    <div class="card-head"><h2 id="h-lessons">Lessons</h2><span class="muted small">10 questions each · new questions every time</span></div>
+    <div id="lesson-list"></div>
+    <div class="mix-row">
+      <div class="grow"><b>Mixed review</b><span class="muted small" id="mix-sub">10 questions from the lessons you have already tried.</span></div>
+      <button type="button" class="btn" id="btn-mix">🔀 Start mixed review</button>
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section class="card" id="quiz-card" hidden aria-labelledby="q-title">
+    <div class="card-head"><h2 id="q-title">Quiz</h2><span class="muted small mono" id="q-timer" aria-label="Time elapsed">0:00</span></div>
+    <div id="q-body"></div>
+  </section>
+
+  <!-- History -->
+  <section class="card" id="history" aria-labelledby="h-hist">
+    <div class="card-head"><h2 id="h-hist">History</h2><span class="muted small" id="hist-count"></span></div>
+    <div id="hist-body"></div>
+  </section>
+
+</main>
+<script src="shared.js"></script>
+<script src="cpm_int2_ch1.js"></script>
+<script>
+(function () {
+  'use strict';
+  const KEY = 'ph.quiz.v1';
+  const QUIZ_LEN = 10;      // questions per quiz
+  const MASTER = 9;         // best score needed (out of 10) to call a lesson mastered
+  const MAX_HISTORY = 100;
+  const MIX = 'mix';
+  const $ = (s, el) => (el || document).querySelector(s);
+  const esc = PH.esc;
+  const BANK = (window.CPM_QUIZZES && Array.isArray(window.CPM_QUIZZES.lessons)) ? window.CPM_QUIZZES : { lessons: [], title: '' };
+  const LESSONS = BANK.lessons.filter(l => l && typeof l.id === 'string' && Array.isArray(l.questions));
+  const byId = {}; LESSONS.forEach(l => { byId[l.id] = l; });
+
+  function lessonLabel(id) { return id === MIX ? 'Mixed review' : (byId[id] ? id + ' · ' + byId[id].title : id); }
+  function shortName(id) { return id === MIX ? 'Mixed' : id; }
+  function fmtTime(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function fmtNum(n) { const v = Number.isInteger(n) ? n : Math.round(n * 100) / 100; return String(v).replace('-', '−'); }
+  function prettyAlg(s) { return String(s).replace(/\^2/g, '²').replace(/\*/g, '').replace(/\+/g, ' + ').replace(/-/g, ' − ').replace(/^ − /, '−').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')'); }
+  function newSeed() { return (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0; }
+  function shuffle(rnd, arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  /* ===================== State ===================== */
+  function validISO(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime()); }
+  function normaliseAttempt(a) {
+    if (!a || typeof a !== 'object') return null;
+    const total = Math.round(Number(a.total)), right = Math.round(Number(a.right));
+    if (!(total > 0) || !(right >= 0) || right > total) return null;
+    const lesson = String(a.lesson || '');
+    if (lesson !== MIX && !/^\d+(\.\d+)*$/.test(lesson)) return null;
+    const ts = Number(a.ts) || (validISO(a.date) ? new Date(a.date + 'T12:00:00').getTime() : Date.now());
+    const out = {
+      id: String(a.id || PH.uid()),
+      date: validISO(a.date) ? a.date : PH.todayISO(new Date(ts)),
+      ts, lesson, right, total,
+      seconds: Math.max(0, Math.round(Number(a.seconds)) || 0),
+      seed: (Number(a.seed) >>> 0) || 0,
+      missed: (Array.isArray(a.missed) ? a.missed : []).filter(m => (Number.isInteger(m) && m >= 0) || (typeof m === 'string' && /^[\d.]+:\d+$/.test(m))).slice(0, 60),
+      kind: a.kind === 'missed' ? 'missed' : 'full'
+    };
+    if (lesson === MIX && Array.isArray(a.lessons)) out.lessons = a.lessons.filter(x => typeof x === 'string').slice(0, 30);
+    return out;
+  }
+  /** Accepts anything (null, old versions, imported files) and returns a valid state. */
+  function migrate(raw) {
+    const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    const st = { version: 1, attempts: [], settings: { lastLesson: '' }, summary: { headline: '', sub: '' } };
+    st.attempts = (Array.isArray(src.attempts) ? src.attempts : []).map(normaliseAttempt).filter(Boolean);
+    st.attempts.sort((a, b) => b.ts - a.ts);
+    st.attempts = st.attempts.slice(0, MAX_HISTORY);
+    const s = src.settings && typeof src.settings === 'object' ? src.settings : {};
+    st.settings.lastLesson = typeof s.lastLesson === 'string' ? s.lastLesson : '';
+    return st;
+  }
+  const stored = PH.load(KEY, null);
+  let state = migrate(stored);
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+
+  /* ===================== Derived data ===================== */
+  function bestOf(id) { let best = null; state.attempts.forEach(a => { if (a.lesson === id && a.kind === 'full' && (!best || a.right / a.total > best.right / best.total)) best = a; }); return best; }
+  function isMastered(id) { const b = bestOf(id); return !!b && b.total >= QUIZ_LEN && b.right >= MASTER; }
+  function attemptedLessonIds() { const s = new Set(); state.attempts.forEach(a => { if (byId[a.lesson]) s.add(a.lesson); }); return LESSONS.map(l => l.id).filter(id => s.has(id)); }
+  function currentStreak() {
+    const days = new Set(state.attempts.map(a => a.date)), t = PH.todayISO();
+    let d = days.has(t) ? t : PH.addDays(t, -1);
+    if (!days.has(d)) return 0;
+    let n = 0; while (days.has(d)) { n++; d = PH.addDays(d, -1); }
+    return n;
+  }
+  function buildSummary() {
+    const A = state.attempts;
+    if (!A.length) return { headline: '', sub: '' };
+    let best = null;
+    A.forEach(a => { if (a.kind === 'full' && a.lesson !== MIX && a.total >= QUIZ_LEN && (!best || a.right > best.right || (a.right === best.right && a.ts > best.ts))) best = a; });
+    const headline = best && best.right >= MASTER ? 'Best: ' + best.right + '/' + best.total + ' on ' + best.lesson : A.length + (A.length === 1 ? ' quiz taken' : ' quizzes taken');
+    const last = A[0];
+    return { headline, sub: 'Last: ' + shortName(last.lesson) + ' · ' + last.right + '/' + last.total + ' · ' + PH.fmtDate(last.date, { month: 'short', day: 'numeric' }) };
+  }
+
+  /* ===================== Building a quiz ===================== */
+  function refsOf(lesson) { return lesson.questions.map((def, idx) => ({ lesson, idx, def })); }
+  function pickMixed(rnd, ids, n) {
+    const lists = shuffle(rnd, ids.map(id => byId[id]).filter(Boolean)).map(l => shuffle(rnd, refsOf(l)));
+    const out = []; let k = 0;
+    while (out.length < n && lists.some(l => l.length)) { const l = lists[k % lists.length]; if (l.length) out.push(l.shift()); k++; }
+    return out;
+  }
+  function materialise(ref, rnd) {
+    let def = ref.def;
+    if (def && def.type === 'gen' && typeof def.make === 'function') { try { def = def.make(rnd); } catch (e) { console.warn('question generator failed', ref.lesson.id, ref.idx, e); def = null; } }
+    if (!def || !def.q || !['mc', 'num', 'text'].includes(def.type)) return null;
+    const item = { lessonId: ref.lesson.id, idx: ref.idx, type: def.type, q: String(def.q), explain: String(def.explain || ''), svg: typeof def.svg === 'string' ? def.svg : '', unit: def.unit ? String(def.unit) : '' };
+    if (def.type === 'mc') {
+      if (!Array.isArray(def.choices) || def.choices.length < 2) return null;
+      const order = shuffle(rnd, def.choices.map((_, i) => i));
+      item.choices = order.map(i => String(def.choices[i]));
+      item.answer = order.indexOf(Number(def.answer));
+      if (item.answer < 0) return null;
+    } else if (def.type === 'num') {
+      item.answer = Number(def.answer); if (!Number.isFinite(item.answer)) return null;
+      item.tolerance = Number.isFinite(def.tolerance) ? def.tolerance : 0.01;
+    } else {
+      item.answer = String(def.answer); item.accept = Array.isArray(def.accept) ? def.accept.map(String) : [];
+    }
+    return item;
+  }
+  /** opts: { lesson, seed, refs?: ['1.1.1:3', ...] (retry missed), lessons?: [...] (mixed pool) } */
+  function buildQuiz(opts) {
+    const rnd = PH.rng(opts.seed);
+    let picked;
+    if (opts.refs) {
+      picked = shuffle(rnd, opts.refs.map(r => { const p = String(r).split(':'); const l = byId[p[0]]; const idx = Number(p[1]); return l && l.questions[idx] ? { lesson: l, idx, def: l.questions[idx] } : null; }).filter(Boolean));
+    } else if (opts.lesson === MIX) {
+      picked = pickMixed(rnd, opts.lessons && opts.lessons.length ? opts.lessons : LESSONS.map(l => l.id), QUIZ_LEN);
+    } else {
+      const l = byId[opts.lesson];
+      picked = l ? shuffle(rnd, refsOf(l)).slice(0, QUIZ_LEN) : [];
+    }
+    const items = picked.map(p => materialise(p, rnd)).filter(Boolean);
+    return { lesson: opts.lesson, lessons: opts.lessons || null, seed: opts.seed >>> 0, kind: opts.refs ? 'missed' : 'full', refs: opts.refs || null,
+      items, i: 0, sel: null, checked: false, finished: false, given: [], started: Date.now(), timer: null, right: 0, seconds: 0 };
+  }
+
+  /* ===================== Answer checking ===================== */
+  function normNum(s) {
+    s = String(s).trim().toLowerCase().replace(/^[a-z]\s*=\s*/, '').replace(/[−–]/g, '-').replace(/,/g, '');
+    s = s.replace(/[a-z°º%\s]/g, '');                 // strip "degrees", "units", "°", "sq units", "in", …
+    const fr = s.match(/^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/);
+    if (fr) return Number(fr[1]) / Number(fr[2]);
+    return s === '' ? NaN : Number(s);
+  }
+  function checkNum(given, item) { const g = normNum(given); return Number.isFinite(g) && Math.abs(g - item.answer) <= (item.tolerance != null ? item.tolerance : 0.01) + 1e-9; }
+  function normText(s) {
+    return String(s).toLowerCase().replace(/\s+/g, '').replace(/²/g, '^2').replace(/\*\*/g, '^').replace(/[−–]/g, '-').replace(/[*·×]/g, '').replace(/^[a-z]=/, '');
+  }
+  /** Order-independent form for sums like x^2+5x+6 (leaves products such as (x+2)(x+3) alone). */
+  function canonPoly(s) {
+    s = normText(s);
+    const sum = t => t.replace(/-/g, '+-').split('+').filter(Boolean).map(u => u.replace(/^(-?)1(?=[a-z])/, '$1')).sort().join('+');
+    if (/^(\([^()]*\))+$/.test(s)) return s.match(/\([^()]*\)/g).map(g => '(' + sum(g.slice(1, -1)) + ')').sort().join('');
+    if (/[()]/.test(s)) return s;
+    return sum(s);
+  }
+  function checkText(given, item) { const g = canonPoly(given); return !!g && [item.answer].concat(item.accept || []).some(a => canonPoly(a) === g); }
+  function fmtAnswer(item) {
+    if (item.type === 'mc') return item.choices[item.answer];
+    if (item.type === 'num') return fmtNum(item.answer) + (item.unit ? (item.unit === '°' ? '°' : ' ' + esc(item.unit)) : '');
+    return esc(prettyAlg(item.answer));
+  }
+  function fmtGiven(item, g) {
+    if (g == null) return '—';
+    if (item.type === 'mc') return item.choices[g.given] != null ? item.choices[g.given] : '—';
+    return esc(String(g.given));
+  }
+
+  /* ===================== Rendering ===================== */
+  let quiz = null;
+  const ui = { confirmId: null, confirmTimer: null };
+
+  function renderStats() {
+    const A = state.attempts;
+    const avg = A.length ? Math.round(A.reduce((s, a) => s + a.right / a.total, 0) / A.length * 100) : null;
+    $('#s-taken').textContent = A.length;
+    $('#s-avg').textContent = avg == null ? '–' : avg + '%';
+    $('#s-mastered').textContent = LESSONS.filter(l => isMastered(l.id)).length + (LESSONS.length ? '/' + LESSONS.length : '');
+    $('#s-streak').textContent = currentStreak();
+    $('#bank-title').textContent = BANK.title ? (BANK.book || '') + ' · Ch. ' + (BANK.chapter || '') : '';
+  }
+
+  function renderPicker() {
+    const host = $('#lesson-list');
+    if (!LESSONS.length) { host.innerHTML = '<div class="empty">The question bank (cpm_int2_ch1.js) did not load, so there are no quizzes to show.</div>'; $('#btn-mix').disabled = true; return; }
+    const groups = {}, order = [];
+    LESSONS.forEach(l => { const sec = l.id.split('.').slice(0, 2).join('.'); if (!groups[sec]) { groups[sec] = []; order.push(sec); } groups[sec].push(l); });
+    host.innerHTML = order.map(sec => '<div class="sect-head">Section ' + esc(sec) + '</div>' + groups[sec].map(l => {
+      const best = bestOf(l.id), n = state.attempts.filter(a => a.lesson === l.id).length;
+      const ratio = best ? best.right / best.total : 0;
+      const pill = best ? '<span class="pill ' + (ratio >= .9 ? 'ok' : ratio >= .6 ? 'warn' : 'neutral') + '" title="Best score">' + (ratio >= .9 ? '★ ' : '') + best.right + '/' + best.total + '</span>' : '<span class="pill neutral">New</span>';
+      return '<div class="lrow">' +
+        '<div class="lid">' + esc(l.id) + '</div>' +
+        '<div class="lt"><b>' + esc(l.title) + '</b><div class="focus" title="' + esc((l.focus || []).join(' · ')) + '">' + esc((l.focus || []).join(' · ')) + '</div></div>' +
+        pill + '<span class="att">' + (n ? n + (n === 1 ? ' attempt' : ' attempts') : '') + '</span>' +
+        '<button type="button" class="btn btn-sm btn-primary" data-start="' + esc(l.id) + '" aria-label="Start quiz ' + esc(l.id) + '">' + (n ? 'Quiz again' : 'Start quiz') + '</button>' +
+        '</div>';
+    }).join('')).join('');
+    const tried = attemptedLessonIds();
+    $('#mix-sub').textContent = tried.length > 1 ? '10 questions mixed from the ' + tried.length + ' lessons you have tried: ' + tried.join(', ') + '.' : tried.length === 1 ? 'Try one more lesson to unlock a real mix — for now it draws from ' + tried[0] + '.' : '10 questions drawn from all ten lessons (until you have tried some).';
+  }
+
+  function renderHistory() {
+    const A = state.attempts, host = $('#hist-body');
+    $('#hist-count').textContent = A.length ? 'Last ' + A.length + ' quiz' + (A.length === 1 ? '' : 'zes') : '';
+    if (!A.length) { host.innerHTML = '<div class="empty">No quizzes yet. Pick a lesson above to start.</div>'; return; }
+    host.innerHTML = '<div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Lesson</th><th class="n">Score</th><th class="n hide-sm">Time</th><th></th></tr></thead><tbody>' +
+      A.map(a => {
+        const del = ui.confirmId === a.id
+          ? '<button type="button" class="btn btn-sm btn-danger" data-del="' + esc(a.id) + '">Delete?</button>'
+          : '<button type="button" class="btn btn-sm btn-ghost" data-del="' + esc(a.id) + '" aria-label="Delete this attempt" title="Delete">✕</button>';
+        const replay = a.kind === 'full' && a.seed ? '<button type="button" class="btn btn-sm btn-ghost" data-replay="' + esc(a.id) + '" aria-label="Replay the same quiz" title="Replay the same questions">↻</button>' : '';
+        return '<tr><td class="when">' + esc(PH.fmtDate(a.date)) + '</td>' +
+          '<td>' + esc(lessonLabel(a.lesson)) + (a.kind === 'missed' ? '<span class="pill neutral">retry</span>' : '') + '</td>' +
+          '<td class="n"><b>' + a.right + '/' + a.total + '</b></td><td class="n hide-sm">' + fmtTime(a.seconds) + '</td>' +
+          '<td class="actions">' + replay + del + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function showView(v) {
+    $('#quiz-card').hidden = v !== 'quiz';
+    $('#picker').hidden = v === 'quiz';
+    $('#history').hidden = v === 'quiz';
+  }
+
+  function renderQuiz() {
+    if (!quiz) return;
+    const body = $('#q-body'), n = quiz.items.length;
+    $('#q-title').textContent = (quiz.kind === 'missed' ? 'Retry missed · ' : '') + lessonLabel(quiz.lesson);
+    $('#q-timer').textContent = fmtTime((Date.now() - quiz.started) / 1000);
+    if (quiz.finished) { renderResults(); return; }
+    const item = quiz.items[quiz.i], g = quiz.given[quiz.i];
+    const score = quiz.given.filter(x => x && x.ok).length, done = quiz.i + (quiz.checked ? 1 : 0);
+    let h = '<div class="q-meta"><span>Question ' + (quiz.i + 1) + ' of ' + n + '</span><span>' + score + ' correct so far</span></div>' +
+      '<div class="progress" role="progressbar" aria-label="Quiz progress" aria-valuemin="0" aria-valuemax="' + n + '" aria-valuenow="' + done + '"><i style="width:' + Math.round(done / n * 100) + '%"></i></div>';
+    if (item.svg) h += '<div class="q-svg">' + item.svg + '</div>';
+    h += '<p class="q-text" id="q-text">' + (quiz.lesson === MIX ? '<span class="pill neutral">' + esc(item.lessonId) + '</span>' : '') + item.q + '</p>';
+    if (item.type === 'mc') {
+      h += '<div class="choices" role="radiogroup" aria-labelledby="q-text">' + item.choices.map((c, i) => {
+        let cls = 'choice';
+        if (quiz.checked) { if (i === item.answer) cls += ' correct'; else if (g && g.given === i) cls += ' wrong'; }
+        return '<button type="button" role="radio" class="' + cls + '" data-i="' + i + '" aria-checked="' + (quiz.sel === i) + '"' + (quiz.checked ? ' disabled' : '') + '><span class="key" aria-hidden="true">' + (i + 1) + '</span><span>' + c + '</span></button>';
+      }).join('') + '</div>';
+    } else {
+      h += '<div class="answer-row"><input class="input" id="q-input" type="text" inputmode="' + (item.type === 'num' ? 'decimal' : 'text') + '" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer" placeholder="' + (item.type === 'num' ? 'Type a number' : 'Type your answer, e.g. x^2+5x+6') + '"' + (quiz.checked ? ' disabled value="' + esc(g.given) + '"' : '') + '>' +
+        (item.unit ? '<span class="unit muted">' + esc(item.unit) + '</span>' : '') + '</div>';
+    }
+    if (quiz.checked) {
+      h += '<div class="feedback ' + (g.ok ? 'ok' : 'bad') + '" role="status">' +
+        '<b class="' + (g.ok ? 'good' : 'nope') + '">' + (g.ok ? '✓ Correct!' : '✗ Not quite. The answer is ' + fmtAnswer(item) + '.') + '</b>' + item.explain + '</div>';
+    }
+    h += '<div class="q-actions"><button type="button" class="btn btn-ghost" id="q-quit">Quit</button><span class="spacer"></span>' +
+      '<span class="muted small kbd-hint">' + (item.type === 'mc' && !quiz.checked ? '<span class="kbd">1</span>–<span class="kbd">4</span> pick · ' : '') + '<span class="kbd">Enter</span> ' + (quiz.checked ? 'next' : 'check') + '</span>' +
+      (quiz.checked
+        ? '<button type="button" class="btn btn-primary" id="q-next">' + (quiz.i + 1 >= n ? 'See results' : 'Next →') + '</button>'
+        : '<button type="button" class="btn btn-primary" id="q-check">Check</button>') + '</div>';
+    body.innerHTML = h;
+    const focus = quiz.checked ? $('#q-next', body) : (item.type === 'mc' ? $('.choice[data-i="' + (quiz.sel == null ? 0 : quiz.sel) + '"]', body) : $('#q-input', body));
+    if (focus) focus.focus({ preventScroll: true });
+  }
+
+  function renderResults() {
+    const n = quiz.items.length, pct = n ? Math.round(quiz.right / n * 100) : 0;
+    const missedRefs = quiz.items.filter((it, i) => !(quiz.given[i] && quiz.given[i].ok)).map(it => it.lessonId + ':' + it.idx);
+    const mastered = quiz.kind === 'full' && quiz.lesson !== MIX && n >= QUIZ_LEN && quiz.right >= MASTER;
+    const msg = quiz.right === n ? 'Perfect score! 🎉' : quiz.right >= MASTER * n / QUIZ_LEN ? 'Great work — you have this lesson down.' : quiz.right >= 6 * n / QUIZ_LEN ? 'Good. Read the explanations for the ones you missed, then try again.' : 'Keep practising — the review below shows what to look at.';
+    let h = '<div class="result"><div class="big">' + quiz.right + '/' + n + '</div>' +
+      '<div class="line"><span>' + pct + '%</span><span>·</span><span>' + fmtTime(quiz.seconds) + '</span>' + (mastered ? '<span class="pill ok">★ Mastered</span>' : '') + '</div><p class="muted">' + msg + '</p></div>' +
+      '<div class="row result-actions">' +
+      (missedRefs.length ? '<button type="button" class="btn" id="r-missed">Retry missed (' + missedRefs.length + ')</button>' : '') +
+      '<button type="button" class="btn" id="r-same" title="Same seed, same questions">Retake same questions</button>' +
+      '<button type="button" class="btn btn-primary" id="r-new">' + (quiz.lesson === MIX ? 'New mixed review' : 'New quiz on ' + esc(quiz.lesson)) + '</button>' +
+      '<button type="button" class="btn btn-ghost" id="r-back">Back to lessons</button></div>' +
+      '<h3>Review</h3><ol class="review">' + quiz.items.map((it, i) => {
+        const g = quiz.given[i], ok = !!(g && g.ok);
+        return '<li class="' + (ok ? 'ok' : 'bad') + '"><span class="mark" aria-label="' + (ok ? 'correct' : 'incorrect') + '">' + (ok ? '✓' : '✗') + '</span><div>' +
+          '<div class="rq">' + (quiz.lesson === MIX ? '<span class="pill neutral">' + esc(it.lessonId) + '</span> ' : '') + it.q + '</div>' +
+          '<div class="ra">' + (ok ? 'Your answer: <span class="ans">' + fmtGiven(it, g) + '</span>' : 'Your answer: <span class="you bad">' + fmtGiven(it, g) + '</span> · Correct: <span class="ans">' + fmtAnswer(it) + '</span>') + '</div></div></li>';
+      }).join('') + '</ol>';
+    $('#q-body').innerHTML = h;
+    quiz.missedRefs = missedRefs;
+    const f = $('#r-new'); if (f) f.focus({ preventScroll: true });
+  }
+
+  function renderAll() { renderStats(); renderPicker(); renderHistory(); if (quiz) renderQuiz(); }
+
+  /* ===================== Quiz flow ===================== */
+  function tickTimer() { if (quiz && !quiz.finished) $('#q-timer').textContent = fmtTime((Date.now() - quiz.started) / 1000); }
+  function startQuiz(opts) {
+    if (quiz && quiz.timer) clearInterval(quiz.timer);
+    const q = buildQuiz(opts);
+    if (!q.items.length) { PH.toast('No questions available for that quiz'); return; }
+    quiz = q;
+    if (opts.lesson !== MIX && byId[opts.lesson]) { state.settings.lastLesson = opts.lesson; save(); }
+    quiz.timer = setInterval(tickTimer, 1000);
+    showView('quiz'); renderQuiz();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function select(i) {
+    if (!quiz || quiz.checked || quiz.finished) return;
+    const item = quiz.items[quiz.i]; if (item.type !== 'mc' || i < 0 || i >= item.choices.length) return;
+    quiz.sel = i;
+    document.querySelectorAll('#q-body .choice').forEach(b => { b.setAttribute('aria-checked', String(Number(b.dataset.i) === i)); });
+    const btn = $('#q-body .choice[data-i="' + i + '"]'); if (btn) btn.focus({ preventScroll: true });
+  }
+  function check() {
+    if (!quiz || quiz.checked || quiz.finished) return;
+    const item = quiz.items[quiz.i]; let given, ok;
+    if (item.type === 'mc') {
+      if (quiz.sel == null) { PH.toast('Pick an answer first (keys 1–4)'); return; }
+      given = quiz.sel; ok = given === item.answer;
+    } else {
+      const inp = $('#q-input'); given = (inp && inp.value || '').trim();
+      if (!given) { if (inp) inp.focus(); PH.toast('Type an answer first'); return; }
+      ok = item.type === 'num' ? checkNum(given, item) : checkText(given, item);
+    }
+    quiz.given[quiz.i] = { given, ok };
+    quiz.checked = true;
+    renderQuiz();
+  }
+  function next() {
+    if (!quiz || !quiz.checked || quiz.finished) return;
+    if (quiz.i + 1 >= quiz.items.length) { finish(); return; }
+    quiz.i++; quiz.checked = false; quiz.sel = null;
+    renderQuiz();
+    const card = $('#quiz-card'); const top = card.getBoundingClientRect().top;
+    if (top < 0) window.scrollTo({ top: window.scrollY + top - 70, behavior: 'smooth' });
+  }
+  function finish() {
+    quiz.finished = true; clearInterval(quiz.timer); quiz.timer = null;
+    quiz.seconds = Math.round((Date.now() - quiz.started) / 1000);
+    quiz.right = quiz.given.filter(g => g && g.ok).length;
+    const missed = quiz.items.map((it, i) => ({ it, i })).filter(x => !(quiz.given[x.i] && quiz.given[x.i].ok)).map(x => quiz.lesson === MIX ? x.it.lessonId + ':' + x.it.idx : x.it.idx);
+    const att = { id: PH.uid(), date: PH.todayISO(), ts: Date.now(), lesson: quiz.lesson, right: quiz.right, total: quiz.items.length, seconds: quiz.seconds, seed: quiz.seed, missed, kind: quiz.kind };
+    if (quiz.lesson === MIX) att.lessons = quiz.lessons || attemptedLessonIds();
+    state.attempts.unshift(att);
+    state.attempts = state.attempts.slice(0, MAX_HISTORY);
+    save();
+    renderAll();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function quit() {
+    if (quiz && !quiz.finished && quiz.given.length && !window.confirm('Leave this quiz? Your progress on it will not be saved.')) return;
+    if (quiz && quiz.timer) clearInterval(quiz.timer);
+    quiz = null;
+    showView('lessons'); renderAll();
+  }
+
+  /* ===================== Backup & restore ===================== */
+  function isObj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function exportJSON() {
+    const out = Object.assign({ app: 'ph.quiz', exported: new Date().toISOString() }, state);
+    PH.download('priyaan-lesson-quizzes-' + PH.todayISO() + '.json', JSON.stringify(out, null, 2));
+    PH.toast('Quiz history exported');
+  }
+  function importJSON() {
+    PH.pickFile('application/json,.json').then(text => {
+      if (!text) return;
+      let obj;
+      try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+      if (isObj(obj) && isObj(obj.data) && obj.data[KEY] != null) { // whole-hub backup file
+        const v = obj.data[KEY];
+        if (typeof v === 'string') { try { obj = JSON.parse(v); } catch (e) { obj = null; } } else obj = v;
+      }
+      if (!isObj(obj) || !Array.isArray(obj.attempts)) { PH.toast('No quiz history found in that file (needs an "attempts" list)', 2600); return; }
+      const inc = migrate(obj);
+      const ids = new Set(state.attempts.map(a => a.id)); let n = 0;
+      inc.attempts.forEach(a => { if (!ids.has(a.id)) { state.attempts.push(a); ids.add(a.id); n++; } });
+      state.attempts.sort((a, b) => b.ts - a.ts);
+      state.attempts = state.attempts.slice(0, MAX_HISTORY);
+      if (inc.settings.lastLesson && !state.settings.lastLesson) state.settings.lastLesson = inc.settings.lastLesson;
+      save(); renderAll();
+      PH.toast('Imported ' + n + ' quiz attempt' + (n === 1 ? '' : 's'), 2400);
+    });
+  }
+
+  /* ===================== Events ===================== */
+  document.querySelector('main').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.start) { startQuiz({ lesson: b.dataset.start, seed: newSeed() }); return; }
+    if (b.id === 'btn-mix') { const ids = attemptedLessonIds(); startQuiz({ lesson: MIX, seed: newSeed(), lessons: ids.length ? ids : LESSONS.map(l => l.id) }); return; }
+    if (b.classList.contains('choice')) { select(Number(b.dataset.i)); return; }
+    if (b.id === 'q-check') { check(); return; }
+    if (b.id === 'q-next') { next(); return; }
+    if (b.id === 'q-quit' || b.id === 'r-back') { quit(); return; }
+    if (b.id === 'r-missed' && quiz) { startQuiz({ lesson: quiz.lesson, seed: newSeed(), refs: quiz.missedRefs, lessons: quiz.lessons }); return; }
+    if (b.id === 'r-same' && quiz) { startQuiz({ lesson: quiz.lesson, seed: quiz.seed, refs: quiz.refs, lessons: quiz.lessons }); return; }
+    if (b.id === 'r-new' && quiz) { startQuiz({ lesson: quiz.lesson, seed: newSeed(), lessons: quiz.lesson === MIX ? attemptedLessonIds() : null }); return; }
+    if (b.dataset.replay) { const a = state.attempts.find(x => x.id === b.dataset.replay); if (a) startQuiz({ lesson: a.lesson, seed: a.seed, lessons: a.lessons || null }); return; }
+    if (b.dataset.del) {
+      const id = b.dataset.del;
+      clearTimeout(ui.confirmTimer);
+      if (ui.confirmId !== id) { ui.confirmId = id; renderHistory(); ui.confirmTimer = setTimeout(() => { ui.confirmId = null; renderHistory(); }, 4000); return; }
+      ui.confirmId = null;
+      state.attempts = state.attempts.filter(a => a.id !== id);
+      save(); renderAll(); PH.toast('Attempt deleted');
+    }
+  });
+  document.addEventListener('keydown', e => {
+    if (!quiz || quiz.finished || e.altKey || e.ctrlKey || e.metaKey) return;
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = /^(input|textarea|select)$/i.test(tag);
+    const item = quiz.items[quiz.i];
+    if (!quiz.checked && item.type === 'mc' && !typing && /^[1-4]$/.test(e.key)) { e.preventDefault(); select(Number(e.key) - 1); return; }
+    if (e.key === 'Enter') {
+      const btn = e.target.closest && e.target.closest('button');
+      if (btn && !btn.classList.contains('choice')) return;        // let the focused button's own click handle it
+      e.preventDefault();
+      if (btn && !quiz.checked) select(Number(btn.dataset.i));
+      if (!quiz.checked) check(); else next();
+    }
+  });
+  $('#btn-export').addEventListener('click', exportJSON);
+  $('#btn-import').addEventListener('click', importJSON);
+  window.addEventListener('beforeunload', e => { if (quiz && !quiz.finished && quiz.given.length) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ===================== Boot ===================== */
+  if (stored) save(); // refresh the hub summary format
+  showView('lessons');
+  renderAll();
+  // Exposed for automated checks only.
+  window.PHQuizDebug = { migrate, checkNum, checkText, canonPoly, buildQuiz, getQuiz: () => quiz, getState: () => state };
+})();
+</script></body></html>

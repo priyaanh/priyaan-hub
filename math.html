@@ -1,0 +1,361 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Math Worksheets · Priyaan's Hub</title>
+<link rel="stylesheet" href="shared.css"><style>
+main > * + * { margin-top: 1rem; }
+/* topic picker */
+.chapters { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.topic { display: flex; gap: .6rem; align-items: flex-start; padding: .5rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; background: var(--surface); }
+.topic:hover { border-color: var(--accent); background: var(--surface-2); }
+.topic input { margin: .2rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--accent); flex: none; cursor: pointer; }
+.topic.on { border-color: var(--accent); background: var(--accent-soft); }
+.topic .tn { font-weight: 600; font-size: .93rem; display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; }
+.topic .tn .ch { font-size: .72rem; font-weight: 700; color: var(--muted); background: var(--surface-2); padding: .05rem .35rem; border-radius: 999px; }
+.topic.on .tn .ch { background: var(--surface); }
+.topic .td { font-size: .78rem; color: var(--muted); line-height: 1.35; margin-top: .1rem; }
+.opts { display: grid; gap: .9rem; grid-template-columns: 1fr; margin-top: 1rem; }
+@media (min-width: 760px) { .opts { grid-template-columns: auto auto auto 1fr; align-items: end; } }
+.countbtns { display: flex; gap: .3rem; }
+.countbtns .btn.on, .tabs .tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tabs .tab.on { box-shadow: none; }
+.seedrow { display: flex; gap: .4rem; align-items: flex-end; }
+.seedrow .input { width: 7.5rem; }
+.mk-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1rem; }
+/* worksheet */
+.ws-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .9rem 1.6rem; grid-template-columns: 1fr; counter-reset: none; }
+@media (min-width: 780px) { .ws-list { grid-template-columns: 1fr 1fr; } }
+.prob { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .65rem .75rem; background: var(--surface); }
+.prob.right { border-color: var(--ok); background: var(--ok-soft); }
+.prob.wrong { border-color: var(--danger); background: var(--danger-soft); }
+.prob .qline { display: flex; gap: .55rem; line-height: 1.5; }
+.prob .n { font-weight: 800; color: var(--accent); min-width: 1.5rem; font-variant-numeric: tabular-nums; }
+.prob .qt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.prob .tag { font-size: .7rem; color: var(--muted); margin-top: .2rem; }
+.ans-row { display: flex; gap: .4rem; margin-top: .5rem; align-items: center; }
+.ans-row .input { flex: 1; min-width: 0; font-family: var(--mono); }
+.verdict { font-size: .85rem; margin-top: .35rem; font-weight: 600; }
+.verdict.ok { color: var(--ok); } .verdict.no { color: var(--danger); }
+.showans { margin-top: .4rem; font-size: .88rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: .35rem; }
+.showans b { color: var(--text); }
+.score { font-variant-numeric: tabular-nums; font-weight: 700; }
+/* history */
+.hrow { display: flex; gap: .7rem; align-items: center; padding: .55rem 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.hrow:first-child { border-top: 0; }
+.hrow .meta { flex: 1; min-width: 12rem; }
+.hrow .meta .t { font-weight: 600; }
+.hrow .meta .s { font-size: .8rem; color: var(--muted); }
+.hrow .acts { display: flex; gap: .3rem; }
+#printFrame { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }
+@media print { body > *:not(.no-print) { } .topbar, .no-print { display: none !important; } }
+</style></head>
+<body data-app="math">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <div class="title"><span class="emoji">🧮</span><span class="name">Math Worksheets</span></div>
+  <div class="spacer"></div>
+  <button class="btn btn-sm" id="exportBtn">↓ Export</button>
+  <button class="btn btn-sm" id="importBtn">↑ Import</button>
+</div></header>
+<main class="container">
+
+  <div class="stats no-print" id="stats"></div>
+
+  <section class="card no-print" aria-labelledby="h-make">
+    <div class="card-head"><h2 id="h-make">Make a worksheet</h2>
+      <span class="small"><a href="#" data-pick="all">All</a> · <a href="#" data-pick="none">None</a> · <a href="#" data-pick="last">Last used</a></span>
+    </div>
+    <div class="chapters" id="topics"></div>
+
+    <div class="opts">
+      <div class="field"><label>How many problems</label>
+        <div class="countbtns" id="countBtns">
+          <button class="btn btn-sm" data-count="10">10</button><button class="btn btn-sm" data-count="15">15</button>
+          <button class="btn btn-sm" data-count="20">20</button><button class="btn btn-sm" data-count="30">30</button>
+          <input class="input" id="countIn" type="number" min="1" max="60" step="1" aria-label="Number of problems">
+        </div>
+      </div>
+      <div class="field"><label>Level</label>
+        <div class="tabs" id="diffTabs" role="group" aria-label="Difficulty">
+          <button class="tab" data-diff="1">1 · Warm-up</button><button class="tab" data-diff="2">2 · Standard</button><button class="tab" data-diff="3">3 · Challenge</button>
+        </div>
+      </div>
+      <div class="field"><label for="seedIn">Seed</label>
+        <div class="seedrow"><input class="input" id="seedIn" type="number" min="1" step="1" aria-label="Seed"><button class="btn btn-sm" id="newSeed" title="New random seed">🔀</button></div>
+      </div>
+      <div class="field"><label for="nameIn">Name on the sheet</label><input class="input" id="nameIn" placeholder="Priyaan"></div>
+    </div>
+
+    <div class="mk-actions">
+      <button class="btn btn-primary" id="preview">Make worksheet</button>
+      <button class="btn" id="printBtn">🖨️ Print</button>
+      <button class="btn" id="downloadBtn">⬇ Download HTML</button>
+      <span class="muted small" id="mkNote"></span>
+    </div>
+  </section>
+
+  <section class="card" id="wsCard" hidden aria-labelledby="h-ws">
+    <div class="card-head"><h2 id="h-ws">Worksheet</h2>
+      <div class="row no-print" style="gap:.4rem">
+        <span class="pill" id="wsMeta"></span>
+        <button class="btn btn-sm" id="practiceBtn" aria-pressed="false">✏️ Practice online</button>
+        <button class="btn btn-sm" id="answersBtn" aria-pressed="false">👁 Show answers</button>
+      </div>
+    </div>
+    <div class="row between no-print" id="practiceBar" hidden>
+      <span class="score" id="scoreLbl">0 / 0</span>
+      <span class="row" style="gap:.4rem"><button class="btn btn-sm" id="checkAll">Check all</button><button class="btn btn-sm btn-primary" id="finish">Finish &amp; save score</button></span>
+    </div>
+    <ol class="ws-list" id="wsList"></ol>
+  </section>
+
+  <section class="card no-print" aria-labelledby="h-hist">
+    <div class="card-head"><h2 id="h-hist">History</h2><button class="btn btn-sm btn-ghost btn-danger" id="clearHist" hidden>Clear</button></div>
+    <div id="hist"></div>
+  </section>
+</main>
+<iframe id="printFrame" title="Printable worksheet" aria-hidden="true"></iframe>
+<script src="shared.js"></script><script src="im1.js"></script><script>
+(function () {
+  'use strict';
+  const KEY = 'ph.math.v1';
+  const $ = s => document.querySelector(s), $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
+  const esc = PH.esc;
+  const ALL = IM1.TOPICS.map(t => t.id);
+
+  /* ---------------- state ---------------- */
+  function blank() {
+    return { version: 1, history: [], settings: { topics: ['linear', 'slope', 'systems'], count: 20, difficulty: 2, name: 'Priyaan' }, summary: { headline: '', sub: '' } };
+  }
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const validISO = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime());
+  function normalize(raw) {
+    const s = blank();
+    if (!isObj(raw)) return s;
+    const st = isObj(raw.settings) ? raw.settings : {};
+    const t = Array.isArray(st.topics) ? st.topics.filter(x => ALL.indexOf(x) >= 0) : [];
+    if (t.length) s.settings.topics = t;
+    if (isFinite(st.count)) s.settings.count = Math.min(60, Math.max(1, Math.round(st.count)));
+    if ([1, 2, 3].indexOf(st.difficulty) >= 0) s.settings.difficulty = st.difficulty;
+    if (typeof st.name === 'string') s.settings.name = st.name.slice(0, 40);
+    if (Array.isArray(raw.history)) {
+      s.history = raw.history.filter(isObj).map(h => ({
+        id: typeof h.id === 'string' && h.id ? h.id : PH.uid(),
+        date: validISO(h.date) ? h.date : PH.todayISO(),
+        topics: Array.isArray(h.topics) ? h.topics.filter(x => ALL.indexOf(x) >= 0) : [],
+        count: isFinite(h.count) ? Math.min(60, Math.max(1, Math.round(h.count))) : 20,
+        difficulty: [1, 2, 3].indexOf(h.difficulty) >= 0 ? h.difficulty : 2,
+        seed: isFinite(h.seed) ? Math.round(h.seed) : 1,
+        name: typeof h.name === 'string' ? h.name : '',
+        score: isObj(h.score) && isFinite(h.score.right) && isFinite(h.score.total) ? { right: h.score.right, total: h.score.total } : null
+      })).filter(h => h.topics.length).slice(0, 100);
+    }
+    return s;
+  }
+  const stored = PH.load(KEY, null);
+  let state = normalize(stored);
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+
+  function practiced() { return state.history.filter(h => h.score); }
+  function streak() {
+    const days = {}; practiced().forEach(h => days[h.date] = 1);
+    let n = 0, d = PH.todayISO();
+    if (!days[d]) d = PH.addDays(d, -1);                       // today not practiced yet: a streak can still end yesterday
+    while (days[d]) { n++; d = PH.addDays(d, -1); }
+    return n;
+  }
+  function buildSummary() {
+    if (!state.history.length) return { headline: '', sub: '' };
+    const last = state.history[0], pr = practiced();
+    const names = last.topics.map(id => (IM1.TOPICS.filter(t => t.id === id)[0] || {}).name || id);
+    const headline = last.score ? 'Last score ' + last.score.right + '/' + last.score.total
+      : state.history.length + ' worksheet' + (state.history.length === 1 ? '' : 's') + ' made';
+    const st = streak();
+    return { headline, sub: names.slice(0, 2).join(' · ') + (names.length > 2 ? ' +' + (names.length - 2) : '') +
+      (pr.length ? ' · practiced ' + PH.fmtDate(pr[0].date, { month: 'short', day: 'numeric' }) : '') + (st > 1 ? ' · 🔥 ' + st + ' days' : '') };
+  }
+
+  /* ---------------- worksheet in view ---------------- */
+  let ws = null, practice = false, showAns = false, marks = {}, lastHistId = null;
+  const randSeed = () => Math.floor(Math.random() * 999999) + 1;
+
+  function opts() {
+    return { topics: state.settings.topics.slice(), count: state.settings.count, difficulty: state.settings.difficulty, seed: Number($('#seedIn').value) || randSeed() };
+  }
+  function makeWorksheet(o, remember) {
+    try { ws = IM1.generate(o); }
+    catch (e) { PH.toast(e.message); return null; }
+    marks = {}; practice = false; showAns = false;
+    $('#practiceBtn').setAttribute('aria-pressed', 'false'); $('#answersBtn').setAttribute('aria-pressed', 'false');
+    $('#seedIn').value = ws.seed;
+    if (remember !== false) {
+      const h = { id: PH.uid(), date: PH.todayISO(), topics: ws.topics.slice(), count: ws.problems.length, difficulty: ws.difficulty, seed: ws.seed, name: state.settings.name, score: null };
+      state.history.unshift(h); state.history = state.history.slice(0, 100); lastHistId = h.id;
+      save();
+    }
+    renderWorksheet(); renderHistory(); renderStats();
+    $('#wsCard').hidden = false;
+    return ws;
+  }
+  function renderWorksheet() {
+    if (!ws) return;
+    const diff = ['', 'Warm-up', 'Standard', 'Challenge'][ws.difficulty];
+    $('#wsMeta').textContent = ws.problems.length + ' problems · ' + diff + ' · seed ' + ws.seed;
+    $('#practiceBar').hidden = !practice;
+    $('#wsList').innerHTML = ws.problems.map((p, i) => {
+      const m = marks[p.id];
+      return '<li class="prob' + (m ? (m.ok ? ' right' : ' wrong') : '') + '" data-p="' + esc(p.id) + '">' +
+        '<div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + p.question +
+          '<div class="tag">' + esc(p.topicName) + '</div></div></div>' +
+        (practice ? '<div class="ans-row"><input class="input" data-ans="' + esc(p.id) + '" placeholder="Your answer" ' +
+            'autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Answer for problem ' + (i + 1) + '" value="' + esc(m ? m.typed : '') + '">' +
+            '<button class="btn btn-sm" data-check="' + esc(p.id) + '">Check</button></div>' +
+          (m ? '<div class="verdict ' + (m.ok ? 'ok' : 'no') + '">' + (m.ok ? '✓ Correct' : '✗ Not yet — answer: ' + p.answer) + '</div>' : '') : '') +
+        (showAns ? '<div class="showans"><b>Answer:</b> ' + p.answer + (p.work ? '<br><span class="muted">' + p.work + '</span>' : '') + '</div>' : '') +
+      '</li>';
+    }).join('');
+    const done = Object.keys(marks).length, right = Object.keys(marks).filter(k => marks[k].ok).length;
+    $('#scoreLbl').textContent = right + ' / ' + (done || ws.problems.length) + (done < ws.problems.length ? ' (' + done + ' checked)' : '');
+  }
+  function checkOne(id) {
+    const p = ws.problems.filter(x => x.id === id)[0], inp = document.querySelector('[data-ans="' + id + '"]');
+    if (!p || !inp) return;
+    const typed = inp.value.trim();
+    if (!typed) { PH.toast('Type an answer first'); inp.focus(); return; }
+    marks[id] = { typed, ok: IM1.checkAnswer(p, typed) };
+    renderWorksheet();
+    const next = document.querySelector('[data-ans="' + id + '"]');
+    if (next) next.focus();
+  }
+  function finish() {
+    const total = ws.problems.length, right = Object.keys(marks).filter(k => marks[k].ok).length;
+    const h = state.history.filter(x => x.id === lastHistId)[0] || state.history[0];
+    if (h) { h.score = { right, total }; h.date = PH.todayISO(); }
+    save(); renderHistory(); renderStats();
+    PH.toast(right === total ? '🎉 ' + right + '/' + total + ' — perfect!' : 'Saved: ' + right + '/' + total);
+  }
+  function sheetHTML(withAnswers) {
+    return IM1.renderWorksheet(ws, { title: 'Integrated Math 1 · ' + ws.topics.map(id => (IM1.TOPICS.filter(t => t.id === id)[0] || {}).name || id).join(', '),
+      name: state.settings.name, showAnswers: withAnswers !== false });
+  }
+  function printSheet() {
+    if (!ws && !makeWorksheet(opts())) return;
+    const f = $('#printFrame');
+    f.srcdoc = sheetHTML(true);
+    f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { PH.toast('Could not open the print dialog'); } };
+  }
+  function download() {
+    if (!ws && !makeWorksheet(opts())) return;
+    PH.download('im1_' + ws.topics.join('-') + '_d' + ws.difficulty + '_s' + ws.seed + '.html', sheetHTML(true), 'text/html');
+    PH.toast('Downloaded');
+  }
+
+  /* ---------------- pickers ---------------- */
+  function renderTopics() {
+    const byChapter = IM1.TOPICS.slice().sort((a, b) => (a.chapter || 99) - (b.chapter || 99));
+    $('#topics').innerHTML = byChapter.map(t => {
+      const on = state.settings.topics.indexOf(t.id) >= 0;
+      return '<label class="topic' + (on ? ' on' : '') + '"><input type="checkbox" data-topic="' + t.id + '"' + (on ? ' checked' : '') + '>' +
+        '<span><span class="tn">' + esc(t.name) + ' <span class="ch">' + esc(t.unit) + '</span></span><span class="td">' + esc(t.description) + '</span></span></label>';
+    }).join('');
+    $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
+    $('#countIn').value = state.settings.count;
+    $$('#diffTabs .tab').forEach(b => { const on = Number(b.dataset.diff) === state.settings.difficulty; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    $('#nameIn').value = state.settings.name;
+    const n = state.settings.topics.length;
+    $('#mkNote').textContent = n ? n + ' topic' + (n === 1 ? '' : 's') + ' selected' : 'Pick at least one topic';
+    $('#preview').disabled = !n;
+  }
+  function renderStats() {
+    const pr = practiced(), best = pr.reduce((b, h) => Math.max(b, Math.round(h.score.right / h.score.total * 100)), 0);
+    const probs = pr.reduce((n, h) => n + h.score.total, 0);
+    $('#stats').innerHTML = [
+      ['Worksheets made', state.history.length], ['Problems practiced', probs],
+      ['Best score', pr.length ? best + '%' : '—'], ['Practice streak', streak() + (streak() === 1 ? ' day' : ' days')]
+    ].map(([lbl, num]) => '<div class="stat"><div class="num">' + esc(String(num)) + '</div><div class="lbl">' + lbl + '</div></div>').join('');
+  }
+  function renderHistory() {
+    $('#clearHist').hidden = !state.history.length;
+    if (!state.history.length) { $('#hist').innerHTML = '<div class="empty">No worksheets yet. Pick some topics and press <b>Make worksheet</b>.</div>'; return; }
+    $('#hist').innerHTML = state.history.map(h => {
+      const names = h.topics.map(id => (IM1.TOPICS.filter(t => t.id === id)[0] || {}).name || id);
+      const pct = h.score ? Math.round(h.score.right / h.score.total * 100) : null;
+      return '<div class="hrow" data-h="' + esc(h.id) + '">' +
+        '<div class="meta"><div class="t">' + esc(names.join(' · ')) + '</div>' +
+        '<div class="s">' + esc(PH.fmtDate(h.date, { month: 'short', day: 'numeric' })) + ' · ' + h.count + ' problems · level ' + h.difficulty + ' · seed ' + h.seed + '</div></div>' +
+        (h.score ? '<span class="pill ' + (pct >= 80 ? 'ok' : pct >= 60 ? 'warn' : 'danger') + '">' + h.score.right + '/' + h.score.total + '</span>' : '<span class="pill neutral">not practiced</span>') +
+        '<div class="acts"><button class="btn btn-sm" data-open="' + esc(h.id) + '">Open again</button>' +
+        '<button class="btn btn-sm btn-ghost" data-print="' + esc(h.id) + '">Print</button>' +
+        '<button class="btn btn-sm btn-ghost btn-danger" data-del="' + esc(h.id) + '" aria-label="Delete">✕</button></div></div>';
+    }).join('');
+  }
+  function renderAll() { renderTopics(); renderStats(); renderHistory(); }
+
+  /* ---------------- events ---------------- */
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.topic) {
+      const id = t.dataset.topic, i = state.settings.topics.indexOf(id);
+      if (t.checked && i < 0) state.settings.topics.push(id); else if (!t.checked && i >= 0) state.settings.topics.splice(i, 1);
+      save(); renderTopics(); return;
+    }
+    if (t.id === 'countIn') { state.settings.count = Math.min(60, Math.max(1, Math.round(Number(t.value) || 20))); save(); renderTopics(); return; }
+    if (t.id === 'nameIn') { state.settings.name = t.value.trim().slice(0, 40); save(); return; }
+  });
+  document.addEventListener('click', e => {
+    const pick = e.target.closest('[data-pick]');
+    if (pick) { e.preventDefault();
+      if (pick.dataset.pick === 'all') state.settings.topics = ALL.slice();
+      else if (pick.dataset.pick === 'none') state.settings.topics = [];
+      else if (state.history[0]) state.settings.topics = state.history[0].topics.slice();
+      save(); renderTopics(); return; }
+    const cb = e.target.closest('[data-count]');
+    if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderTopics(); return; }
+    const db = e.target.closest('[data-diff]');
+    if (db) { state.settings.difficulty = Number(db.dataset.diff); save(); renderTopics(); return; }
+    if (e.target.closest('#newSeed')) { $('#seedIn').value = randSeed(); return; }
+    if (e.target.closest('#preview')) { makeWorksheet(opts()); $('#wsCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (e.target.closest('#printBtn')) { if (!ws) makeWorksheet(opts()); printSheet(); return; }
+    if (e.target.closest('#downloadBtn')) { if (!ws) makeWorksheet(opts()); download(); return; }
+    if (e.target.closest('#practiceBtn')) { practice = !practice; $('#practiceBtn').setAttribute('aria-pressed', String(practice)); renderWorksheet(); return; }
+    if (e.target.closest('#answersBtn')) { showAns = !showAns; $('#answersBtn').setAttribute('aria-pressed', String(showAns)); renderWorksheet(); return; }
+    const chk = e.target.closest('[data-check]');
+    if (chk) { checkOne(chk.dataset.check); return; }
+    if (e.target.closest('#checkAll')) { ws.problems.forEach(p => { const inp = document.querySelector('[data-ans="' + p.id + '"]'); if (inp && inp.value.trim()) marks[p.id] = { typed: inp.value.trim(), ok: IM1.checkAnswer(p, inp.value.trim()) }; }); renderWorksheet(); return; }
+    if (e.target.closest('#finish')) { finish(); return; }
+    const open = e.target.closest('[data-open]');
+    if (open) { const h = state.history.filter(x => x.id === open.dataset.open)[0]; if (h) { lastHistId = h.id; $('#seedIn').value = h.seed;
+        state.settings.topics = h.topics.slice(); state.settings.count = h.count; state.settings.difficulty = h.difficulty; save(); renderTopics();
+        makeWorksheet({ topics: h.topics, count: h.count, difficulty: h.difficulty, seed: h.seed }, false); $('#wsCard').scrollIntoView({ behavior: 'smooth' }); } return; }
+    const pr = e.target.closest('[data-print]');
+    if (pr) { const h = state.history.filter(x => x.id === pr.dataset.print)[0]; if (h) { makeWorksheet({ topics: h.topics, count: h.count, difficulty: h.difficulty, seed: h.seed }, false); printSheet(); } return; }
+    const del = e.target.closest('[data-del]');
+    if (del) { state.history = state.history.filter(x => x.id !== del.dataset.del); save(); renderHistory(); renderStats(); return; }
+    if (e.target.closest('#clearHist')) { state.history = []; save(); renderHistory(); renderStats(); PH.toast('History cleared'); return; }
+    if (e.target.closest('#exportBtn')) { PH.download('priyaan-math-' + PH.todayISO() + '.json', JSON.stringify(state, null, 2)); return; }
+    if (e.target.closest('#importBtn')) { importJSON(); return; }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const inp = e.target.closest('[data-ans]');
+    if (inp) { e.preventDefault(); checkOne(inp.dataset.ans); }
+  });
+  async function importJSON() {
+    const text = await PH.pickFile('application/json');
+    if (!text) return;
+    let obj; try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+    if (isObj(obj) && isObj(obj.data) && typeof obj.data[KEY] === 'string') {          // whole-hub backup file
+      try { obj = JSON.parse(obj.data[KEY]); } catch (e) { obj = null; }
+    }
+    const inc = normalize(obj);
+    if (!inc.history.length && !obj) { PH.toast('No math data in that file'); return; }
+    const seen = {}; state.history.concat(inc.history).forEach(h => { const k = h.topics.join(',') + '|' + h.seed + '|' + h.count + '|' + h.difficulty; if (!seen[k]) seen[k] = h; });
+    state.history = Object.keys(seen).map(k => seen[k]).sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id)).slice(0, 100);
+    state.settings = inc.settings;
+    save(); renderAll(); PH.toast('Imported ' + state.history.length + ' worksheets');
+  }
+
+  $('#seedIn').value = randSeed();
+  renderAll();
+  if (stored) save();
+})();
+</script>
+</body></html>
