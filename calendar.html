@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calendar · Priyaan's Hub</title>
+<title>Calendar &amp; Tasks · Priyaan's Hub</title>
 <link rel="stylesheet" href="shared.css"><style>
 main > * + * { margin-top: 1rem; }
 .cal-head { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
@@ -38,6 +38,28 @@ main > * + * { margin-top: 1rem; }
 .ev .when { flex: none; width: 5.6rem; font-variant-numeric: tabular-nums; font-size: .9rem; color: var(--muted); }
 .ev .what { flex: 1; min-width: 0; }
 .ev .what .loc { font-size: .8rem; color: var(--muted); }
+/* ---- tasks ---- */
+.list-chips { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: .6rem; }
+.list-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-size: .85rem; font-weight: 600; padding: .3rem .7rem; border-radius: 999px; cursor: pointer; }
+.list-chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.tgroup { margin-top: .8rem; }
+.tgroup > h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .2rem; }
+.tgroup.over > h3 { color: var(--danger); }
+.tgroup.today > h3 { color: var(--accent); }
+.task { display: flex; gap: .6rem; align-items: flex-start; padding: .45rem .3rem; border-top: 1px solid var(--border); }
+.task:first-of-type { border-top: 0; }
+.task input[type="checkbox"] { width: 1.15rem; height: 1.15rem; margin: .1rem 0 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+.task .tt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.task .tt .ti { overflow-wrap: anywhere; }
+.task .tt .tn { font-size: .8rem; color: var(--muted); white-space: pre-wrap; }
+.task .tt .td { font-size: .78rem; color: var(--muted); }
+.task.done .tt .ti { text-decoration: line-through; color: var(--muted); }
+.task.overdue .tt .td { color: var(--danger); font-weight: 600; }
+.task .x { opacity: 0; }
+.task:hover .x, .task:focus-within .x { opacity: 1; }
+.add-task { display: grid; gap: .5rem; grid-template-columns: 1fr; margin-top: .9rem; padding-top: .8rem; border-top: 1px dashed var(--border); }
+@media (min-width: 720px) { .add-task { grid-template-columns: 1fr auto auto; align-items: end; } }
+.stale { font-size: .8rem; color: var(--warn); margin: 0 0 .4rem; }
 .settings-grid { display: grid; gap: .75rem; grid-template-columns: 1fr; }
 @media (min-width: 720px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
 details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
@@ -49,7 +71,7 @@ details[open] summary { margin-bottom: .6rem; }
 <body data-app="calendar">
 <header class="topbar"><div class="inner">
   <a class="back" href="index.html">← Hub</a>
-  <div class="title"><span class="emoji">🗓️</span><span class="name">Calendar</span></div>
+  <div class="title"><span class="emoji">🗓️</span><span class="name">Calendar &amp; Tasks</span></div>
   <div class="spacer"></div>
   <a class="btn btn-sm" id="openGcal" href="https://calendar.google.com/" target="_blank" rel="noopener">Open Google Calendar ↗</a>
 </div></header>
@@ -115,12 +137,27 @@ details[open] summary { margin-bottom: .6rem; }
       <p class="small muted">Reading events inside this page needs a free Google API client ID. About 5 minutes:</p>
       <ol class="steps">
         <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a>, signed in as the main calendar account, and create a project (any name, e.g. “Priyaan Hub”).</li>
-        <li><b>APIs &amp; Services → Library</b>: enable the <b>Google Calendar API</b>.</li>
+        <li><b>APIs &amp; Services → Library</b>: enable the <b>Google Calendar API</b> and the <b>Google Tasks API</b>.</li>
         <li><b>APIs &amp; Services → OAuth consent screen</b>: choose <b>External</b>, fill in the app name and your email, and add every family Google account under <b>Test users</b>.</li>
         <li><b>Credentials → Create credentials → OAuth client ID</b>, type <b>Web application</b>. Under <b>Authorized JavaScript origins</b> add <code>https://priyaanh.github.io</code>. Save and copy the <b>Client ID</b>.</li>
-        <li>Paste it under Settings below. One sign-in covers every calendar shared with that account. Sign-in only works on the hosted site, not from disk.</li>
+        <li>Paste it under Settings below. The same sign-in covers every calendar shared with that account <b>and</b> Google Tasks. Sign-in only works on the hosted site, not from disk.</li>
       </ol>
     </details>
+  </section>
+
+  <section class="card" aria-labelledby="h-tasks">
+    <div class="card-head"><h2 id="h-tasks">Google Tasks</h2>
+      <span class="row" style="gap:.4rem"><span class="muted small" id="taskStatus"></span>
+        <button class="btn btn-sm" id="taskRefresh" hidden>↻</button>
+        <a class="btn btn-sm btn-ghost" href="https://tasks.google.com/" target="_blank" rel="noopener">Open Tasks ↗</a></span>
+    </div>
+    <div class="list-chips" id="taskLists" hidden></div>
+    <div id="taskBox"><div class="empty">Google Tasks has no public embed, so this list needs the same one-time sign-in as the section above. Once it is set up, tasks show here and ticking one off updates Google.</div></div>
+    <form class="add-task" id="addTask" hidden>
+      <div class="field"><label for="newTask">New task</label><input class="input" id="newTask" placeholder="Finish Unit 3 worksheet" maxlength="200" required></div>
+      <div class="field"><label for="newDue">Due (optional)</label><input class="input" id="newDue" type="date"></div>
+      <button class="btn btn-primary" type="submit">+ Add</button>
+    </form>
   </section>
 
   <section class="card" aria-labelledby="h-set">
@@ -142,6 +179,7 @@ details[open] summary { margin-bottom: .6rem; }
   const PALETTE = ['#d64292', '#4f6bed', '#0f9d9a', '#e0701f', '#7c5cff', '#2f8f4e', '#d64545', '#8d6e63'];
   const $ = s => document.querySelector(s);
   const esc = PH.esc;
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
   const localTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'; } catch (e) { return 'America/Los_Angeles'; } })();
 
   const QUICK = [
@@ -161,7 +199,8 @@ details[open] summary { margin-bottom: .6rem; }
   }
   function labelFor(src) { const s = String(src); return s.includes('@') ? s.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Calendar'; }
   function blank() {
-    return { version: 2, settings: { calendars: [mkCal(DEFAULT_CAL, 'Priyaan', PALETTE[0], true)], mode: 'WEEK', tz: localTz, clientId: '' }, summary: { headline: '', sub: '' } };
+    return { version: 2, settings: { calendars: [mkCal(DEFAULT_CAL, 'Priyaan', PALETTE[0], true)], mode: 'WEEK', tz: localTz, clientId: '', taskList: '' },
+      tasksCache: null, summary: { headline: '', sub: '' } };
   }
   function normalize(raw) {
     const s = blank();
@@ -184,23 +223,39 @@ details[open] summary { margin-bottom: .6rem; }
     if (MODES.includes(st.mode)) s.settings.mode = st.mode;
     if (typeof st.tz === 'string' && st.tz.trim()) s.settings.tz = st.tz.trim();
     if (typeof st.clientId === 'string') s.settings.clientId = st.clientId.trim();
+    if (typeof st.taskList === 'string') s.settings.taskList = st.taskList;
+    if (isObj(raw.tasksCache) && Array.isArray(raw.tasksCache.items)) {
+      s.tasksCache = { listId: String(raw.tasksCache.listId || ''), listTitle: String(raw.tasksCache.listTitle || ''),
+        at: Number(raw.tasksCache.at) || 0,
+        items: raw.tasksCache.items.filter(isObj).map(t => ({ id: String(t.id || ''), title: String(t.title || ''),
+          notes: String(t.notes || ''), due: String(t.due || ''), status: t.status === 'completed' ? 'completed' : 'needsAction' })) };
+    }
     return s;
   }
   let state = normalize(PH.load(KEY, null));
   let events = null, token = null;
+  let taskLists = null, tasks = null, curList = '', tasksAt = 0;
   const cals = () => state.settings.calendars;
   const shown = () => cals().filter(c => c.on);
   function save() { state.summary = summary(); PH.save(KEY, state); }
+  function openTasks() {
+    const src = tasks || (state.tasksCache && state.tasksCache.items) || [];
+    return src.filter(t => t.status !== 'completed');
+  }
+  function dueToday() { const t = PH.todayISO(); return openTasks().filter(x => x.due && x.due.slice(0, 10) <= t).length; }
   function summary() {
     const names = shown().map(c => c.name).join(' · ');
+    const due = dueToday();
     if (events) {
       const t = PH.todayISO();
       const today = events.filter(e => e.date === t);
       const next = events.filter(e => e.date > t)[0];
-      return { headline: today.length ? today.length + ' event' + (today.length === 1 ? '' : 's') + ' today' : 'Nothing on the calendar today',
+      return { headline: (today.length ? today.length + ' event' + (today.length === 1 ? '' : 's') + ' today' : 'Nothing on the calendar today') +
+          (due ? ' · ' + due + ' task' + (due === 1 ? '' : 's') + ' due' : ''),
         sub: today.length ? today.slice(0, 2).map(e => (e.allDay ? '' : fmtTime(e.start) + ' ') + e.title).join(' · ')
                           : (next ? 'Next: ' + PH.fmtDate(next.date) + ' · ' + next.title : names) };
     }
+    if (due) return { headline: due + ' task' + (due === 1 ? '' : 's') + ' due', sub: openTasks().slice(0, 2).map(t => t.title).join(' · ') || names };
     return { headline: 'Google Calendar', sub: cals().length > 1 ? cals().length + ' calendars · ' + names : names };
   }
 
@@ -288,8 +343,8 @@ details[open] summary { margin-bottom: .6rem; }
       $('#upStatus').textContent = 'Connecting…';
       await loadScript('https://accounts.google.com/gsi/client');
       window.google.accounts.oauth2.initTokenClient({
-        client_id: state.settings.clientId, scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        callback: resp => { if (resp && resp.access_token) { token = resp.access_token; loadEvents(); } else { $('#upStatus').textContent = 'Sign-in was cancelled'; } },
+        client_id: state.settings.clientId, scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks',
+        callback: resp => { if (resp && resp.access_token) { token = resp.access_token; loadEvents(); loadTasks(); } else { $('#upStatus').textContent = 'Sign-in was cancelled'; } },
         error_callback: err => { $('#upStatus').textContent = 'Sign-in failed: ' + ((err && err.type) || 'unknown'); }
       }).requestAccessToken({ prompt: token ? '' : 'select_account' });
     } catch (e) { $('#upStatus').textContent = e.message; }
@@ -321,6 +376,104 @@ details[open] summary { margin-bottom: .6rem; }
     $('#upStatus').textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + (problems.length ? ' · could not read ' + problems.join(', ') : '');
     $('#signin').hidden = true; $('#refresh').hidden = false; $('#signout').hidden = false;
   }
+  /* ---------------- Google Tasks ---------------- */
+  const TASKS_API = 'https://tasks.googleapis.com/tasks/v1';
+  async function api(path, opts) {
+    const r = await fetch(TASKS_API + path, Object.assign({}, opts, {
+      headers: Object.assign({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, (opts || {}).headers) }));
+    if (r.status === 401) { token = null; throw new Error('Signed out — sign in again'); }
+    if (!r.ok) { let m = 'HTTP ' + r.status; try { const e = await r.json(); if (e.error && e.error.message) m = e.error.message; } catch (err) {} throw new Error(m); }
+    return r.status === 204 ? null : r.json();
+  }
+  async function loadTasks() {
+    if (!token) return;
+    $('#taskStatus').textContent = 'Loading…';
+    try {
+      const lists = await api('/users/@me/lists?maxResults=50');
+      taskLists = (lists.items || []).map(l => ({ id: l.id, title: l.title }));
+      if (!taskLists.length) { tasks = []; renderTasks(); $('#taskStatus').textContent = 'No task lists'; return; }
+      if (!curList || !taskLists.some(l => l.id === curList)) {
+        curList = (state.settings.taskList && taskLists.some(l => l.id === state.settings.taskList)) ? state.settings.taskList : taskLists[0].id;
+      }
+      const data = await api('/lists/' + encodeURIComponent(curList) + '/tasks?maxResults=100&showCompleted=true&showHidden=false');
+      tasks = (data.items || []).filter(t => !t.deleted).map(t => ({ id: t.id, title: t.title || '(no title)', notes: t.notes || '',
+        due: t.due || '', status: t.status === 'completed' ? 'completed' : 'needsAction', position: t.position || '' }));
+      tasks.sort((a, b) => (a.position || '').localeCompare(b.position || ''));
+      tasksAt = Date.now();
+      state.settings.taskList = curList;
+      const listTitle = (taskLists.filter(l => l.id === curList)[0] || {}).title || '';
+      state.tasksCache = { listId: curList, listTitle, at: tasksAt, items: tasks.map(t => ({ id: t.id, title: t.title, notes: t.notes, due: t.due, status: t.status })) };
+      save(); renderTasks();
+      $('#taskStatus').textContent = 'Updated ' + new Date(tasksAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    } catch (e) { $('#taskStatus').textContent = e.message; renderTasks(); }
+  }
+  async function toggleTask(id, done) {
+    const t = (tasks || []).filter(x => x.id === id)[0]; if (!t) return;
+    t.status = done ? 'completed' : 'needsAction';                 // optimistic; put it back if Google refuses
+    renderTasks();
+    try {
+      await api('/lists/' + encodeURIComponent(curList) + '/tasks/' + encodeURIComponent(id),
+        { method: 'PATCH', body: JSON.stringify(done ? { status: 'completed' } : { status: 'needsAction', completed: null }) });
+      if (state.tasksCache) { const c = state.tasksCache.items.filter(x => x.id === id)[0]; if (c) c.status = t.status; save(); }
+    } catch (e) { t.status = done ? 'needsAction' : 'completed'; renderTasks(); PH.toast(e.message, 3000); }
+  }
+  async function addTask(title, due) {
+    if (!token) { PH.toast('Sign in first'); return; }
+    const body = { title: title };
+    if (due) body.due = due + 'T00:00:00.000Z';                    // Google Tasks keeps the date only
+    try { await api('/lists/' + encodeURIComponent(curList) + '/tasks', { method: 'POST', body: JSON.stringify(body) });
+      PH.toast('Added'); loadTasks(); } catch (e) { PH.toast(e.message, 3000); }
+  }
+  async function deleteTask(id) {
+    try { await api('/lists/' + encodeURIComponent(curList) + '/tasks/' + encodeURIComponent(id), { method: 'DELETE' });
+      tasks = tasks.filter(t => t.id !== id);
+      if (state.tasksCache) state.tasksCache.items = state.tasksCache.items.filter(t => t.id !== id);
+      save(); renderTasks(); } catch (e) { PH.toast(e.message, 3000); }
+  }
+  function dueLabel(iso) {
+    if (!iso) return '';
+    const d = iso.slice(0, 10), diff = PH.daysBetween(PH.todayISO(), d);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff === -1) return 'Yesterday';
+    if (diff < 0) return Math.abs(diff) + ' days ago';
+    return PH.fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function renderTasks() {
+    const box = $('#taskBox');
+    const live = !!(tasks && token), cached = !live && state.tasksCache && state.tasksCache.items.length;
+    const items = live ? tasks : (cached ? state.tasksCache.items : null);
+    $('#taskRefresh').hidden = !token;
+    $('#addTask').hidden = !live;
+    $('#taskLists').hidden = !(live && taskLists && taskLists.length > 1);
+    if (live && taskLists) $('#taskLists').innerHTML = taskLists.map(l =>
+      '<button class="list-chip" data-list="' + esc(l.id) + '" aria-pressed="' + (l.id === curList) + '">' + esc(l.title) + '</button>').join('');
+    if (!items) return;                                            // never signed in: keep the explainer
+    const today = PH.todayISO();
+    const groups = [
+      { key: 'over', title: 'Overdue', cls: 'over', f: t => t.status !== 'completed' && t.due && t.due.slice(0, 10) < today },
+      { key: 'today', title: 'Today', cls: 'today', f: t => t.status !== 'completed' && t.due && t.due.slice(0, 10) === today },
+      { key: 'soon', title: 'Coming up', cls: '', f: t => t.status !== 'completed' && t.due && t.due.slice(0, 10) > today },
+      { key: 'none', title: 'No date', cls: '', f: t => t.status !== 'completed' && !t.due },
+      { key: 'done', title: 'Done', cls: '', f: t => t.status === 'completed' }
+    ];
+    const html = groups.map(g => {
+      const rows = items.filter(g.f);
+      if (!rows.length) return '';
+      return '<div class="tgroup ' + g.cls + '"><h3>' + g.title + ' · ' + rows.length + '</h3>' + rows.map(t =>
+        '<div class="task' + (t.status === 'completed' ? ' done' : '') + (g.key === 'over' ? ' overdue' : '') + '">' +
+          '<input type="checkbox" data-task="' + esc(t.id) + '"' + (t.status === 'completed' ? ' checked' : '') + (live ? '' : ' disabled') +
+            ' aria-label="' + esc(t.title) + '">' +
+          '<span class="tt"><span class="ti">' + esc(t.title) + '</span>' +
+            (t.notes ? '<span class="tn">' + esc(t.notes) + '</span>' : '') +
+            (t.due ? '<span class="td">' + esc(dueLabel(t.due)) + '</span>' : '') + '</span>' +
+          (live ? '<button class="btn btn-sm btn-ghost btn-danger x" data-deltask="' + esc(t.id) + '" aria-label="Delete ' + esc(t.title) + '">✕</button>' : '') +
+        '</div>').join('') + '</div>';
+    }).join('');
+    box.innerHTML = (cached ? '<p class="stale">Showing the last saved copy — sign in to update or change it.</p>' : '') +
+      (html || '<div class="empty">Nothing on this list' + (live ? '. Add one below.' : '.') + '</div>');
+  }
+
   function renderUpcoming() {
     const box = $('#upcoming'); if (!events) return;
     if (!events.length) { box.innerHTML = '<div class="empty">Nothing scheduled in the next 7 days.</div>'; return; }
@@ -335,14 +488,14 @@ details[open] summary { margin-bottom: .6rem; }
   }
   function signOut() {
     if (token && window.google && google.accounts && google.accounts.oauth2) { try { google.accounts.oauth2.revoke(token, () => {}); } catch (e) {} }
-    token = null; events = null; save();
+    token = null; events = null; tasks = null; taskLists = null; save(); renderTasks();
     $('#upcoming').innerHTML = '<div class="empty">Signed out. The calendar above still works.</div>';
     $('#upStatus').textContent = ''; $('#signin').hidden = false; $('#refresh').hidden = true; $('#signout').hidden = true;
   }
 
   /* ---------------- settings & wiring ---------------- */
   function renderSettings() { $('#tz').value = state.settings.tz; $('#clientId').value = state.settings.clientId; }
-  function renderAll() { renderCals(); renderEmbed(); renderQuick(); renderSettings(); }
+  function renderAll() { renderCals(); renderEmbed(); renderQuick(); renderSettings(); renderTasks(); }
 
   $('#modeTabs').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; state.settings.mode = b.dataset.mode; save(); renderEmbed(); });
   $('#calList').addEventListener('click', e => {
@@ -360,11 +513,23 @@ details[open] summary { margin-bottom: .6rem; }
     state.settings.clientId = $('#clientId').value.trim();
     save(); renderAll(); PH.toast('Settings saved');
   });
+  $('#taskRefresh').addEventListener('click', loadTasks);
+  $('#taskBox').addEventListener('change', e => { const c = e.target.closest('[data-task]'); if (c) toggleTask(c.dataset.task, c.checked); });
+  $('#taskBox').addEventListener('click', e => { const d = e.target.closest('[data-deltask]'); if (d) deleteTask(d.dataset.deltask); });
+  $('#taskLists').addEventListener('click', e => { const b = e.target.closest('[data-list]'); if (b) { curList = b.dataset.list; state.settings.taskList = curList; save(); loadTasks(); } });
+  $('#addTask').addEventListener('submit', e => { e.preventDefault(); const t = $('#newTask').value.trim(); if (!t) return;
+    addTask(t, $('#newDue').value); $('#newTask').value = ''; $('#newDue').value = ''; $('#newTask').focus(); });
   $('#signin').addEventListener('click', signIn);
-  $('#refresh').addEventListener('click', loadEvents);
+  $('#refresh').addEventListener('click', () => { loadEvents(); loadTasks(); });
   $('#signout').addEventListener('click', signOut);
 
   renderAll(); save();
+
+  /* Hook for the automated tests in this repo: they stub window.fetch and drive these directly, since the
+     Google sign-in popup cannot run headless. Harmless in normal use — it exposes no secrets. */
+  window.PH_CAL = { loadTasks: loadTasks, loadEvents: loadEvents, signOut: signOut, renderTasks: renderTasks,
+    setToken: function (t) { token = t; }, setList: function (id) { curList = id; state.settings.taskList = id; },
+    state: function () { return state; } };
 })();
 </script>
 </body></html>

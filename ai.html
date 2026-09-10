@@ -63,20 +63,24 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 <main class="container">
 
   <section class="card" id="setupCard" aria-labelledby="h-key">
-    <div class="card-head"><h2 id="h-key">Connect Claude</h2><span class="pill neutral" id="keyState">No key yet</span></div>
-    <p class="note">This page sends your PDF to Claude and gets practice problems back. It needs an Anthropic API key, which is stored <b>only in this browser</b> and never leaves it except in the request to Anthropic. Use a key with a spending limit, and don't add one on a shared computer.</p>
+    <div class="card-head"><h2 id="h-key">Connect an AI</h2>
+      <div class="tabs" id="provTabs" role="group" aria-label="Which AI to use">
+        <button class="tab" data-prov="claude">Claude</button><button class="tab" data-prov="openai">ChatGPT</button>
+      </div>
+    </div>
+    <p class="note">This page sends your PDF straight to <span id="provName">Claude</span> and gets practice problems back. Either service works — pick whichever account you already have. Both need an API key, which is stored <b>only in this browser</b> and never leaves it except in the request to <span id="provName2">Anthropic</span>. Use a key with a spending limit, and don't add one on a shared computer.</p>
     <div class="key-row" style="margin-top:.7rem">
-      <div class="field"><label for="keyIn">Anthropic API key</label><input class="input" id="keyIn" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="keyIn" id="keyLabel">Anthropic API key</label><input class="input" id="keyIn" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"></div>
       <button class="btn btn-primary" id="saveKey">Save key</button>
       <button class="btn btn-ghost btn-danger" id="clearKey" hidden>Remove</button>
     </div>
+    <div class="key-row" style="margin-top:.7rem">
+      <div class="field"><label for="modelIn">Model</label><select id="modelIn"></select></div>
+      <span class="pill neutral" id="keyState" style="align-self:end">No key yet</span>
+    </div>
     <details style="margin-top:.9rem"><summary>How to get a key (parent, about 3 minutes)</summary>
-      <ol class="steps">
-        <li>Go to <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> and sign in.</li>
-        <li>Add a small amount of credit under <b>Billing</b>, and set a monthly limit so it can never overspend.</li>
-        <li>Open <b>API keys → Create key</b>, copy it, and paste it above.</li>
-        <li>Each worksheet costs a few cents. The exact cost of every run is shown after it finishes.</li>
-      </ol>
+      <ol class="steps" id="keySteps"></ol>
+      <p class="note">There is no key-free option: both companies charge per use, and a page like this one has nowhere to hide a shared key. A few cents per worksheet is normal, and the exact cost of each run is shown when it finishes.</p>
     </details>
   </section>
 
@@ -137,16 +141,35 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 <script src="shared.js"></script><script>
 (function () {
   'use strict';
-  const KEY = 'ph.ai.v1', KEYKEY = 'ph.ai.key';           // the API key lives under its own key so Export never includes it
-  const API = 'https://api.anthropic.com/v1/messages';
-  const MODEL = 'claude-opus-5';                            // input $5 / output $25 per million tokens
-  const PRICE_IN = 5 / 1e6, PRICE_OUT = 25 / 1e6;
+  const KEY = 'ph.ai.v1';                                  // API keys live under their own keys so Export never includes them
   const MAX_BYTES = 20 * 1024 * 1024;
+  /* Two providers, same job. Prices are per million tokens, used only to show what a run cost. */
+  const PROVIDERS = {
+    claude: {
+      name: 'Claude', vendor: 'Anthropic', keyStore: 'ph.ai.key', placeholder: 'sk-ant-…',
+      keyLabel: 'Anthropic API key', console: 'https://console.anthropic.com/', consoleName: 'console.anthropic.com',
+      models: [{ id: 'claude-opus-5', label: 'Claude Opus 5 — best at this', in: 5, out: 25 },
+               { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 — cheaper', in: 2, out: 10 }],
+      steps: ['Go to <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> and sign in.',
+              'Add a little credit under <b>Billing</b>, and set a monthly limit so it can never overspend.',
+              'Open <b>API keys → Create key</b>, copy it, and paste it above.']
+    },
+    openai: {
+      name: 'ChatGPT', vendor: 'OpenAI', keyStore: 'ph.ai.key.openai', placeholder: 'sk-…',
+      keyLabel: 'OpenAI API key', console: 'https://platform.openai.com/api-keys', consoleName: 'platform.openai.com',
+      models: [{ id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra — balanced', in: 2, out: 12 },
+               { id: 'gpt-6-astra', label: 'GPT-6 Astra — best at this', in: 10, out: 50 },
+               { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna — cheapest', in: 0.2, out: 1.2 }],
+      steps: ['Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a> and sign in (a ChatGPT Plus subscription does not include this — the API is billed separately).',
+              'Add a little credit under <b>Billing</b>, and set a monthly limit.',
+              'Open <b>API keys → Create new secret key</b>, copy it, and paste it above.']
+    }
+  };
   const $ = s => document.querySelector(s), $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
   const esc = PH.esc;
 
   /* ---------------- state ---------------- */
-  function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10 }, summary: { headline: '', sub: '' } }; }
+  function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10, provider: 'claude', models: {} }, summary: { headline: '', sub: '' } }; }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
   function normalize(raw) {
     const s = blank();
@@ -154,6 +177,10 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     const st = isObj(raw.settings) ? raw.settings : {};
     if (st.kind === 'quiz' || st.kind === 'worksheet') s.settings.kind = st.kind;
     if (isFinite(st.count)) s.settings.count = Math.min(20, Math.max(3, Math.round(st.count)));
+    if (PROVIDERS[st.provider]) s.settings.provider = st.provider;
+    if (isObj(st.models)) Object.keys(PROVIDERS).forEach(k => {
+      if (typeof st.models[k] === 'string' && PROVIDERS[k].models.some(m => m.id === st.models[k])) s.settings.models[k] = st.models[k];
+    });
     if (Array.isArray(raw.sets)) s.sets = raw.sets.filter(isObj).map(x => ({
       id: typeof x.id === 'string' && x.id ? x.id : PH.uid(),
       date: typeof x.date === 'string' ? x.date : PH.todayISO(),
@@ -161,6 +188,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       title: typeof x.title === 'string' ? x.title : 'Practice set',
       source: typeof x.source === 'string' ? x.source : '',
       summary: typeof x.summary === 'string' ? x.summary : '',
+      by: typeof x.by === 'string' ? x.by : '',
       score: isObj(x.score) && isFinite(x.score.right) ? { right: x.score.right, total: x.score.total } : null,
       problems: Array.isArray(x.problems) ? x.problems.filter(isObj).map(p => ({
         question: String(p.question || ''), answer: String(p.answer || ''), work: String(p.work || ''),
@@ -170,8 +198,11 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     return s;
   }
   let state = normalize(PH.load(KEY, null));
-  let apiKey = '';
-  try { apiKey = localStorage.getItem(KEYKEY) || ''; } catch (e) {}
+  const prov = () => PROVIDERS[state.settings.provider];
+  const modelId = () => state.settings.models[state.settings.provider] || prov().models[0].id;
+  const modelInfo = () => prov().models.filter(m => m.id === modelId())[0] || prov().models[0];
+  function readKey(which) { try { return localStorage.getItem(PROVIDERS[which].keyStore) || ''; } catch (e) { return ''; } }
+  let apiKey = readKey(state.settings.provider);
   function save() { state.summary = buildSummary(); PH.save(KEY, state); }
   function buildSummary() {
     if (!state.sets.length) return { headline: '', sub: '' };
@@ -241,49 +272,84 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       (focus ? '\n\nThe parent asked you to focus on: ' + focus : '') +
       '\n\nIf the document has no material that can be practised (for example it is a permission slip), return an empty "problems" array and say why in "source_summary".';
   }
-  async function generate() {
-    if (!apiKey) { PH.toast('Add your Anthropic API key first'); $('#keyIn').focus(); return; }
-    if (!file) { PH.toast('Pick a PDF first'); return; }
-    const kind = state.settings.kind, count = state.settings.count, focus = $('#focusIn').value.trim();
-    setBusy(true, 'Reading the document and writing questions… this takes 20–60 seconds.');
+  async function callClaude(text) {
     const doc = file.mime === 'application/pdf'
       ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: file.b64 } }
       : { type: 'image', source: { type: 'base64', media_type: file.mime, data: file.b64 } };
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: modelId(), max_tokens: 16000,
+        output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+        messages: [{ role: 'user', content: [doc, { type: 'text', text: text }] }]
+      })
+    });
+    if (!res.ok) throw await httpError(res);
+    const data = await res.json();
+    if (data.stop_reason === 'refusal') throw new Error('Claude declined this document. Try a different one.');
+    const block = (data.content || []).filter(b => b.type === 'text')[0];
+    if (!block) throw new Error('Empty response. Try again.');
+    return { json: block.text, usage: data.usage || {} };
+  }
+  async function callOpenAI(text) {
+    const doc = file.mime === 'application/pdf'
+      ? { type: 'input_file', filename: file.name, file_data: 'data:application/pdf;base64,' + file.b64 }
+      : { type: 'input_image', image_url: 'data:' + file.mime + ';base64,' + file.b64 };
+    const res = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: modelId(),
+        input: [{ role: 'user', content: [doc, { type: 'input_text', text: text }] }],
+        text: { format: { type: 'json_schema', name: 'practice_set', schema: SCHEMA, strict: true } }
+      })
+    });
+    if (!res.ok) throw await httpError(res);
+    const data = await res.json();
+    let out = typeof data.output_text === 'string' ? data.output_text : '';
+    if (!out) {
+      (data.output || []).forEach(item => (item.content || []).forEach(c => {
+        if (c.type === 'output_text' && c.text) out += c.text;
+        if (c.type === 'refusal') throw new Error('ChatGPT declined this document: ' + (c.refusal || 'no reason given'));
+      }));
+    }
+    if (!out) throw new Error('Empty response. Try again.');
+    const u = data.usage || {};
+    return { json: out, usage: { input_tokens: u.input_tokens, output_tokens: u.output_tokens } };
+  }
+  async function httpError(res) {
+    let msg = 'HTTP ' + res.status;
+    try { const e = await res.json(); if (e && e.error && e.error.message) msg = e.error.message; } catch (err) {}
+    if (res.status === 401) msg = 'That API key was not accepted. Check it and save it again.';
+    if (res.status === 429) msg = prov().vendor + ' is rate-limiting, or the account is out of credit. Try again in a minute.';
+    return new Error(msg);
+  }
+  async function generate() {
+    if (!apiKey) { PH.toast('Add your ' + prov().keyLabel + ' first'); $('#keyIn').focus(); return; }
+    if (!file) { PH.toast('Pick a PDF first'); return; }
+    const kind = state.settings.kind, count = state.settings.count, focus = $('#focusIn').value.trim();
+    setBusy(true, 'Reading the document and writing questions… this takes 20–60 seconds.');
     try {
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
-          model: MODEL, max_tokens: 16000,
-          output_config: { format: { type: 'json_schema', schema: SCHEMA } },
-          messages: [{ role: 'user', content: [doc, { type: 'text', text: prompt(kind, count, focus) }] }]
-        })
-      });
-      if (!res.ok) {
-        let msg = 'HTTP ' + res.status;
-        try { const e = await res.json(); if (e && e.error && e.error.message) msg = e.error.message; } catch (err) {}
-        if (res.status === 401) msg = 'That API key was not accepted. Check it and save it again.';
-        if (res.status === 429) msg = 'Anthropic is rate-limiting or the account is out of credit. Try again in a minute.';
-        setBusy(false, '⚠️ ' + msg); return;
-      }
-      const data = await res.json();
-      if (data.stop_reason === 'refusal') { setBusy(false, '⚠️ Claude declined this document. Try a different one.'); return; }
-      const textBlock = (data.content || []).filter(b => b.type === 'text')[0];
-      let out; try { out = JSON.parse(textBlock.text); } catch (e) { setBusy(false, '⚠️ Could not read the response. Try again.'); return; }
+      const call = state.settings.provider === 'openai' ? callOpenAI : callClaude;
+      const reply = await call(prompt(kind, count, focus));
+      let out; try { out = JSON.parse(reply.json); } catch (e) { setBusy(false, '⚠️ Could not read the response. Try again.'); return; }
       const problems = (out.problems || []).filter(p => p && p.question && p.answer);
       if (!problems.length) { setBusy(false, '⚠️ ' + (out.source_summary || 'Nothing practisable in that document.')); return; }
       const set = { id: PH.uid(), date: PH.todayISO(), kind, title: out.title || file.name.replace(/\.[^.]+$/, ''),
-        source: file.name, summary: out.source_summary || '', score: null,
+        source: file.name, summary: out.source_summary || '', score: null, by: prov().name,
         problems: problems.map(p => ({ question: String(p.question), answer: String(p.answer), work: String(p.work || ''),
           topic: String(p.topic || ''), choices: Array.isArray(p.choices) ? p.choices.map(String) : [] })) };
       state.sets.unshift(set); state.sets = state.sets.slice(0, 60); save();
-      const u = data.usage || {};
-      const cost = ((u.input_tokens || 0) * PRICE_IN + (u.output_tokens || 0) * PRICE_OUT);
-      setBusy(false, '✅ ' + set.problems.length + ' ' + (kind === 'quiz' ? 'questions' : 'problems') + ' · cost about ' + (cost < 0.005 ? 'a fifth of a cent' : cost < 0.10 ? Math.round(cost * 100) + ' cents' : '$' + cost.toFixed(2)));
+      const u = reply.usage || {}, m = modelInfo();
+      const cost = (u.input_tokens || 0) * m.in / 1e6 + (u.output_tokens || 0) * m.out / 1e6;
+      setBusy(false, '✅ ' + set.problems.length + ' ' + (kind === 'quiz' ? 'questions' : 'problems') + ' from ' + prov().name +
+        ' · cost about ' + (cost < 0.005 ? 'a fifth of a cent' : cost < 0.10 ? Math.round(cost * 100) + ' cents' : '$' + cost.toFixed(2)));
       show(set); renderSaved();
     } catch (e) {
-      setBusy(false, '⚠️ ' + (navigator.onLine === false ? 'You are offline — saved sets below still work.' : 'Could not reach Anthropic: ' + e.message));
+      setBusy(false, '⚠️ ' + (navigator.onLine === false ? 'You are offline — saved sets below still work.'
+        : /HTTP|key|credit|declined|rate-limit|response/i.test(e.message) ? e.message : 'Could not reach ' + prov().vendor + ': ' + e.message));
     }
   }
   function setBusy(on, note) {
@@ -355,19 +421,27 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (!state.sets.length) { $('#saved').innerHTML = '<div class="empty">Nothing yet. Pick a PDF above and press <b>Make it</b>.</div>'; return; }
     $('#saved').innerHTML = state.sets.map(s => '<div class="saved-row">' +
       '<div class="meta"><div class="t">' + (s.kind === 'quiz' ? '❓ ' : '📝 ') + esc(s.title) + '</div>' +
-      '<div class="s">' + esc(PH.fmtDate(s.date, { month: 'short', day: 'numeric' })) + ' · ' + s.problems.length + ' questions · ' + esc(s.source) + '</div></div>' +
+      '<div class="s">' + esc(PH.fmtDate(s.date, { month: 'short', day: 'numeric' })) + ' · ' + s.problems.length + ' questions · ' + esc(s.source) + (s.by ? ' · by ' + esc(s.by) : '') + '</div></div>' +
       (s.score ? '<span class="pill ' + (s.score.right / s.score.total >= 0.8 ? 'ok' : 'warn') + '">' + s.score.right + '/' + s.score.total + '</span>' : '') +
       '<div class="row" style="gap:.3rem"><button class="btn btn-sm" data-open="' + esc(s.id) + '">Open</button>' +
       '<button class="btn btn-sm btn-ghost btn-danger" data-del="' + esc(s.id) + '" aria-label="Delete">✕</button></div></div>').join('');
   }
   function renderControls() {
+    const P = prov();
     $$('#kindTabs .tab').forEach(t => { const on = t.dataset.kind === state.settings.kind; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
     $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
+    $$('#provTabs .tab').forEach(t => { const on = t.dataset.prov === state.settings.provider; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
     $('#genBtn').disabled = !file;
-    $('#keyState').textContent = apiKey ? 'Key saved in this browser' : 'No key yet';
+    $('#provName').textContent = P.name; $('#provName2').textContent = P.vendor;
+    $('#keyLabel').textContent = P.keyLabel; $('#keyIn').placeholder = P.placeholder;
+    $('#keyState').textContent = apiKey ? P.name + ' key saved in this browser' : 'No ' + P.name + ' key yet';
     $('#keyState').className = 'pill ' + (apiKey ? 'ok' : 'neutral');
     $('#clearKey').hidden = !apiKey;
-    if (apiKey && !$('#keyIn').value) $('#keyIn').value = '•'.repeat(20);
+    $('#keyIn').value = apiKey ? '•'.repeat(20) : '';
+    $('#modelIn').innerHTML = P.models.map(m => '<option value="' + esc(m.id) + '"' + (m.id === modelId() ? ' selected' : '') + '>' +
+      esc(m.label) + ' · $' + m.in + '/$' + m.out + ' per million tokens</option>').join('');
+    $('#keySteps').innerHTML = P.steps.map(t => '<li>' + t + '</li>').join('') +
+      '<li>Each worksheet costs a few cents on the default model. The exact cost is shown after every run.</li>';
   }
   function renderAll() { renderControls(); renderFile(); renderSaved(); }
 
@@ -385,13 +459,15 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     const cb = e.target.closest('[data-count]');
     if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderControls(); return; }
     if (e.target.closest('#genBtn')) { generate(); return; }
+    const pt = e.target.closest('[data-prov]');
+    if (pt) { state.settings.provider = pt.dataset.prov; apiKey = readKey(state.settings.provider); save(); renderControls(); return; }
     if (e.target.closest('#saveKey')) {
       const v = $('#keyIn').value.trim();
       if (!v || /^•+$/.test(v)) { PH.toast('Paste a key first'); return; }
-      apiKey = v; try { localStorage.setItem(KEYKEY, v); } catch (err) {}
-      $('#keyIn').value = '•'.repeat(20); renderControls(); PH.toast('Key saved in this browser'); return;
+      apiKey = v; try { localStorage.setItem(prov().keyStore, v); } catch (err) {}
+      renderControls(); PH.toast(prov().name + ' key saved in this browser'); return;
     }
-    if (e.target.closest('#clearKey')) { apiKey = ''; try { localStorage.removeItem(KEYKEY); } catch (err) {} $('#keyIn').value = ''; renderControls(); PH.toast('Key removed'); return; }
+    if (e.target.closest('#clearKey')) { apiKey = ''; try { localStorage.removeItem(prov().keyStore); } catch (err) {} renderControls(); PH.toast('Key removed'); return; }
     const pick = e.target.closest('[data-pick]');
     if (pick) { const [i, j] = pick.dataset.pick.split(':').map(Number);
       marks[i] = { pick: j, ok: cur.problems[i].choices[j] === cur.problems[i].answer }; renderOut(); return; }
@@ -429,8 +505,16 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     save(); renderSaved(); PH.toast('Imported — ' + state.sets.length + ' sets');
   }
 
+  document.addEventListener('change', e => {
+    if (e.target.id === 'modelIn') { state.settings.models[state.settings.provider] = e.target.value; save(); renderControls(); }
+  });
+
   renderAll();
   if (state.sets.length) save();
+
+  /* Hook for this repo's automated tests: they stub window.fetch, since a real API call needs a paid key. */
+  window.PH_AI = { generate: generate, state: function () { return state; }, setKey: function (k) { apiKey = k; },
+    setProvider: function (p) { state.settings.provider = p; apiKey = readKey(p); renderControls(); } };
 })();
 </script>
 </body></html>
