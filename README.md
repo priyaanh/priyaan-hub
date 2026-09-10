@@ -15,9 +15,12 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 
 ## How it works
 
+The hub page opens on a **Today** panel computed from the other apps' saved data: piano minutes against the daily goal, how much of today's plan is ticked off, Google Tasks that are due or overdue, Hindi words waiting for review, today's worksheet and quiz scores, merit badge requirements signed off this week, and any practice streaks. It only shows tiles that have something to say, and one line names the next unchecked thing on today's plan.
+
+
 - Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build.
 - Progress is saved in the browser's localStorage under keys named `ph.<app>.v1`. Each app also writes a short `summary` that the hub page shows on its card.
-- Data lives only in the browser you use. Use **Back up all data** on the hub page now and then, and **Restore** on a new device.
+- Data lives only in the browser you use. Use **Back up all data** on the hub page now and then, and **Restore** on a new device. API keys are deliberately left out of backups, so add those again per device.
 - Works when opened directly from disk (`file://`) and when hosted on GitHub Pages.
 
 ## Math worksheets from the command line

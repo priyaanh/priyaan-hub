@@ -23,6 +23,26 @@
   .app .emoji { font-size: 1.9rem; width: 3rem; height: 3rem; display: grid; place-items: center; border-radius: 12px; background: var(--accent-soft); }
   .app h2 { margin: 0; font-size: 1.15rem; }
   .app .desc { color: var(--muted); font-size: .925rem; margin: 0; flex: 1; }
+  /* today panel */
+  .today-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem 1.1rem; margin-bottom: 1.25rem; }
+  .today-head { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; margin-bottom: .2rem; }
+  .today-head h2 { margin: 0; font-size: 1.05rem; }
+  .today-head .when { color: var(--muted); font-size: .875rem; }
+  .today-head .spacer { flex: 1; }
+  .next-up { font-size: .95rem; margin: .35rem 0 0; }
+  .next-up b { color: var(--accent); }
+  .tiles { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); margin-top: .8rem; }
+  .tile { display: flex; flex-direction: column; gap: .15rem; padding: .6rem .7rem; border-radius: var(--radius-sm); background: var(--surface-2); border-left: 3px solid var(--tc, var(--accent)); text-decoration: none; color: inherit; }
+  .tile:hover { text-decoration: none; background: color-mix(in srgb, var(--tc, var(--accent)) 12%, var(--surface-2)); }
+  .tile .tl { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; display: flex; gap: .3rem; align-items: center; }
+  .tile .tv { font-weight: 800; font-size: 1.05rem; color: var(--tc, var(--accent)); font-variant-numeric: tabular-nums; }
+  .tile .ts { font-size: .78rem; color: var(--muted); }
+  .tile.done .tv { color: var(--ok); }
+  .tile.due .tv { color: var(--warn); }
+  .tile.late .tv { color: var(--danger); }
+  .bar { height: 5px; background: color-mix(in srgb, var(--muted) 22%, transparent); border-radius: 999px; overflow: hidden; margin-top: .25rem; }
+  .bar > i { display: block; height: 100%; background: var(--tc, var(--accent)); border-radius: 999px; }
+  .streaks { display: flex; gap: .5rem; flex-wrap: wrap; }
   .app .summary { display: flex; flex-direction: column; gap: .1rem; padding: .6rem .75rem; border-radius: var(--radius-sm); background: var(--surface-2); min-height: 3.4rem; justify-content: center; }
   .app .summary .headline { font-weight: 700; color: var(--accent); }
   .app .summary .sub { font-size: .825rem; color: var(--muted); }
@@ -53,6 +73,12 @@
       <h1 id="greet">Hi Priyaan 👋</h1>
       <div class="date" id="today"></div>
     </div>
+  </section>
+
+  <section class="today-card" id="todayCard" aria-labelledby="h-today" hidden>
+    <div class="today-head"><h2 id="h-today">Today</h2><span class="when" id="todayWhen"></span><span class="spacer"></span><span class="streaks" id="streaks"></span></div>
+    <p class="next-up" id="nextUp" hidden></p>
+    <div class="tiles" id="tiles"></div>
   </section>
 
   <section class="apps" id="apps">
@@ -107,7 +133,7 @@
   </section>
 
   <footer>
-    <span>Everything is saved in this browser only. Back up now and then.</span>
+    <span>Everything is saved in this browser only. Back up now and then — API keys are never included.</span>
     <span class="spacer"></span>
     <button class="btn btn-sm" id="backup">⬇ Back up all data</button>
     <button class="btn btn-sm" id="restore">⬆ Restore</button>
@@ -122,6 +148,117 @@
   const h = now.getHours();
   document.getElementById('greet').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + ', Priyaan 👋';
 
+  /* ---------------- Today panel: computed from each app's own saved state ---------------- */
+  const load = k => PH.load(k, null);
+  const T = PH.todayISO();
+  const tiles = [];
+  const tile = o => tiles.push(o);
+  const safe = fn => { try { return fn(); } catch (e) { return null; } };
+
+  // piano: minutes today against the daily goal
+  safe(() => {
+    const d = load('ph.piano.v1'); if (!d || !Array.isArray(d.sessions) || !d.sessions.length) return;
+    const goal = (d.settings && d.settings.dailyGoal) || 30;
+    const mins = d.sessions.filter(x => x && x.date === T).reduce((n, x) => n + (Number(x.minutes) || 0), 0);
+    tile({ href: 'piano.html', emoji: '🎹', label: 'Piano', value: mins + ' / ' + goal + ' min',
+      sub: mins >= goal ? 'Goal met' : mins ? 'Keep going' : 'Not started yet', colour: '#7c5cff',
+      cls: mins >= goal ? 'done' : mins ? '' : 'due', pct: Math.min(100, Math.round(mins / goal * 100)) });
+  });
+
+  // weekly plan: today's items, what is left, and what is next
+  safe(() => {
+    const d = load('ph.schedule.v1'); if (!d || !Array.isArray(d.tasks)) return;
+    const di = new Date(T + 'T00:00:00').getDay();
+    const items = d.tasks.filter(t => t && t.active && Array.isArray(t.days) && t.days.indexOf(di) >= 0);
+    const extras = (d.extras && d.extras[T]) || [];
+    const checks = (d.checks && d.checks[T]) || {};
+    const total = items.length + extras.length; if (!total) return;
+    const done = items.filter(t => checks[t.id]).length + extras.filter(x => x && x.done).length;
+    const left = items.filter(t => !checks[t.id]).sort((a, b) => String(a.time || '~~').localeCompare(String(b.time || '~~')));
+    tile({ href: 'schedule.html', emoji: '📅', label: 'Plan', value: done + ' of ' + total,
+      sub: done === total ? 'All done' : left.length + ' still to do', colour: '#0f9d9a',
+      cls: done === total ? 'done' : '', pct: Math.round(done / total * 100) });
+    if (left.length) {
+      const n = left[0], el = document.getElementById('nextUp');
+      el.innerHTML = 'Next up: <b>' + PH.esc(n.name) + '</b>' + (n.time ? ' at ' + PH.esc(String(n.time)) : '') +
+        (n.minutes ? ' · ' + n.minutes + ' min' : '') + ' <a href="schedule.html">open the plan →</a>';
+      el.hidden = false;
+    }
+  });
+
+  // google tasks due (from the calendar page's cached copy)
+  safe(() => {
+    const d = load('ph.calendar.v1'); if (!d || !d.tasksCache || !Array.isArray(d.tasksCache.items)) return;
+    const open = d.tasksCache.items.filter(t => t && t.status !== 'completed' && t.due);
+    const late = open.filter(t => t.due.slice(0, 10) < T).length;
+    const today = open.filter(t => t.due.slice(0, 10) === T).length;
+    if (!late && !today) return;
+    tile({ href: 'calendar.html', emoji: '✅', label: 'Tasks', value: (late + today) + ' due',
+      sub: late ? late + ' overdue' : 'due today', colour: '#d64292', cls: late ? 'late' : 'due' });
+  });
+
+  // hindi: cards due for review
+  safe(() => {
+    const d = load('ph.hindi.v1'); if (!d || !d.progress) return;
+    const ids = Object.keys(d.progress); if (!ids.length) return;
+    const due = ids.filter(k => { const pr = d.progress[k]; return pr && (!pr.due || pr.due <= T); }).length;
+    const seenToday = ids.filter(k => d.progress[k] && d.progress[k].last === T).length;
+    tile({ href: 'hindi.html', emoji: '📖', label: 'Hindi', value: due ? due + ' due' : 'All caught up',
+      sub: seenToday ? seenToday + ' reviewed today' : (due ? 'words to review' : 'nothing due'),
+      colour: '#e0701f', cls: due ? 'due' : 'done' });
+  });
+
+  // maths: any worksheet or quiz practice today
+  safe(() => {
+    const m = load('ph.math.v1'), q = load('ph.quiz.v1');
+    const hist = (m && Array.isArray(m.history)) ? m.history : [];
+    const att = (q && Array.isArray(q.attempts)) ? q.attempts : [];
+    if (!hist.length && !att.length) return;
+    const scored = att.filter(a => a && a.date === T).map(a => ({ right: a.right, total: a.total }))
+      .concat(hist.filter(h => h && h.date === T && h.score).map(h => ({ right: h.score.right, total: h.score.total })));
+    const right = scored.reduce((n, a) => n + (a.right || 0), 0), total = scored.reduce((n, a) => n + (a.total || 0), 0);
+    tile({ href: total ? 'quizzes.html' : 'math.html', emoji: '🧮', label: 'Maths',
+      value: total ? right + ' / ' + total : 'Not yet', sub: total ? 'practised today' : 'worksheet or quiz',
+      colour: '#2f6fed', cls: total ? 'done' : 'due' });
+  });
+
+  // merit badges: requirements signed off in the last week
+  safe(() => {
+    const d = load('ph.badges.v1'); if (!d || !d.done) return;
+    const keys = Object.keys(d.done); if (!keys.length) return;
+    const weekAgo = PH.addDays(T, -6);
+    const recent = keys.filter(k => d.done[k] && d.done[k].date >= weekAgo).length;
+    tile({ href: 'badges.html', emoji: '🏕️', label: 'Badges', value: keys.length + ' signed off',
+      sub: recent ? recent + ' this week' : 'none this week', colour: '#2f8f4e', cls: recent ? 'done' : '' });
+  });
+
+  // streak chips
+  safe(() => {
+    const chip = (label, n, emoji) => n >= 2 ? '<span class="pill">' + emoji + ' ' + n + '-day ' + label + '</span>' : '';
+    const back = has => { let n = 0, d = has(T) ? T : PH.addDays(T, -1); while (has(d)) { n++; d = PH.addDays(d, -1); } return n; };
+    let out = '';
+    const p = load('ph.piano.v1');
+    if (p && Array.isArray(p.sessions)) {
+      const days = {}; p.sessions.forEach(x => { if (x && x.minutes > 0) days[x.date] = 1; });
+      out += chip('piano', back(d => !!days[d]), '🎹');
+    }
+    const h = load('ph.hindi.v1');
+    if (h && h.days) out += chip('Hindi', back(d => !!h.days[d]), '📖');
+    document.getElementById('streaks').innerHTML = out;
+  });
+
+  document.getElementById('todayWhen').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  if (tiles.length) {
+    document.getElementById('todayCard').hidden = false;
+    document.getElementById('tiles').innerHTML = tiles.map(t =>
+      '<a class="tile ' + (t.cls || '') + '" href="' + t.href + '" style="--tc:' + t.colour + '">' +
+        '<span class="tl">' + t.emoji + ' ' + PH.esc(t.label) + '</span>' +
+        '<span class="tv">' + PH.esc(String(t.value)) + '</span>' +
+        '<span class="ts">' + PH.esc(t.sub || '') + '</span>' +
+        (t.pct != null ? '<span class="bar"><i style="width:' + t.pct + '%"></i></span>' : '') +
+      '</a>').join('');
+  }
+
   // Pull each app's summary from localStorage.
   document.querySelectorAll('.summary[data-key]').forEach(el => {
     const data = PH.load(el.dataset.key, null);
@@ -134,17 +271,21 @@
   });
 
   // Backup / restore every ph.* key.
+  const SECRET = /^ph\.ai\.key/;                          // API keys stay on the device — never in a backup file
   document.getElementById('backup').addEventListener('click', () => {
     const out = {};
-    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('ph.')) out[k] = localStorage.getItem(k); }
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('ph.') && !SECRET.test(k)) out[k] = localStorage.getItem(k);
+    }
     PH.download('priyaan-hub-backup-' + PH.todayISO() + '.json', JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(), data: out }, null, 2));
-    PH.toast('Backup downloaded');
+    PH.toast('Backup downloaded (without API keys)');
   });
   document.getElementById('restore').addEventListener('click', async () => {
     const text = await PH.pickFile('application/json'); if (!text) return;
     try {
       const obj = JSON.parse(text); const data = obj.data || obj; let n = 0;
-      for (const k of Object.keys(data)) { if (k.startsWith('ph.')) { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } }
+      for (const k of Object.keys(data)) { if (k.startsWith('ph.') && !SECRET.test(k)) { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } }
       PH.toast('Restored ' + n + ' app' + (n === 1 ? '' : 's')); setTimeout(() => location.reload(), 600);
     } catch (e) { PH.toast('That file could not be read'); }
   });
