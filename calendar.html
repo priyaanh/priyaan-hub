@@ -8,27 +8,42 @@ main > * + * { margin-top: 1rem; }
 .cal-frame-wrap iframe { display: block; width: 100%; height: 70vh; min-height: 480px; border: 0; }
 @media (max-width: 640px) { .cal-frame-wrap iframe { height: 62vh; min-height: 420px; } }
 .cal-note { margin-top: .6rem; }
+
+/* ---- calendar accounts ---- */
+.cals { display: flex; flex-direction: column; }
+.cal-row { display: flex; gap: .65rem; align-items: center; padding: .55rem 0; border-top: 1px solid var(--border); }
+.cal-row:first-child { border-top: 0; }
+.cal-row.off { opacity: .55; }
+.dot { width: .95rem; height: .95rem; border-radius: 50%; flex: none; background: var(--c, var(--accent)); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.cal-row .who2 { flex: 1; min-width: 0; }
+.cal-row .who2 .nm { font-weight: 600; display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.cal-row .who2 .addr { font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.cal-row .acts { display: flex; gap: .25rem; align-items: center; flex: none; }
+.swatches { display: flex; gap: .25rem; }
+.swatch { width: 1.15rem; height: 1.15rem; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; background: var(--c); }
+.swatch[aria-pressed="true"] { border-color: var(--text); }
+.add-cal { display: grid; gap: .6rem; grid-template-columns: 1fr; margin-top: .9rem; padding-top: .9rem; border-top: 1px dashed var(--border); }
+@media (min-width: 720px) { .add-cal { grid-template-columns: 1.4fr 1fr auto; align-items: end; } }
 .quick { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .quick a { display: flex; flex-direction: column; align-items: flex-start; gap: .15rem; padding: .7rem .8rem; height: auto; white-space: normal; text-align: left; }
 .quick a .em { font-size: 1.4rem; }
 .quick a .t { font-weight: 700; }
 .quick a .s { font-size: .78rem; color: var(--muted); font-weight: 500; }
-.cal-list { list-style: none; margin: 0; padding: 0; }
 .cal-day { margin-top: .75rem; }
 .cal-day h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .25rem; }
 .cal-day.today h3 { color: var(--accent); }
-.ev { display: flex; gap: .7rem; align-items: flex-start; padding: .45rem 0; border-top: 1px solid var(--border); }
+.ev { display: flex; gap: .6rem; align-items: flex-start; padding: .45rem 0; border-top: 1px solid var(--border); }
 .ev:first-of-type { border-top: 0; }
+.ev .dot { margin-top: .3rem; }
 .ev .when { flex: none; width: 5.6rem; font-variant-numeric: tabular-nums; font-size: .9rem; color: var(--muted); }
 .ev .what { flex: 1; min-width: 0; }
 .ev .what .loc { font-size: .8rem; color: var(--muted); }
 .settings-grid { display: grid; gap: .75rem; grid-template-columns: 1fr; }
-@media (min-width: 720px) { .settings-grid { grid-template-columns: 1fr 1fr; } .settings-grid .span { grid-column: 1 / -1; } }
+@media (min-width: 720px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
 details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 details[open] summary { margin-bottom: .6rem; }
 .steps { margin: .4rem 0 0 1.1rem; padding: 0; font-size: .9rem; }
-.steps li { margin: .25rem 0; }
-.print-hide { }
+.steps li { margin: .3rem 0; }
 @media print { .cal-frame-wrap, .quick, details, .topbar { display: none !important; } }
 </style></head>
 <body data-app="calendar">
@@ -43,7 +58,7 @@ details[open] summary { margin-bottom: .6rem; }
   <section class="card" aria-labelledby="h-cal">
     <div class="card-head">
       <div class="cal-head">
-        <h2 id="h-cal">Google Calendar</h2>
+        <h2 id="h-cal">Calendar</h2>
         <span class="who" id="who"></span>
       </div>
       <div class="tabs" role="group" aria-label="View" id="modeTabs">
@@ -53,17 +68,43 @@ details[open] summary { margin-bottom: .6rem; }
       </div>
     </div>
     <div class="cal-frame-wrap"><iframe id="calFrame" title="Google Calendar" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
-    <p class="muted small cal-note">This is Google's own calendar view. If it says you don't have permission, sign in to Google in this browser as the calendar's account (or share the calendar with the account you are signed in as). Times are shown in <b id="tzName"></b>.</p>
+    <p class="muted small cal-note">Google's own calendar view. A calendar shows here when this browser is signed in to an account that can see it. Times are shown in <b id="tzName"></b>.</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-accounts">
+    <div class="card-head"><h2 id="h-accounts">Google accounts</h2><span class="muted small" id="calCount"></span></div>
+    <div class="cals" id="calList"></div>
+
+    <form class="add-cal" id="addForm">
+      <div class="field"><label for="newSrc">Add another Google account or calendar</label>
+        <input class="input" id="newSrc" type="email" placeholder="someone@gmail.com" spellcheck="false" autocomplete="off" required></div>
+      <div class="field"><label for="newName">Label (optional)</label>
+        <input class="input" id="newName" placeholder="Mom, School, Scouts…" autocomplete="off"></div>
+      <button class="btn btn-primary" type="submit">+ Add calendar</button>
+    </form>
+
+    <details style="margin-top:1rem">
+      <summary>The second calendar says “no permission”? Share it once</summary>
+      <p class="small muted">A browser can only show a private calendar for the account it is signed in as. Two ways to see several accounts at once:</p>
+      <ol class="steps">
+        <li><b>Share it (best).</b> On the other account, open <a href="https://calendar.google.com/calendar/r/settings" target="_blank" rel="noopener">Google Calendar settings</a> → <b>Settings for my calendars</b> → pick the calendar → <b>Share with specific people or groups</b> → <b>Add people</b> → enter the account you normally use here (for example <code id="shareTo"></code>) → permission <b>See all event details</b> → Send. Accept the emailed invitation. It then shows up above.</li>
+        <li><b>Or sign in to both.</b> In Chrome, add both Google accounts to the browser profile (avatar → Add). Google shows calendars for whichever account is “first” in that browser, so sharing is the reliable option on shared devices.</li>
+        <li><b>School or sports calendars</b> that are public: paste the calendar's ID or its public address above instead of an email.</li>
+      </ol>
+    </details>
   </section>
 
   <section class="card" aria-labelledby="h-quick">
-    <div class="card-head"><h2 id="h-quick">Add to the calendar</h2><span class="muted small">Opens a prefilled event in Google Calendar</span></div>
+    <div class="card-head"><h2 id="h-quick">Add to the calendar</h2>
+      <label class="row" style="gap:.4rem;margin:0"><span class="muted small">Add to</span>
+        <select id="quickTarget" aria-label="Which calendar new events go on"></select></label>
+    </div>
     <div class="quick" id="quick"></div>
   </section>
 
   <section class="card" aria-labelledby="h-up">
     <div class="card-head"><h2 id="h-up">Upcoming in the hub</h2><span class="muted small" id="upStatus"></span></div>
-    <div id="upcoming"><div class="empty">Sign in below to list the next 7 days here (and to show today's events on the hub page). The embedded calendar above works without this.</div></div>
+    <div id="upcoming"><div class="empty">Sign in below to list the next 7 days here (and to show today's events on the hub page). The calendar above works without this.</div></div>
     <div class="row" style="margin-top:.75rem">
       <button class="btn btn-primary" id="signin">Sign in with Google</button>
       <button class="btn" id="refresh" hidden>↻ Refresh</button>
@@ -71,13 +112,13 @@ details[open] summary { margin-bottom: .6rem; }
     </div>
     <details style="margin-top:1rem" id="setupHelp">
       <summary>One-time setup for “Sign in with Google” (parent)</summary>
-      <p class="small muted">Reading events inside this page needs a Google API client ID. It takes about 5 minutes and is free:</p>
+      <p class="small muted">Reading events inside this page needs a free Google API client ID. About 5 minutes:</p>
       <ol class="steps">
-        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a>, signed in as the calendar's Google account, and create a project (any name, e.g. “Priyaan Hub”).</li>
+        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a>, signed in as the main calendar account, and create a project (any name, e.g. “Priyaan Hub”).</li>
         <li><b>APIs &amp; Services → Library</b>: enable the <b>Google Calendar API</b>.</li>
-        <li><b>APIs &amp; Services → OAuth consent screen</b>: choose <b>External</b>, fill in the app name and your email, and add <code>priyaan.haldiya@gmail.com</code> (and any other family account) under <b>Test users</b>.</li>
-        <li><b>Credentials → Create credentials → OAuth client ID</b>, type <b>Web application</b>. Under <b>Authorized JavaScript origins</b> add <code>https://priyaanh.github.io</code>. Save and copy the <b>Client ID</b> (ends in <code>.apps.googleusercontent.com</code>).</li>
-        <li>Paste it in the settings below. Sign-in only works on the hosted site, not when this file is opened from disk.</li>
+        <li><b>APIs &amp; Services → OAuth consent screen</b>: choose <b>External</b>, fill in the app name and your email, and add every family Google account under <b>Test users</b>.</li>
+        <li><b>Credentials → Create credentials → OAuth client ID</b>, type <b>Web application</b>. Under <b>Authorized JavaScript origins</b> add <code>https://priyaanh.github.io</code>. Save and copy the <b>Client ID</b>.</li>
+        <li>Paste it under Settings below. One sign-in covers every calendar shared with that account. Sign-in only works on the hosted site, not from disk.</li>
       </ol>
     </details>
   </section>
@@ -85,9 +126,8 @@ details[open] summary { margin-bottom: .6rem; }
   <section class="card" aria-labelledby="h-set">
     <div class="card-head"><h2 id="h-set">Settings</h2></div>
     <div class="settings-grid">
-      <div class="field span"><label for="calIds">Calendars to show (one per line: Gmail address or calendar ID)</label><textarea id="calIds" rows="2" spellcheck="false"></textarea></div>
       <div class="field"><label for="tz">Time zone</label><input class="input" id="tz" placeholder="America/Los_Angeles" spellcheck="false"></div>
-      <div class="field"><label for="clientId">Google API client ID (optional, for “Sign in”)</label><input class="input" id="clientId" placeholder="xxxx.apps.googleusercontent.com" spellcheck="false" autocomplete="off"></div>
+      <div class="field"><label for="clientId">Google API client ID (optional)</label><input class="input" id="clientId" placeholder="xxxx.apps.googleusercontent.com" spellcheck="false" autocomplete="off"></div>
     </div>
     <div class="row" style="margin-top:.75rem"><button class="btn btn-primary" id="saveSettings">Save settings</button><span class="muted small">Saved in this browser only.</span></div>
   </section>
@@ -98,65 +138,123 @@ details[open] summary { margin-bottom: .6rem; }
   const KEY = 'ph.calendar.v1';
   const DEFAULT_CAL = 'priyaan.haldiya@gmail.com';
   const MODES = ['WEEK', 'MONTH', 'AGENDA'];
+  const MAX_CALS = 8;
+  const PALETTE = ['#d64292', '#4f6bed', '#0f9d9a', '#e0701f', '#7c5cff', '#2f8f4e', '#d64545', '#8d6e63'];
   const $ = s => document.querySelector(s);
   const esc = PH.esc;
   const localTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'; } catch (e) { return 'America/Los_Angeles'; } })();
 
-  // Quick-add templates: opens Google Calendar's event form prefilled for today (adjust there before saving).
   const QUICK = [
-    { em: '🎹', t: 'Piano practice', s: '30 min · 5:00 pm', h: 17, m: 0, d: 30, details: 'Grade 4 pieces, exercises, scales. Log it in Priyaan\'s Hub → Piano.' },
+    { em: '🎹', t: 'Piano practice', s: '30 min · 5:00 pm', h: 17, m: 0, d: 30, details: "Grade 4 pieces, exercises, scales. Log it in Priyaan's Hub → Piano." },
     { em: '💃', t: 'Dance class', s: '60 min · 6:00 pm', h: 18, m: 0, d: 60 },
     { em: '🏕️', t: 'Scouts meeting', s: '90 min · 7:00 pm', h: 19, m: 0, d: 90 },
-    { em: '🧮', t: 'Math homework', s: '45 min · 4:00 pm', h: 16, m: 0, d: 45, details: 'CPM lesson + Priyaan\'s Hub → Math worksheets / Lesson quizzes' },
-    { em: '📖', t: 'Hindi review', s: '20 min · 7:30 pm', h: 19, m: 30, d: 20, details: 'Priyaan\'s Hub → Hindi flashcards' },
+    { em: '🧮', t: 'Math homework', s: '45 min · 4:00 pm', h: 16, m: 0, d: 45, details: "CPM lesson + Priyaan's Hub → Math worksheets / Lesson quizzes" },
+    { em: '📖', t: 'Hindi review', s: '20 min · 7:30 pm', h: 19, m: 30, d: 20, details: "Priyaan's Hub → Hindi flashcards" },
     { em: '🐍', t: 'Python', s: '45 min · 4:30 pm', h: 16, m: 30, d: 45 },
     { em: '🎖️', t: 'Merit badge work', s: '60 min · Sat 10:00 am', h: 10, m: 0, d: 60, weekday: 6 },
     { em: '➕', t: 'Anything else', s: 'Blank event', h: 17, m: 0, d: 60, blank: true }
   ];
 
-  function blank() { return { version: 1, settings: { calendars: [DEFAULT_CAL], mode: 'WEEK', tz: localTz, clientId: '' }, summary: { headline: '', sub: '' } }; }
+  /* ---------------- state ---------------- */
+  function mkCal(src, name, color, on) {
+    return { id: PH.uid(), src: String(src).trim(), name: (name || '').trim() || labelFor(src), color: color || PALETTE[0], on: on !== false };
+  }
+  function labelFor(src) { const s = String(src); return s.includes('@') ? s.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Calendar'; }
+  function blank() {
+    return { version: 2, settings: { calendars: [mkCal(DEFAULT_CAL, 'Priyaan', PALETTE[0], true)], mode: 'WEEK', tz: localTz, clientId: '' }, summary: { headline: '', sub: '' } };
+  }
   function normalize(raw) {
     const s = blank();
     if (!raw || typeof raw !== 'object') return s;
     const st = raw.settings && typeof raw.settings === 'object' ? raw.settings : {};
-    if (Array.isArray(st.calendars)) { const c = st.calendars.map(x => String(x).trim()).filter(Boolean); if (c.length) s.settings.calendars = c.slice(0, 10); }
+    if (Array.isArray(st.calendars) && st.calendars.length) {
+      const seen = {}; const out = [];
+      st.calendars.forEach((c, i) => {
+        const src = (typeof c === 'string' ? c : (c && c.src) || '').trim();       // v1 stored plain strings
+        if (!src || seen[src.toLowerCase()]) return;
+        seen[src.toLowerCase()] = 1;
+        const o = (c && typeof c === 'object') ? c : {};
+        out.push({ id: typeof o.id === 'string' && o.id ? o.id : PH.uid(), src,
+          name: typeof o.name === 'string' && o.name.trim() ? o.name.trim() : labelFor(src),
+          color: /^#[0-9a-f]{6}$/i.test(o.color) ? o.color : PALETTE[i % PALETTE.length],
+          on: o.on !== false });
+      });
+      if (out.length) s.settings.calendars = out.slice(0, MAX_CALS);
+    }
     if (MODES.includes(st.mode)) s.settings.mode = st.mode;
     if (typeof st.tz === 'string' && st.tz.trim()) s.settings.tz = st.tz.trim();
     if (typeof st.clientId === 'string') s.settings.clientId = st.clientId.trim();
     return s;
   }
   let state = normalize(PH.load(KEY, null));
-  let events = null; // loaded via the API when signed in
-  let token = null;
+  let events = null, token = null;
+  const cals = () => state.settings.calendars;
+  const shown = () => cals().filter(c => c.on);
   function save() { state.summary = summary(); PH.save(KEY, state); }
   function summary() {
-    const cal = state.settings.calendars[0] || '';
+    const names = shown().map(c => c.name).join(' · ');
     if (events) {
       const t = PH.todayISO();
       const today = events.filter(e => e.date === t);
       const next = events.filter(e => e.date > t)[0];
       return { headline: today.length ? today.length + ' event' + (today.length === 1 ? '' : 's') + ' today' : 'Nothing on the calendar today',
-        sub: today.length ? today.slice(0, 2).map(e => (e.allDay ? '' : fmtTime(e.start) + ' ') + e.title).join(' · ') : (next ? 'Next: ' + PH.fmtDate(next.date) + ' · ' + next.title : cal) };
+        sub: today.length ? today.slice(0, 2).map(e => (e.allDay ? '' : fmtTime(e.start) + ' ') + e.title).join(' · ')
+                          : (next ? 'Next: ' + PH.fmtDate(next.date) + ' · ' + next.title : names) };
     }
-    return { headline: 'Google Calendar', sub: state.settings.mode[0] + state.settings.mode.slice(1).toLowerCase() + ' view · ' + cal };
+    return { headline: 'Google Calendar', sub: cals().length > 1 ? cals().length + ' calendars · ' + names : names };
   }
 
   /* ---------------- embed ---------------- */
   function embedURL() {
-    const s = state.settings;
-    const p = new URLSearchParams({ ctz: s.tz, mode: s.mode, wkst: '2', showTitle: '0', showPrint: '0', showTz: '0', showCalendars: s.calendars.length > 1 ? '1' : '0', showTabs: '0', showNav: '1', showDate: '1' });
+    const s = state.settings, list = shown();
+    const p = new URLSearchParams({ ctz: s.tz, mode: s.mode, wkst: '2', showTitle: '0', showPrint: '0', showTz: '0',
+      showCalendars: list.length > 1 ? '1' : '0', showTabs: '0', showNav: '1', showDate: '1' });
     let q = p.toString();
-    s.calendars.forEach(c => { q += '&src=' + encodeURIComponent(c); });
+    list.forEach(c => { q += '&src=' + encodeURIComponent(c.src) + '&color=' + encodeURIComponent(c.color); });
     return 'https://calendar.google.com/calendar/embed?' + q;
   }
   function renderEmbed() {
-    const url = embedURL();
-    const f = $('#calFrame');
-    if (f.getAttribute('src') !== url) f.src = url;
-    $('#who').textContent = state.settings.calendars.join(' · ');
+    const list = shown(), f = $('#calFrame');
+    if (!list.length) { f.removeAttribute('src'); $('#who').textContent = 'No calendars shown'; }
+    else { const url = embedURL(); if (f.getAttribute('src') !== url) f.src = url; $('#who').textContent = list.map(c => c.name).join(' · '); }
     $('#tzName').textContent = state.settings.tz;
     document.querySelectorAll('#modeTabs .tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.mode === state.settings.mode)));
     $('#openGcal').href = 'https://calendar.google.com/calendar/u/0/r/' + (state.settings.mode === 'MONTH' ? 'month' : state.settings.mode === 'AGENDA' ? 'agenda' : 'week');
+  }
+
+  /* ---------------- accounts ---------------- */
+  function renderCals() {
+    const list = cals();
+    $('#calList').innerHTML = list.map(c =>
+      '<div class="cal-row' + (c.on ? '' : ' off') + '" data-cal="' + esc(c.id) + '">' +
+        '<span class="dot" style="--c:' + esc(c.color) + '" aria-hidden="true"></span>' +
+        '<div class="who2"><div class="nm">' + esc(c.name) + (c.on ? '' : ' <span class="pill neutral">hidden</span>') + '</div><div class="addr">' + esc(c.src) + '</div></div>' +
+        '<div class="acts">' +
+          '<span class="swatches" role="group" aria-label="Colour for ' + esc(c.name) + '">' +
+            PALETTE.map(p => '<button class="swatch" style="--c:' + p + '" data-color="' + p + '" data-id="' + esc(c.id) + '" aria-pressed="' + (p.toLowerCase() === c.color.toLowerCase()) + '" title="' + p + '" aria-label="Colour ' + p + '"></button>').join('') +
+          '</span>' +
+          '<button class="btn btn-sm" data-toggle="' + esc(c.id) + '" aria-pressed="' + c.on + '">' + (c.on ? 'Shown' : 'Hidden') + '</button>' +
+          '<button class="btn btn-sm btn-ghost btn-danger" data-remove="' + esc(c.id) + '" aria-label="Remove ' + esc(c.name) + '">✕</button>' +
+        '</div></div>').join('') || '<div class="empty">No calendars yet — add one below.</div>';
+    $('#calCount').textContent = list.length + ' calendar' + (list.length === 1 ? '' : 's') + (list.length ? ' · ' + shown().length + ' shown' : '');
+    $('#shareTo').textContent = (list[0] && list[0].src) || DEFAULT_CAL;
+    const sel = $('#quickTarget'), prev = sel.value;
+    const targets = shown().filter(c => c.src.includes('@'));
+    sel.innerHTML = targets.map(c => '<option value="' + esc(c.src) + '">' + esc(c.name) + '</option>').join('') || '<option value="">Default calendar</option>';
+    if (prev && targets.some(c => c.src === prev)) sel.value = prev;
+    sel.disabled = !targets.length;
+  }
+  function addCal(src, name) {
+    src = src.trim(); if (!src) return;
+    if (cals().length >= MAX_CALS) { PH.toast('Up to ' + MAX_CALS + ' calendars'); return; }
+    if (cals().some(c => c.src.toLowerCase() === src.toLowerCase())) { PH.toast('That calendar is already here'); return; }
+    cals().push(mkCal(src, name, PALETTE[cals().length % PALETTE.length], true));
+    save(); renderAll(); PH.toast('Added ' + src);
+  }
+  function removeCal(id) {
+    const i = cals().findIndex(c => c.id === id); if (i < 0) return;
+    const [gone] = cals().splice(i, 1);
+    save(); renderAll(); PH.toast('Removed ' + gone.name);
   }
 
   /* ---------------- quick add ---------------- */
@@ -166,18 +264,19 @@ details[open] summary { margin-bottom: .6rem; }
     const start = new Date(); start.setSeconds(0, 0);
     if (q.weekday != null) { const diff = (q.weekday - start.getDay() + 7) % 7 || 7; start.setDate(start.getDate() + diff); }
     start.setHours(q.h, q.m, 0, 0);
-    if (q.weekday == null && start < new Date()) start.setDate(start.getDate() + 1); // already past today → tomorrow
+    if (q.weekday == null && start < new Date()) start.setDate(start.getDate() + 1);
     const end = new Date(start.getTime() + q.d * 60000);
     const p = new URLSearchParams({ action: 'TEMPLATE', text: q.blank ? '' : q.t, dates: gcalStamp(start) + '/' + gcalStamp(end), ctz: state.settings.tz });
     if (q.details) p.set('details', q.details);
-    const cal = state.settings.calendars[0]; if (cal && cal.includes('@')) p.set('src', cal);
+    const target = $('#quickTarget') && $('#quickTarget').value;
+    if (target && target.includes('@')) p.set('src', target);
     return 'https://calendar.google.com/calendar/render?' + p.toString();
   }
   function renderQuick() {
     $('#quick').innerHTML = QUICK.map(q => '<a class="btn" href="' + esc(quickURL(q)) + '" target="_blank" rel="noopener"><span class="em">' + q.em + '</span><span class="t">' + esc(q.t) + '</span><span class="s">' + esc(q.s) + '</span></a>').join('');
   }
 
-  /* ---------------- optional: Google Calendar API (needs a client ID) ---------------- */
+  /* ---------------- optional Google Calendar API ---------------- */
   function fmtTime(iso) { return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
   function loadScript(src) {
     return new Promise((res, rej) => { if (document.querySelector('script[src="' + src + '"]')) return res(); const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = () => rej(new Error('Could not load Google sign-in (offline?)')); document.head.appendChild(s); });
@@ -188,79 +287,84 @@ details[open] summary { margin-bottom: .6rem; }
     try {
       $('#upStatus').textContent = 'Connecting…';
       await loadScript('https://accounts.google.com/gsi/client');
-      const tc = window.google.accounts.oauth2.initTokenClient({
+      window.google.accounts.oauth2.initTokenClient({
         client_id: state.settings.clientId, scope: 'https://www.googleapis.com/auth/calendar.readonly',
         callback: resp => { if (resp && resp.access_token) { token = resp.access_token; loadEvents(); } else { $('#upStatus').textContent = 'Sign-in was cancelled'; } },
-        error_callback: err => { $('#upStatus').textContent = 'Sign-in failed: ' + (err && err.type || 'unknown'); }
-      });
-      tc.requestAccessToken({ prompt: token ? '' : 'select_account' });
+        error_callback: err => { $('#upStatus').textContent = 'Sign-in failed: ' + ((err && err.type) || 'unknown'); }
+      }).requestAccessToken({ prompt: token ? '' : 'select_account' });
     } catch (e) { $('#upStatus').textContent = e.message; }
   }
   async function loadEvents() {
     if (!token) return;
     $('#upStatus').textContent = 'Loading…';
     const now = new Date(); const min = new Date(now); min.setHours(0, 0, 0, 0); const max = new Date(min); max.setDate(max.getDate() + 8);
-    const all = [];
-    for (const cal of state.settings.calendars) {
-      const url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(cal) + '/events?' + new URLSearchParams({ timeMin: min.toISOString(), timeMax: max.toISOString(), singleEvents: 'true', orderBy: 'startTime', maxResults: '50' });
-      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    const all = []; const problems = [];
+    for (const cal of shown()) {
+      const url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(cal.src) + '/events?' + new URLSearchParams({ timeMin: min.toISOString(), timeMax: max.toISOString(), singleEvents: 'true', orderBy: 'startTime', maxResults: '50' });
+      let r;
+      try { r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } }); }
+      catch (e) { problems.push(cal.name + ' (offline)'); continue; }
       if (r.status === 401) { token = null; $('#upStatus').textContent = 'Signed out — sign in again'; return; }
-      if (!r.ok) { $('#upStatus').textContent = 'Could not read ' + cal + ' (HTTP ' + r.status + ')'; continue; }
+      if (r.status === 404 || r.status === 403) { problems.push(cal.name + ' (not shared with you)'); continue; }
+      if (!r.ok) { problems.push(cal.name + ' (HTTP ' + r.status + ')'); continue; }
       const data = await r.json();
       (data.items || []).forEach(it => {
         const allDay = !!(it.start && it.start.date);
         const start = allDay ? it.start.date + 'T00:00:00' : (it.start && it.start.dateTime);
         if (!start) return;
-        all.push({ title: it.summary || '(no title)', allDay, start, end: allDay ? null : (it.end && it.end.dateTime), date: PH.todayISO(new Date(start)), loc: it.location || '', cal, link: it.htmlLink || '' });
+        all.push({ title: it.summary || '(no title)', allDay, start, end: allDay ? null : (it.end && it.end.dateTime),
+          date: PH.todayISO(new Date(start)), loc: it.location || '', calName: cal.name, color: cal.color, link: it.htmlLink || '' });
       });
     }
     all.sort((a, b) => a.start.localeCompare(b.start));
-    events = all;
-    save(); renderUpcoming();
-    $('#upStatus').textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    events = all; save(); renderUpcoming();
+    $('#upStatus').textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + (problems.length ? ' · could not read ' + problems.join(', ') : '');
     $('#signin').hidden = true; $('#refresh').hidden = false; $('#signout').hidden = false;
   }
   function renderUpcoming() {
-    const box = $('#upcoming');
-    if (!events) return;
+    const box = $('#upcoming'); if (!events) return;
     if (!events.length) { box.innerHTML = '<div class="empty">Nothing scheduled in the next 7 days.</div>'; return; }
-    const t = PH.todayISO();
-    const days = {}; events.forEach(e => { (days[e.date] = days[e.date] || []).push(e); });
+    const t = PH.todayISO(), days = {};
+    events.forEach(e => { (days[e.date] = days[e.date] || []).push(e); });
     box.innerHTML = Object.keys(days).sort().map(d =>
       '<div class="cal-day' + (d === t ? ' today' : '') + '"><h3>' + (d === t ? 'Today · ' : '') + esc(PH.fmtDate(d, { weekday: 'long', month: 'short', day: 'numeric' })) + '</h3>' +
-      days[d].map(e => '<div class="ev"><div class="when">' + (e.allDay ? 'All day' : esc(fmtTime(e.start)) + (e.end ? '–' + esc(fmtTime(e.end)) : '')) + '</div><div class="what">' +
+      days[d].map(e => '<div class="ev"><span class="dot" style="--c:' + esc(e.color) + '" title="' + esc(e.calName) + '"></span>' +
+        '<div class="when">' + (e.allDay ? 'All day' : esc(fmtTime(e.start)) + (e.end ? '–' + esc(fmtTime(e.end)) : '')) + '</div><div class="what">' +
         (e.link ? '<a href="' + esc(e.link) + '" target="_blank" rel="noopener">' + esc(e.title) + '</a>' : esc(e.title)) +
         (e.loc ? '<div class="loc">📍 ' + esc(e.loc) + '</div>' : '') + '</div></div>').join('') + '</div>').join('');
   }
   function signOut() {
     if (token && window.google && google.accounts && google.accounts.oauth2) { try { google.accounts.oauth2.revoke(token, () => {}); } catch (e) {} }
     token = null; events = null; save();
-    $('#upcoming').innerHTML = '<div class="empty">Signed out. The embedded calendar above still works.</div>';
+    $('#upcoming').innerHTML = '<div class="empty">Signed out. The calendar above still works.</div>';
     $('#upStatus').textContent = ''; $('#signin').hidden = false; $('#refresh').hidden = true; $('#signout').hidden = true;
   }
 
-  /* ---------------- settings ---------------- */
-  function renderSettings() {
-    $('#calIds').value = state.settings.calendars.join('\n');
-    $('#tz').value = state.settings.tz;
-    $('#clientId').value = state.settings.clientId;
-  }
-  function saveSettings() {
-    const cals = $('#calIds').value.split(/\n|,/).map(x => x.trim()).filter(Boolean);
-    state = normalize({ settings: { calendars: cals.length ? cals : [DEFAULT_CAL], mode: state.settings.mode, tz: $('#tz').value.trim() || localTz, clientId: $('#clientId').value.trim() } });
-    save(); renderAll(); PH.toast('Settings saved');
-  }
-  function renderAll() { renderEmbed(); renderQuick(); renderSettings(); }
+  /* ---------------- settings & wiring ---------------- */
+  function renderSettings() { $('#tz').value = state.settings.tz; $('#clientId').value = state.settings.clientId; }
+  function renderAll() { renderCals(); renderEmbed(); renderQuick(); renderSettings(); }
 
-  /* ---------------- events ---------------- */
   $('#modeTabs').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; state.settings.mode = b.dataset.mode; save(); renderEmbed(); });
-  $('#saveSettings').addEventListener('click', saveSettings);
+  $('#calList').addEventListener('click', e => {
+    const sw = e.target.closest('[data-color]');
+    if (sw) { const c = cals().find(x => x.id === sw.dataset.id); if (c) { c.color = sw.dataset.color; save(); renderCals(); renderEmbed(); if (events) renderUpcoming(); } return; }
+    const tg = e.target.closest('[data-toggle]');
+    if (tg) { const c = cals().find(x => x.id === tg.dataset.toggle); if (c) { c.on = !c.on; save(); renderAll(); } return; }
+    const rm = e.target.closest('[data-remove]');
+    if (rm) removeCal(rm.dataset.remove);
+  });
+  $('#addForm').addEventListener('submit', e => { e.preventDefault(); addCal($('#newSrc').value, $('#newName').value); $('#newSrc').value = ''; $('#newName').value = ''; $('#newSrc').focus(); });
+  $('#quickTarget').addEventListener('change', renderQuick);
+  $('#saveSettings').addEventListener('click', () => {
+    state.settings.tz = $('#tz').value.trim() || localTz;
+    state.settings.clientId = $('#clientId').value.trim();
+    save(); renderAll(); PH.toast('Settings saved');
+  });
   $('#signin').addEventListener('click', signIn);
   $('#refresh').addEventListener('click', loadEvents);
   $('#signout').addEventListener('click', signOut);
 
-  renderAll();
-  save();
+  renderAll(); save();
 })();
 </script>
 </body></html>

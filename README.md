@@ -7,7 +7,7 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 | 🎹 Piano Practice | `piano.html` | Log daily practice by piece, track minutes, keep a streak. Trinity Grade 4 (2021–2023) pieces preloaded. |
 | 🏕️ Merit Badges | `badges.html` | Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting, plus a catalog of all 139 merit badges by category with status and earned dates, a Trail to Eagle tracker (14 required + 7 electives), and a workbook PDF for each (offline after one download). |
 | 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys. Same generator also runs from the command line. |
-| 📖 Hindi Flashcards | `hindi.html` | Vocabulary from NCERT Malhar Class 6 and Class 7 chapters, with flashcards and quizzes. |
+| 📖 Hindi Flashcards | `hindi.html` | About 400 words from every chapter of NCERT Malhar (मल्हार) Class 6 and Class 7, in Devanagari with transliteration, meaning, and a Hindi hint. Flip flashcards in either direction, rate them Again / Got it for a Leitner spaced review (due cards come back after 1, 3, 7, 21 days), take a 10-question quiz per chapter, add your own words, and print a two-column word list. |
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day. |
 | 🗓️ Calendar | `calendar.html` | Priyaan's Google Calendar embedded (week / month / agenda), one-tap "add event" buttons for each activity, and an optional Google sign-in that lists the next 7 days inside the hub. |
 
@@ -30,7 +30,7 @@ Output is a self-contained HTML file in `worksheets/` with the answer key on the
 
 ## Google Calendar
 
-`calendar.html` embeds Google's own calendar view for the address in its settings (default `priyaan.haldiya@gmail.com`). The embed shows events when that Google account is signed in on the device, or when the calendar is shared with the signed-in account. The **Add to the calendar** buttons open Google Calendar's event form prefilled (piano practice, Scouts, math, Hindi, …). Listing events *inside* the hub needs a free Google API client ID; the page walks through the 5-minute setup (Google Cloud project → enable Calendar API → OAuth client with `https://priyaanh.github.io` as an authorized origin). No calendar data is stored in the repository or on any server; sign-in happens in the browser only.
+`calendar.html` embeds Google's own calendar view. **Several Google accounts can be added** (Priyaan, a parent, a troop or school calendar): each gets a label, a colour, and a show/hide toggle, and new events can be sent to whichever one you pick. A calendar shows up when the browser is signed in to an account that can see it, so the reliable way to combine accounts is to share the second calendar with the first (Google Calendar → Settings for my calendars → Share with specific people); the page has step-by-step instructions. The **Add to the calendar** buttons open Google Calendar's event form prefilled (piano practice, Scouts, math, Hindi, …). Listing events *inside* the hub needs a free Google API client ID; the page walks through the 5-minute setup (Google Cloud project → enable Calendar API → OAuth client with `https://priyaanh.github.io` as an authorized origin). No calendar data is stored in the repository or on any server; sign-in happens in the browser only.
 
 ## Use it offline / add to the home screen
 
@@ -51,7 +51,7 @@ The page then shows **Workbook · offline** and opens the local file. The PDFs s
 
 - Piano pieces: edit the default list near the top of the script in `piano.html`, or add pieces in the app.
 - Badge requirements: the `BADGES` constant in `badges.html`. Custom badges can also be added in the app (the catalog's **＋ Checklist** button pre-fills the form). The list of all badges is `badges_catalog.js`, one badge per line.
-- Hindi vocabulary: the `CARDS` and `CHAPTERS` constants in `hindi.html`, one entry per line.
+- Hindi vocabulary: the `CARDS` and `CHAPTERS` constants in `hindi.html`, one entry per line (`hi` Devanagari, `tr` transliteration, `en` meaning, `hint` Hindi gloss). A card's progress is keyed by chapter + `hi`, so renaming a word resets it. Extra words can also be added in the app under **My words**.
 - Weekly template: use **Edit plan** in the app, or change the default template in `schedule.html`.
 
 ## Sources
