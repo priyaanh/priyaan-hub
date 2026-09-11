@@ -68,6 +68,9 @@ f.addEventListener('load', async () => {
     ok('badges tile counts total and this week', /3 signed off/.test(txt) && /2 this week/.test(txt));
     ok('piano streak chip shows 3 days', /3-day piano/.test($('#streaks').textContent));
     ok('hindi streak chip shows 2 days', /2-day Hindi/.test($('#streaks').textContent));
+    let gptWin = null; w.open = (url, target, feat) => { gptWin = { url, target, feat }; return { focus() {} }; };
+    $('#askGpt').click();
+    ok('hub can open ChatGPT beside the page', gptWin && gptWin.url === 'https://chatgpt.com/' && gptWin.target === 'phChatGPT' && /popup=yes/.test(gptWin.feat));
     ok('tiles link to their apps', $$('.tile').every(a => /\.html$/.test(a.getAttribute('href'))));
     // backup must not contain the API keys
     let captured = null;

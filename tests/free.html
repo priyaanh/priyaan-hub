@@ -25,9 +25,13 @@ f.addEventListener('load', async () => {
     $('[data-kind="worksheet"]').click();
     ok('worksheet prompt asks for empty choices', /"choices": \[\]/.test(w.PH_AI.manualPrompt()));
     // one-click handoff: copies and opens ChatGPT with the prompt in the URL
-    let opened = null; w.open = (url, target) => { opened = { url, target }; return null; };
-    $('#goChatGPT').click(); await waitFor(() => !!opened, 30);
-    ok('handoff opens chatgpt.com', /^https:\/\/chatgpt\.com\/\?q=/.test(opened.url) && opened.target === '_blank');
+    let opened = null; w.open = (url, target, feat) => { opened = { url, target, feat }; return { focus() {} }; };
+    $('#goChatGPT').click(); await waitFor(() => !!opened, 120);
+    ok('handoff opens chatgpt.com', !!opened && /^https:\/\/chatgpt\.com\/\?q=/.test(opened.url));
+    ok('opens docked beside the page, not a throwaway tab', !!opened && opened.target === 'phChatGPT'
+        && /popup=yes/.test(opened.feat) && /width=\d+/.test(opened.feat) && /left=\d+/.test(opened.feat));
+    opened = null; $('#goChatGPT').click(); await waitFor(() => !!opened, 120);
+    ok('a second press reuses that same window', !!opened && opened.target === 'phChatGPT');
     ok('prompt travels in the url', decodeURIComponent(opened.url.split('?q=')[1]).includes('NEW practice'));
     ok('handoff reports copy or offers a fallback', /Copied/.test($('#copyState').textContent) || !!$('#showPrompt'));
     if ($('#showPrompt')) { $('#showPrompt').click(); await tick();

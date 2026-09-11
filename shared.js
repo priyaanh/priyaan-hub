@@ -54,7 +54,22 @@ window.PH = (function () {
   }
   /** Simple seeded RNG (mulberry32) so worksheets are reproducible. */
   function rng(seed) { let a = seed >>> 0; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-  return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, uid, toast, download, pickFile, rng };
+  /** Opens ChatGPT in a window docked to the side of the screen, reusing the same one on repeat clicks.
+      It cannot be embedded in the page: chatgpt.com replies with X-Frame-Options: SAMEORIGIN. */
+  function openChatGPT(prefill) {
+    var base = 'https://chatgpt.com/';
+    var url = prefill ? base + '?q=' + encodeURIComponent(prefill) : base;
+    if (url.length > 7500) url = base;                       // very long prompts do not survive a URL
+    var sw = screen.availWidth || 1280, sh = screen.availHeight || 800;
+    var w = Math.min(600, Math.max(380, Math.round(sw * 0.42)));
+    var feat = 'popup=yes,noopener=no,width=' + w + ',height=' + sh +
+      ',left=' + ((screen.availLeft || 0) + sw - w) + ',top=' + (screen.availTop || 0);
+    var win = window.open(url, 'phChatGPT', feat);
+    if (win) { try { win.focus(); } catch (e) {} }
+    else toast('The browser blocked the pop-up — allow pop-ups for this site, or open chatgpt.com yourself', 5000);
+    return win;
+  }
+  return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, uid, toast, download, pickFile, rng, openChatGPT };
 })();
 
 /* Offline support on the hosted site: register the service worker (sw.js) and add the web-app manifest + iOS icon so the

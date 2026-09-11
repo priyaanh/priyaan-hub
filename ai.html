@@ -126,10 +126,10 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     <div class="card-head"><h2 id="h-manual">Use the free ChatGPT</h2><span class="muted small">no API key, nothing to pay</span></div>
     <p class="manual-note">The free ChatGPT can read your PDF and write the questions. This page gives you the prompt and turns its answer into a printable worksheet. Your PDF goes to ChatGPT directly — it does not need to be added above.</p>
     <ol class="steps big">
-      <li><button class="btn btn-primary btn-sm" id="goChatGPT">📋 Copy prompt &amp; open ChatGPT ↗</button>
+      <li><button class="btn btn-primary btn-sm" id="goChatGPT">📋 Copy prompt &amp; open ChatGPT beside this page</button>
         <button class="btn btn-sm btn-ghost" id="copyPrompt" title="Copy without leaving this page">Copy only</button>
         <div class="small" id="copyState"></div></li>
-      <li>In ChatGPT press <b>+</b>, attach the PDF, and send. (The prompt should already be in the box — if not, paste it.)</li>
+      <li>In the ChatGPT window press <b>+</b>, attach the PDF, and send — the prompt should already be in its box. ChatGPT does not allow itself to be displayed inside another site, so it opens in a window docked to the side of the screen.</li>
       <li>Copy ChatGPT's whole reply and paste it below.</li>
     </ol>
     <div class="field" style="margin-top:.9rem"><label for="pasteIn">Paste ChatGPT's reply</label>
@@ -417,8 +417,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   async function goChatGPT() {
     const text = manualPrompt();
     await copyPrompt(true);
-    const url = 'https://chatgpt.com/?q=' + encodeURIComponent(text);
-    window.open(url.length < 7500 ? url : 'https://chatgpt.com/', '_blank', 'noopener');
+    PH.openChatGPT(text);                                   // docks beside this page and reuses the same window
   }
   async function copyPrompt(quiet) {
     const text = manualPrompt();
