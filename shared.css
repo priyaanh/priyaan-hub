@@ -183,7 +183,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .divider { height: 1px; background: var(--border); margin: 1rem 0; }
 .kbd { font-family: var(--mono); font-size: .8em; padding: .1em .4em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--surface-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-@media (max-width: 560px) { .topbar .title .name { display: none; } .container { padding: 1rem .75rem 4rem; } .card { padding: 1rem; } }
+@media (max-width: 560px) { .topbar .title .name { display: none; } .topbar .btn .lbl { display: none; } .container { padding: 1rem .75rem 4rem; } .card { padding: 1rem; } }
 @media print {
   .topbar, .no-print, .toast { display: none !important; }
   body { background: #fff; color: #000; }

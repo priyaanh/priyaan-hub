@@ -1,0 +1,40 @@
+<!doctype html><title>mobile layout</title><body style="margin:0"><script>
+/* Every page must fit a phone: no horizontal scrolling of the page itself. Wide things (tab strips,
+   tables) are allowed to scroll inside their own container, which is why the rule is on the document. */
+const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai'];
+const WIDTHS = [390, 320];
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const f=document.createElement('iframe'); f.style.cssText='height:900px;border:0'; document.body.appendChild(f);
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+/* calendar.html embeds Google's calendar, which never finishes loading in a test, so do not wait on
+   the iframe's load event alone: proceed once the page itself has rendered. */
+async function load(src, w) {
+  if (w) f.style.width = w + 'px';
+  let loaded = false; f.onload = () => { loaded = true; };
+  f.src = src;
+  for (let i = 0; i < 120 && !loaded; i++) {
+    await tick();
+    try { const d = f.contentDocument; if (d && d.readyState !== 'loading' && d.querySelector('.topbar, .today-card, main')) break; } catch (e) {}
+  }
+  for (let i = 0; i < 8; i++) await tick();
+}
+
+(async () => {
+  for (const w of WIDTHS) {
+    for (const page of PAGES) {
+      try {
+      await load('../' + page + '.html', w);
+      const d = f.contentDocument, de = d.documentElement;
+      ok(page + ' fits ' + w + 'px', de.scrollWidth <= w + 1, 'scrollWidth ' + de.scrollWidth);
+      // tap targets: the main action buttons should not be tiny
+      const small = Array.from(d.querySelectorAll('.topbar .btn, .card > .row > .btn')).filter(b => {
+        const r = b.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.height < 28;
+      });
+      ok(page + ' buttons are tappable at ' + w + 'px', small.length === 0,
+        small.slice(0, 3).map(b => (b.id || b.textContent.trim().slice(0, 12)) + ' ' + Math.round(b.getBoundingClientRect().height) + 'px').join(', '));
+      } catch (e) { ok(page + ' at ' + w + 'px did not throw', false, e.message); }
+    }
+  }
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+})();
+</script></body>
