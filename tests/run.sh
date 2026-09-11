@@ -22,7 +22,7 @@ for page in index piano badges math quizzes hindi schedule calendar ai; do
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark hostile offline)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai gradesheet tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark hostile offline)
 
 # The offline suite needs a real origin: service workers do not run from file://.
 serve() {
@@ -36,7 +36,7 @@ for name in "${want[@]}"; do
   suite="tests/${name%-dark}.html"
   [ -f "$suite" ] || { echo "▶ $name — no such suite"; fail=1; continue; }
   case "$name" in
-    a11y|mobile|contrast|contrast-dark|hostile) realtime=1 ;;
+    a11y|mobile|contrast|contrast-dark|hostile|gradesheet) realtime=1 ;;
     *) realtime=0 ;;
   esac
   if [ "$realtime" = 1 ]; then
@@ -66,8 +66,10 @@ for name in "${want[@]}"; do
   else echo "▶ $name — $total checks passed"; fi
 done
 
-echo "▶ problem generators (node test_im1.js)"
-if out=$(node test_im1.js 2>&1); then echo "  ✓ $(echo "$out" | tail -1)"; else fail=1; echo "$out" | tail -12; fi
+for gen in test_im1.js test_grades.js; do
+  echo "▶ problem generators (node $gen)"
+  if out=$(node "$gen" 2>&1); then echo "  ✓ $(echo "$out" | tail -1)"; else fail=1; echo "$out" | tail -12; fi
+done
 
 [ $fail -eq 0 ] && echo "✅ everything passed" || echo "❌ something failed"
 exit $fail

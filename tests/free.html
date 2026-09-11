@@ -7,8 +7,9 @@ f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
   let snapA=null; try { snapA=w.localStorage.getItem('ph.ai.v1'); w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
   try {
+    $('[data-mode="pdf"]').click(); await tick();      // the grade generator is the default mode now
     // free mode is the default for a new visitor
-    ok('free mode is the default', $('[data-prov="free"]').classList.contains('on') && !$('#manualCard').hidden);
+    ok('free ChatGPT is the default provider', $('[data-prov="free"]').classList.contains('on') && !$('#manualCard').hidden);
     ok('no key needed pill', /No key needed/.test($('#keyState').textContent));
     ok('key box and paid steps hidden', $$('#setupCard .key-row').every(r => r.hidden) && $('#setupCard details').hidden);
     ok('Make it button hidden in free mode', $('#genBtn').hidden);

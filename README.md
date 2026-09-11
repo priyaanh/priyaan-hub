@@ -10,7 +10,7 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 | 📝 Lesson Quizzes | `quizzes.html` | A separate quiz for each CPM Integrated II lesson 1.1.1 to 1.3.4: polygons, predictions from data, tile patterns, area models, describing graphs, angle pairs, transversals and triangles. 199 questions, many with drawn diagrams; 10 per attempt on screen, or print any lesson as a paper quiz with its diagrams and an answer key. |
 | 📖 Hindi Flashcards | `hindi.html` | About 400 words from every chapter of NCERT Malhar (मल्हार) Class 6 and Class 7, in Devanagari with transliteration, meaning, and a Hindi hint. Flip flashcards in either direction, rate them Again / Got it for a Leitner spaced review (due cards come back after 1, 3, 7, 21 days), take a 10-question quiz per chapter, add your own words, print a two-column word list, or print cut-out flashcards, nine to a page with the backs already mirrored for double-sided printing. |
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day, plus any Google Tasks that are due or overdue. |
-| 📄 From a PDF | `ai.html` | Turns a chapter, worksheet or study guide into fresh practice problems or a multiple-choice quiz, laid out as a proper printable worksheet with an answer key. Works with the **free ChatGPT** (copy a prompt, paste its reply back) or, with an API key, with Claude or ChatGPT directly. |
+| ✏️ Make Practice | `ai.html` | **By grade:** pick Grade 6, 7 or 8, choose topics, and get a printable worksheet with an answer key immediately - generated on the device, no key, no internet. **From a PDF:** turn a chapter or study guide into fresh problems or a quiz with the free ChatGPT (copy a prompt, paste the reply back) or, with an API key, with Claude or ChatGPT directly. |
 | 🗓️ Calendar &amp; Tasks | `calendar.html` | Google Calendar embedded (week / month / agenda) for as many Google accounts as you add, one-tap "add event" buttons for each activity, and Google Tasks: tick items off, add tasks with due dates, grouped into Overdue / Today / Coming up. |
 
 ## How it works
@@ -33,6 +33,12 @@ node test_im1.js        # self-test of every topic generator
 ```
 
 Output is a self-contained HTML file in `worksheets/` laid out like a real worksheet - numbered problems in two columns with work boxes, and the answer key on its own page. Open it and print.
+
+## Making practice
+
+Two ways, on one page.
+
+**By grade (the default).** `grades.js` holds 24 problem generators — eight each for Grade 6, 7 and 8 — covering integers and fractions, decimals, ratios and percents, expressions and equations, area and volume, statistics, proportional reasoning, probability, circles and angles, exponents and scientific notation, slope, systems, Pythagoras, transformations and functions. Pick a grade, narrow the topics if you want, choose how many and how hard, and the worksheet appears at once with its answer key. Nothing leaves the device, and the seed makes any sheet reproducible. `node test_grades.js` generates 600 problems per topic per level and checks the answers computationally: 109,213 checks.
 
 ## Turning a PDF into practice
 
@@ -67,10 +73,10 @@ The page then shows **Workbook · offline** and opens the local file. The PDFs s
 ./tests/run.sh
 ```
 
-Loads every page in headless Chrome and fails on any console error, runs sixteen browser suites (about 460
+Loads every page in headless Chrome and fails on any console error, runs eighteen browser suites (about 530
 checks) that drive the real pages with the network stubbed — including accessibility, phone layout, WCAG
 contrast in both light and dark, and the offline service worker — then runs the 142,148 maths-generator
-checks in `test_im1.js`. See `tests/README.md`.
+checks in `test_im1.js` and the 109,213 in `test_grades.js`. See `tests/README.md`.
 
 ## Editing the content
 

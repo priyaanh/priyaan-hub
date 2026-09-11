@@ -19,6 +19,7 @@ f.addEventListener('load', async () => {
         ] }) }] }) };
   };
   try {
+    $('[data-mode="pdf"]').click(); await tick();      // the grade generator is the default mode now
     $('[data-prov="claude"]').click(); await tick();   // free mode is the default now; this suite covers the API paths
     ok('key state starts empty', /No Claude key/.test($('#keyState').textContent));
     ok('generate disabled with no file', $('#genBtn').disabled);

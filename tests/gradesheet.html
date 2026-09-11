@@ -1,0 +1,55 @@
+<!doctype html><title>grade worksheets</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1400px;border:0'; f.src='../ai.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  let snap=null; try { snap=w.localStorage.getItem('ph.ai.v1'); w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
+  try {
+    ok('grade mode is what you land on', !$('#gradeCard').hidden && $('[data-mode="grade"]').classList.contains('on'));
+    ok('no AI key box in grade mode', $('#setupCard').hidden);
+    ok('three grades offered', $$('[data-grade]').length === 3 && /Grade 6/.test($('#gradeCards').textContent));
+    ok('grade 7 is picked by default', $('[data-grade="7"]').classList.contains('on'));
+    ok('topics listed for the grade', $$('[data-gtopic]').length === 8);
+    // make one
+    $('[data-gcount="15"]').click(); $('[data-gdiff="3"]').click(); await tick();
+    $('#gMake').click(); await tick();
+    ok('15 problems made instantly', $$('.prob').length === 15);
+    ok('no network call needed', /seed \d+/.test($('#gNote').textContent));
+    ok('shown as a worksheet, not a quiz', $('#outMeta').textContent.includes('Worksheet'));
+    ok('saved for later', JSON.parse(w.localStorage.getItem('ph.ai.v1')).sets.length === 1);
+    ok('credited to the generator', /Grade 7 generator/.test($('#saved').textContent));
+    // same seed, same sheet
+    const seed = $('#gSeed').value;
+    const first = $('#plist').textContent;
+    $('#gMake').click(); await tick();
+    ok('the same seed makes the same sheet', $('#plist').textContent === first && $('#gSeed').value === seed);
+    $('#gNewSeed').click(); $('#gMake').click(); await tick();
+    ok('a new seed makes a different sheet', $('#plist').textContent !== first);
+    // switching grade changes the topics
+    $('[data-grade="6"]').click(); await tick();
+    ok('grade 6 has its own topics', /Fractions/.test($('#gradeTopics').textContent) && !/Pythagorean/.test($('#gradeTopics').textContent));
+    $('[data-grade="8"]').click(); await tick();
+    ok('grade 8 has its own topics', /Pythagorean/.test($('#gradeTopics').textContent));
+    // choosing topics narrows the sheet
+    // the pills re-render after every toggle, so re-query each time
+    const ids = $$('[data-gtopic]').map(b => b.dataset.gtopic);
+    for (const id of ids.slice(1)) { const b = d.querySelector('[data-gtopic="' + id + '"]'); if (b) b.click(); await tick(); }
+    ok('one topic left selected', $$('[data-gtopic].on').length === 1, $$('[data-gtopic].on').map(b => b.dataset.gtopic).join(','));
+    $('#gMake').click(); await tick();
+    const topics = new Set($$('.prob .tag').map(t => t.textContent.trim()));
+    ok('only the chosen topic appears', topics.size === 1, [...topics].join(', '));
+    // printable
+    const html = w.PH_AI.sheetHTML();
+    ok('prints with an answer key', /Answer key/.test(html) && /page-break-before/.test(html));
+    ok('answers are on the sheet only once', (html.match(/class="prob"/g) || []).length === $$('.prob').length);
+    // back to the PDF side
+    $('[data-mode="pdf"]').click(); await tick();
+    ok('switching to PDF mode restores that UI', $('#gradeCard').hidden && !$('#setupCard').hidden);
+    $('[data-mode="grade"]').click(); await tick();
+    ok('mode is remembered in state', JSON.parse(w.localStorage.getItem('ph.ai.v1')).settings.mode === 'grade');
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  try { if (snap) w.localStorage.setItem('ph.ai.v1', snap); else w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+});
+</script></body>

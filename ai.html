@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>From a PDF · Priyaan's Hub</title>
+<title>Make Practice · Priyaan's Hub</title>
 <link rel="stylesheet" href="shared.css"><style>
 main > * + * { margin-top: 1rem; }
 .drop { border: 2px dashed var(--border); border-radius: var(--radius); padding: 1.6rem 1rem; text-align: center; background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s; }
@@ -53,6 +53,18 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 .steps { margin: .5rem 0 0 1.1rem; padding: 0; font-size: .9rem; } .steps li { margin: .3rem 0; }
 .steps.big { font-size: .95rem; } .steps.big li { margin: .55rem 0; }
 #goChatGPT { white-space: normal; text-align: left; }
+.mode-row { display: flex; justify-content: center; margin-bottom: 1rem; }
+.mode-row .tabs { font-size: 1rem; }
+.mode-row .tab { padding: .5rem 1.1rem; }
+.grade-cards { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.grade { text-align: left; padding: .8rem .9rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; color: inherit; }
+.grade:hover { border-color: var(--accent); background: var(--surface-2); }
+.grade.on { border-color: var(--accent); background: var(--accent-soft); }
+.grade .g { font-weight: 800; font-size: 1.05rem; }
+.grade .s { display: block; font-size: .8rem; color: var(--muted); margin-top: .15rem; line-height: 1.35; }
+.topic-pills { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .7rem; }
+.topic-pill { font-size: .78rem; font-weight: 600; padding: .22rem .6rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+.topic-pill.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
 .manual-note { background: var(--accent-soft); border-radius: var(--radius-sm); padding: .6rem .75rem; font-size: .88rem; margin: 0 0 .8rem; }
 #pasteIn { font-family: var(--mono); font-size: .82rem; min-height: 7rem; }
 .copied { color: var(--ok); font-weight: 600; }
@@ -60,12 +72,44 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 <body data-app="ai">
 <header class="topbar"><div class="inner">
   <a class="back" href="index.html">← Hub</a>
-  <h1 class="title"><span class="emoji">📄</span><span class="name">From a PDF</span></h1>
+  <h1 class="title"><span class="emoji">✏️</span><span class="name">Make Practice</span></h1>
   <div class="spacer"></div>
   <button class="btn btn-sm" id="exportBtn">↓ Export</button>
   <button class="btn btn-sm" id="importBtn">↑ Import</button>
 </div></header>
 <main class="container">
+
+  <div class="mode-row no-print">
+    <div class="tabs" role="group" aria-label="How to make practice" id="modeTabs">
+      <button class="tab" data-mode="grade">📚 By grade</button><button class="tab" data-mode="pdf">📄 From a PDF</button>
+    </div>
+  </div>
+
+  <section class="card" id="gradeCard" hidden aria-labelledby="h-grade">
+    <div class="card-head"><h2 id="h-grade">Pick a grade</h2><span class="muted small">made on this device · no key, no internet</span></div>
+    <div class="grade-cards" id="gradeCards"></div>
+    <div class="topic-pills" id="gradeTopics"></div>
+    <div class="opts">
+      <div class="field"><label>How many problems</label>
+        <div class="countbtns" id="gCountBtns">
+          <button class="btn btn-sm" data-gcount="10">10</button><button class="btn btn-sm" data-gcount="15">15</button>
+          <button class="btn btn-sm" data-gcount="20">20</button><button class="btn btn-sm" data-gcount="30">30</button>
+        </div>
+      </div>
+      <div class="field"><label>Level</label>
+        <div class="tabs" id="gDiffTabs" role="group" aria-label="Level">
+          <button class="tab" data-gdiff="1">1 · Warm-up</button><button class="tab" data-gdiff="2">2 · Standard</button><button class="tab" data-gdiff="3">3 · Challenge</button>
+        </div>
+      </div>
+      <div class="field"><label for="gSeed">Seed</label>
+        <div class="row" style="gap:.4rem"><input class="input" id="gSeed" type="number" min="1" step="1" style="width:7.5rem" aria-label="Seed">
+          <button class="btn btn-sm" id="gNewSeed" title="New random seed">🔀</button></div></div>
+    </div>
+    <div class="gen-actions">
+      <button class="btn btn-primary" id="gMake">✨ Make the worksheet</button>
+      <span class="note" id="gNote"></span>
+    </div>
+  </section>
 
   <section class="card" id="setupCard" aria-labelledby="h-key">
     <div class="card-head"><h2 id="h-key">Connect an AI</h2>
@@ -161,7 +205,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   </section>
 </main>
 <iframe id="printFrame" title="Printable worksheet" aria-hidden="true"></iframe>
-<script src="shared.js"></script><script>
+<script src="shared.js"></script><script src="grades.js"></script><script>
 (function () {
   'use strict';
   const KEY = 'ph.ai.v1';                                  // API keys live under their own keys so Export never includes them
@@ -196,7 +240,8 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   const esc = PH.esc;
 
   /* ---------------- state ---------------- */
-  function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10, provider: 'free', models: {} }, summary: { headline: '', sub: '' } }; }
+  function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10, provider: 'free', models: {},
+    mode: 'grade', grade: '7', gradeCount: 20, gradeDiff: 2, gradeTopics: [] }, summary: { headline: '', sub: '' } }; }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
   function normalize(raw) {
     const s = blank();
@@ -205,6 +250,11 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (st.kind === 'quiz' || st.kind === 'worksheet') s.settings.kind = st.kind;
     if (isFinite(st.count)) s.settings.count = Math.min(20, Math.max(3, Math.round(st.count)));
     if (PROVIDERS[st.provider]) s.settings.provider = st.provider;
+    if (st.mode === 'grade' || st.mode === 'pdf') s.settings.mode = st.mode;
+    if (window.GRADES && GRADES.LEVELS.some(function (g) { return g.id === st.grade; })) s.settings.grade = st.grade;
+    if (isFinite(st.gradeCount)) s.settings.gradeCount = Math.min(60, Math.max(1, Math.round(st.gradeCount)));
+    if ([1, 2, 3].indexOf(st.gradeDiff) >= 0) s.settings.gradeDiff = st.gradeDiff;
+    if (Array.isArray(st.gradeTopics)) s.settings.gradeTopics = st.gradeTopics.filter(function (t) { return typeof t === 'string'; });
     if (isObj(st.models)) Object.keys(PROVIDERS).forEach(k => {
       if (typeof st.models[k] === 'string' && PROVIDERS[k].models.some(m => m.id === st.models[k])) s.settings.models[k] = st.models[k];
     });
@@ -471,6 +521,46 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     $('#genNote').innerHTML = note ? esc(note).replace(/⚠️|✅/g, m => m) : '';
   }
 
+  /* ---------------- by grade: generated here, no AI ---------------- */
+  function gradeLevel() {
+    var L = (window.GRADES && GRADES.LEVELS) || [];
+    return L.filter(function (g) { return g.id === state.settings.grade; })[0] || L[0] || null;
+  }
+  function renderGrade() {
+    if (!window.GRADES) { $('#gradeCard').innerHTML = '<div class="empty">grades.js did not load.</div>'; return; }
+    var lvl = gradeLevel();
+    $('#gradeCards').innerHTML = GRADES.LEVELS.map(function (g) {
+      return '<button type="button" class="grade' + (g.id === state.settings.grade ? ' on' : '') + '" data-grade="' + esc(g.id) + '"' +
+        ' aria-pressed="' + (g.id === state.settings.grade) + '"><span class="g">' + esc(g.name) + '</span><span class="s">' + esc(g.sub) + '</span></button>';
+    }).join('');
+    var chosen = state.settings.gradeTopics;
+    $('#gradeTopics').innerHTML = '<span class="muted small" style="align-self:center">Topics:</span>' +
+      lvl.topics.map(function (t) {
+        var on = !chosen.length || chosen.indexOf(t.id) >= 0;
+        return '<button type="button" class="topic-pill' + (on ? ' on' : '') + '" data-gtopic="' + esc(t.id) + '" aria-pressed="' + on + '" title="' + esc(t.description) + '">' + esc(t.name) + '</button>';
+      }).join('');
+    $$('#gCountBtns .btn').forEach(function (b) { b.classList.toggle('on', Number(b.dataset.gcount) === state.settings.gradeCount); });
+    $$('#gDiffTabs .tab').forEach(function (b) { var on = Number(b.dataset.gdiff) === state.settings.gradeDiff;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    if (!$('#gSeed').value) $('#gSeed').value = (Math.random() * 999999 | 0) + 1;
+  }
+  function makeGradeSheet() {
+    var lvl = gradeLevel(); if (!lvl) return;
+    var chosen = state.settings.gradeTopics.filter(function (t) { return lvl.topics.some(function (x) { return x.id === t; }); });
+    var ws = GRADES.generate({ grade: lvl.id, topics: chosen, count: state.settings.gradeCount,
+      difficulty: state.settings.gradeDiff, seed: Number($('#gSeed').value) || undefined });
+    $('#gSeed').value = ws.seed;
+    var names = {}; lvl.topics.forEach(function (t) { names[t.id] = t.name; });
+    var used = [];
+    ws.problems.forEach(function (p) { if (used.indexOf(names[p.topic]) < 0) used.push(names[p.topic]); });
+    var set = { id: PH.uid(), date: PH.todayISO(), kind: 'worksheet',
+      title: lvl.name + ' practice', source: lvl.name, summary: used.join(' · '), score: null, by: lvl.name + ' generator',
+      problems: ws.problems.map(function (p) { return { question: p.question, answer: p.answer, work: p.work, topic: names[p.topic] || p.topic, choices: [] }; }) };
+    state.sets.unshift(set); state.sets = state.sets.slice(0, 60); save();
+    $('#gNote').innerHTML = '<span class="copied">✅ ' + set.problems.length + ' problems · seed ' + ws.seed + '</span>';
+    show(set); renderSaved();
+  }
+
   /* ---------------- showing a set ---------------- */
   let cur = null, marks = {}, showAns = false;
   function show(set) {
@@ -566,8 +656,9 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   }
   function renderSaved() {
     if (!state.sets.length) {
-      $('#saved').innerHTML = '<div class="empty">Nothing yet. ' + (prov().manual
-        ? 'Copy the prompt, run it in ChatGPT, and paste the reply above.'
+      $('#saved').innerHTML = '<div class="empty">Nothing yet. ' + (state.settings.mode === 'grade'
+        ? 'Pick a grade above and press <b>Make the worksheet</b>.'
+        : prov().manual ? 'Copy the prompt, run it in ChatGPT, and paste the reply above.'
         : 'Pick a PDF above and press <b>Make it</b>.') + '</div>';
       return;
     }
@@ -579,7 +670,13 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       '<button class="btn btn-sm btn-ghost btn-danger" data-del="' + esc(s.id) + '" aria-label="Delete">✕</button></div></div>').join('');
   }
   function renderControls() {
-    const P = prov(), manual = !!P.manual;
+    const P = prov(), manual = !!P.manual, byGrade = state.settings.mode === 'grade';
+    $$('#modeTabs .tab').forEach(function (t) { var on = t.dataset.mode === state.settings.mode;
+      t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
+    $('#gradeCard').hidden = !byGrade;
+    $('#setupCard').hidden = byGrade;
+    document.querySelector('[aria-labelledby="h-src"]').hidden = byGrade;
+    if (byGrade) { $('#manualCard').hidden = true; renderGrade(); renderSaved(); return; }
     $$('#kindTabs .tab').forEach(t => { const on = t.dataset.kind === state.settings.kind; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
     $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
     $$('#provTabs .tab').forEach(t => { const on = t.dataset.prov === state.settings.provider; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
@@ -631,6 +728,26 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (e.target.closest('#goChatGPT')) { goChatGPT(); return; }
     if (e.target.closest('#copyPrompt')) { copyPrompt(false); return; }
     if (e.target.closest('#buildBtn')) { buildFromPaste(); return; }
+    const mt = e.target.closest('[data-mode]');
+    if (mt) { state.settings.mode = mt.dataset.mode; save(); renderControls(); return; }
+    const gr = e.target.closest('[data-grade]');
+    if (gr) { state.settings.grade = gr.dataset.grade; state.settings.gradeTopics = []; save(); renderGrade(); return; }
+    const gt = e.target.closest('[data-gtopic]');
+    if (gt) {
+      const lvl = gradeLevel(), all = lvl.topics.map(function (t) { return t.id; });
+      let chosen = state.settings.gradeTopics.length ? state.settings.gradeTopics.slice() : all.slice();
+      const i = chosen.indexOf(gt.dataset.gtopic);
+      if (i >= 0) chosen.splice(i, 1); else chosen.push(gt.dataset.gtopic);
+      if (!chosen.length) chosen = all.slice();
+      state.settings.gradeTopics = chosen.length === all.length ? [] : chosen;
+      save(); renderGrade(); return;
+    }
+    const gc = e.target.closest('[data-gcount]');
+    if (gc) { state.settings.gradeCount = Number(gc.dataset.gcount); save(); renderGrade(); return; }
+    const gd = e.target.closest('[data-gdiff]');
+    if (gd) { state.settings.gradeDiff = Number(gd.dataset.gdiff); save(); renderGrade(); return; }
+    if (e.target.closest('#gNewSeed')) { $('#gSeed').value = (Math.random() * 999999 | 0) + 1; return; }
+    if (e.target.closest('#gMake')) { makeGradeSheet(); return; }
     const pt = e.target.closest('[data-prov]');
     if (pt) { state.settings.provider = pt.dataset.prov; apiKey = readKey(state.settings.provider); save(); renderControls(); return; }
     if (e.target.closest('#saveKey')) {
@@ -686,6 +803,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 
   /* Hook for this repo's automated tests: they stub window.fetch, since a real API call needs a paid key. */
   window.PH_AI = { generate: generate, state: function () { return state; }, setKey: function (k) { apiKey = k; },
+    makeGradeSheet: makeGradeSheet, gradeLevel: gradeLevel,
     parseReply: parseReply, manualPrompt: manualPrompt, sheetHTML: function () { return sheetHTML(); },
     setProvider: function (p) { state.settings.provider = p; apiKey = readKey(p); renderControls(); } };
 })();
