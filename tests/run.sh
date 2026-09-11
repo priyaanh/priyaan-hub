@@ -22,7 +22,7 @@ for page in index piano badges math quizzes hindi schedule calendar ai; do
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards)
 for name in "${want[@]}"; do
   suite="tests/$name.html"
   [ -f "$suite" ] || { echo "▶ $name — no such suite"; fail=1; continue; }
