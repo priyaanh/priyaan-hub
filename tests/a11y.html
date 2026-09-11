@@ -1,0 +1,54 @@
+<!doctype html><title>accessibility checks</title><body style="margin:0"><script>
+/* Loads every page and checks the things that quietly break a screen reader or keyboard user.
+   Reports one FAIL per page per rule, naming the offending elements. */
+const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai'];
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1000px;border:0'; document.body.appendChild(f);
+const load = src => new Promise(res => { f.onload = () => setTimeout(res, 250); f.src = src; });
+const name = el => (el.textContent || '').trim() || el.getAttribute('aria-label') || el.getAttribute('title') ||
+  (el.getAttribute('aria-labelledby') ? 'labelledby' : '') || (el.querySelector && el.querySelector('img[alt]') ? 'img-alt' : '');
+const desc = el => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : '');
+(async () => {
+  for (const page of PAGES) {
+    await load('../' + page + '.html');
+    const d = f.contentDocument, $$ = s => Array.from(d.querySelectorAll(s));
+    const vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 || r.height > 0 || el.offsetParent !== null; };
+
+    ok(page + ': html has lang', d.documentElement.getAttribute('lang') === 'en');
+    ok(page + ': page has a title', !!(d.title || '').trim());
+    const h1s = $$('h1');
+    ok(page + ': exactly one h1', h1s.length === 1, h1s.length + ' found');
+
+    const levels = $$('h1,h2,h3,h4').filter(vis).map(h => Number(h.tagName[1]));
+    let skip = '';
+    for (let i = 1; i < levels.length; i++) if (levels[i] > levels[i-1] + 1) skip = 'h' + levels[i-1] + ' → h' + levels[i];
+    ok(page + ': heading levels do not skip', !skip, skip);
+
+    const unnamed = $$('button, a[href], [role="button"], [role="radio"], [role="tab"]').filter(vis).filter(el => !name(el));
+    ok(page + ': every control has a name', unnamed.length === 0, unnamed.slice(0,4).map(desc).join(', '));
+
+    const unlabelled = $$('input, select, textarea').filter(el => el.type !== 'hidden').filter(el =>
+      !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby') && !el.closest('label') &&
+      !(el.id && d.querySelector('label[for="' + CSS.escape(el.id) + '"]')));
+    ok(page + ': every input has a label', unlabelled.length === 0, unlabelled.slice(0,4).map(desc).join(', '));
+
+    const noAlt = $$('img').filter(el => el.getAttribute('alt') === null);
+    ok(page + ': images have alt text', noAlt.length === 0, noAlt.slice(0,3).map(desc).join(', '));
+
+    const frames = $$('iframe').filter(el => !el.getAttribute('title'));
+    ok(page + ': iframes are titled', frames.length === 0, frames.slice(0,3).map(desc).join(', '));
+
+    const positive = $$('[tabindex]').filter(el => Number(el.getAttribute('tabindex')) > 0);
+    ok(page + ': no positive tabindex', positive.length === 0, positive.slice(0,3).map(desc).join(', '));
+
+    const badState = $$('[aria-pressed], [aria-selected], [aria-expanded]').filter(el =>
+      !/^(button|a|summary)$/i.test(el.tagName) && !el.getAttribute('role'));
+    ok(page + ': aria state only on real controls', badState.length === 0, badState.slice(0,3).map(desc).join(', '));
+
+    const dupIds = {}; let dup = '';
+    $$('[id]').forEach(el => { if (dupIds[el.id]) dup = el.id; dupIds[el.id] = 1; });
+    ok(page + ': no duplicate ids', !dup, dup);
+  }
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+})();
+</script></body>

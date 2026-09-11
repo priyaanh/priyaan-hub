@@ -22,16 +22,23 @@ for page in index piano badges math quizzes hindi schedule calendar ai; do
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y)
 for name in "${want[@]}"; do
   suite="tests/$name.html"
   [ -f "$suite" ] || { echo "▶ $name — no such suite"; fail=1; continue; }
   "$CHROME" "${FLAGS[@]}" --virtual-time-budget=45000 --dump-dom "file://$ROOT/$suite" >/dev/null 2>"$TMP/$name.err"
-  pass=$(grep -c "PASS " "$TMP/$name.err")
+  # each suite ends with "RESULTS <n> failed of <m>" — trust that over counting console lines, which
+  # Chrome can drop when several runs are in flight.
+  summary=$(grep -oE "RESULTS [0-9]+ failed of [0-9]+" "$TMP/$name.err" | tail -1)
   bad=$(grep -oE "FAIL[^\"]*" "$TMP/$name.err" | sort -u)
-  if [ -n "$bad" ]; then fail=1; echo "▶ $name — $pass passed, FAILURES:"; echo "$bad" | sed 's/^/    /'
-  elif [ "$pass" -eq 0 ]; then fail=1; echo "▶ $name — nothing ran (the harness may have thrown early)"
-  else echo "▶ $name — $pass checks passed"; fi
+  if [ -n "$summary" ]; then
+    failed=$(echo "$summary" | awk '{print $2}'); total=$(echo "$summary" | awk '{print $5}')
+  else
+    failed=$(echo "$bad" | grep -c "FAIL"); total=$(grep -c "PASS " "$TMP/$name.err")
+  fi
+  if [ -n "$bad" ]; then fail=1; echo "▶ $name — $failed of $total failed:"; echo "$bad" | sed 's/^/    /'
+  elif [ "${total:-0}" -eq 0 ]; then fail=1; echo "▶ $name — nothing ran (the harness may have thrown early)"
+  else echo "▶ $name — $total checks passed"; fi
 done
 
 echo "▶ problem generators (node test_im1.js)"

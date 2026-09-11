@@ -41,6 +41,6 @@ f.addEventListener('load', async () => {
     ok('print frame built', !!fr && /Piano practice log/.test(fr.srcdoc || ''));
   } catch (e) { console.log('FAIL threw: ' + e.message); }
   try { if (snap) w.localStorage.setItem('ph.piano.v1', snap); else w.localStorage.removeItem('ph.piano.v1'); } catch(e){}
-  console.log('RESULTS done');
+  console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
 });
 </script></body>

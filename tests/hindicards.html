@@ -36,6 +36,6 @@ f.addEventListener('load', async () => {
     const fr = d.getElementById('cardFrame');
     ok('print frame built with the cards', !!fr && /class="sheet"/.test(fr.srcdoc || ''));
   } catch (e) { console.log('FAIL threw: ' + e.message); }
-  console.log('RESULTS done');
+  console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
 });
 </script></body>

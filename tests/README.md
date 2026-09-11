@@ -27,6 +27,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `badges.html` | the merit badge catalog, Trail to Eagle counting, filters, sorting, the workbook viewer |
 | `hindicards.html` | printable Hindi flashcards: sheet pagination, mirrored backs for duplex printing, cut lines |
 | `pianolog.html` | the printable piano practice log: the day grid, totals, the four-week window, notes and signature lines |
+| `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
 
 Notes for anyone extending these:
 

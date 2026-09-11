@@ -73,6 +73,6 @@ f.addEventListener('load', async () => {
     ok('switching to Claude shows the key box again', $('#manualCard').hidden && !$$('#setupCard .key-row')[0].hidden && !$('#genBtn').hidden);
   } catch (e) { console.log('FAIL threw: ' + e.message + ' @ ' + (e.stack||'').split('\n')[1]); }
   try { if (snapA) w.localStorage.setItem('ph.ai.v1', snapA); else w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
-  console.log('RESULTS done');
+  console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
 });
 </script></body>

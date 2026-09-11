@@ -29,6 +29,6 @@ f.addEventListener('load', async () => {
     ok('print frame created with the sheet', !!fr && /class="prob"/.test(fr.srcdoc || ''));
     ok('page did not navigate away', !!d.querySelector('[data-printq]'));
   } catch (e) { console.log('FAIL threw: ' + e.message); }
-  console.log('RESULTS done');
+  console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
 });
 </script></body>

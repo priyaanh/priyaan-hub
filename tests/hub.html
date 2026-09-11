@@ -45,7 +45,7 @@ f.addEventListener('load', async () => {
     ok('page survives a corrupt app key', !$('#todayCard').hidden && $$('.tile').length === 6);
     ok('the other tiles still work', /1 of 2/.test($('#tiles').textContent) && /17 \/ 20/.test($('#tiles').textContent));
     restore();
-    console.log('RESULTS done');
+    console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
     return;
   }
   try {

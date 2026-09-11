@@ -40,6 +40,6 @@ f.addEventListener('load', async () => {
     ok('week grid still renders', $$('.day-col').length === 7);
   } catch (e) { console.log('FAIL threw: ' + e.message); }
   try { if (snap) w.localStorage.setItem('ph.calendar.v1', snap); else w.localStorage.removeItem('ph.calendar.v1'); } catch(e){}
-  console.log('RESULTS done');
+  console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
 });
 </script></body>

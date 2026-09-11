@@ -74,6 +74,7 @@ p { margin: 0 0 .75em; }
 }
 .topbar .back:hover { color: var(--text); text-decoration: none; border-color: var(--accent); }
 .topbar .title { display: flex; align-items: center; gap: .55rem; font-weight: 700; font-size: 1.1rem; }
+.topbar h1.title { margin: 0; letter-spacing: normal; }   /* the page title is the topbar name; keep h1's semantics, not its size */
 .topbar .title .emoji { font-size: 1.35rem; }
 .topbar .spacer { flex: 1; }
 .container { max-width: 1040px; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
