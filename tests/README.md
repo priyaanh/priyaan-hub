@@ -28,6 +28,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `hindicards.html` | printable Hindi flashcards: sheet pagination, mirrored backs for duplex printing, cut lines |
 | `pianolog.html` | the printable piano practice log: the day grid, totals, the four-week window, notes and signature lines |
 | `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
+| `mobile.html` | every page at 390px and 320px: the document never scrolls sideways, and topbar buttons stay tappable |
 
 Notes for anyone extending these:
 
@@ -35,5 +36,8 @@ Notes for anyone extending these:
 - `--virtual-time-budget` fast-forwards timers, so `setTimeout` does **not** wait for real work such as
   `FileReader`. Wait on a condition, advancing real time with a real async operation each turn (see the
   `tick()`/`waitFor()` helpers the suites share).
+- Do not wait on an iframe's `load` event alone when the page is `calendar.html`: it embeds Google Calendar,
+  which never finishes loading in a test, so everything after it goes unchecked. The multi-page suites
+  proceed once the page itself has rendered.
 - Each suite snapshots the `localStorage` keys it touches and puts them back afterwards, so running the
   tests never destroys real practice data.
