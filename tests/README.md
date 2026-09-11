@@ -27,6 +27,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `badges.html` | the merit badge catalog, Trail to Eagle counting, filters, sorting, the workbook viewer |
 | `hindicards.html` | printable Hindi flashcards: sheet pagination, mirrored backs for duplex printing, cut lines |
 | `pianolog.html` | the printable piano practice log: the day grid, totals, the four-week window, notes and signature lines |
+| `metronome.html` | the metronome: tempo clamping and memory, tempo names, beats per bar, tap tempo, start/stop, the keyboard shortcuts |
 | `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
 | `mobile.html` | every page at 390px and 320px: the document never scrolls sideways, and topbar buttons stay tappable |
 | `offline.html` | the service worker: registration, a versioned cache, the whole app shell precached, pages answering from cache, PDFs deliberately excluded (run over a local server via `tests/cdp.js`, since workers need a real origin and real time) |

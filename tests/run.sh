@@ -22,7 +22,7 @@ for page in index piano badges math quizzes hindi schedule calendar ai; do
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y mobile offline)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome offline)
 
 # The offline suite needs a real origin: service workers do not run from file://.
 serve() {

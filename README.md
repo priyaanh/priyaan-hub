@@ -4,7 +4,7 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 
 | App | File | What it does |
 | --- | --- | --- |
-| 🎹 Piano Practice | `piano.html` | Log daily practice by piece, track minutes, keep a streak. Trinity Grade 4 (2021–2023) pieces preloaded. Prints a month's practice log for the teacher: minutes per piece per day, weekly totals, recent notes, and lines to sign. |
+| 🎹 Piano Practice | `piano.html` | Log daily practice by piece, track minutes, keep a streak. Trinity Grade 4 (2021–2023) pieces preloaded. Prints a month's practice log for the teacher: minutes per piece per day, weekly totals, recent notes, and lines to sign. Has a metronome too: 40–208 BPM with the Italian tempo name, a beat light, beats per bar, and tap tempo. |
 | 🏕️ Merit Badges | `badges.html` | Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting, plus a catalog of all 139 merit badges by category with status and earned dates, a Trail to Eagle tracker (14 required + 7 electives), and a workbook PDF for each (offline after one download). |
 | 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys, from 11 topic generators covering CPM chapters 1-9. Pick topics, count, level and seed; practice on screen with instant checking, or print. The same generator runs from the command line. |
 | 📝 Lesson Quizzes | `quizzes.html` | A separate quiz for each CPM Integrated II lesson 1.1.1 to 1.3.4: polygons, predictions from data, tile patterns, area models, describing graphs, angle pairs, transversals and triangles. 199 questions, many with drawn diagrams; 10 per attempt on screen, or print any lesson as a paper quiz with its diagrams and an answer key. |

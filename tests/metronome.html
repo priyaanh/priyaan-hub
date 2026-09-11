@@ -1,0 +1,51 @@
+<!doctype html><title>metronome test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../piano.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  let snap=null; try { snap = w.localStorage.getItem('ph.piano.bpm'); } catch(e){}
+  try {
+    const D = w.PHPianoDebug;
+    ok('metronome card is on the page', !!$('#m-play') && !!$('#m-range'));
+    ok('starts at a sensible tempo', D.metro.bpm >= 40 && D.metro.bpm <= 208);
+    ok('four beat dots by default', $$('#m-beats .beat').length === 4 && $$('#m-beats .beat')[0].classList.contains('accent'));
+    // tempo control
+    D.setBpm(120);
+    ok('slider and readout follow the tempo', $('#m-range').value === '120' && /120/.test($('#m-bpm').textContent));
+    ok('tempo has an Italian name', $('#m-name').textContent === 'Allegro' && D.tempoName(60) === 'Larghetto' && D.tempoName(200) === 'Presto');
+    D.setBpm(500); ok('tempo clamps at the top', D.metro.bpm === 208);
+    D.setBpm(2);   ok('tempo clamps at the bottom', D.metro.bpm === 40);
+    D.setBpm(96);
+    ok('tempo is remembered for next time', w.localStorage.getItem('ph.piano.bpm') === '96');
+    $('[data-bpm="5"]').click(); $('[data-bpm="5"]').click();
+    ok('the ±5 buttons nudge it', D.metro.bpm === 106);
+    // beats per bar
+    const sel = $('#m-beatsper'); sel.value = '3'; sel.dispatchEvent(new w.Event('change', {bubbles:true}));
+    ok('beats per bar changes the dots', $$('#m-beats .beat').length === 3);
+    // tap tempo
+    D.metro.taps = [];
+    const base = Date.now();
+    D.metro.taps = [base - 1500, base - 1000, base - 500];      // 500 ms apart = 120 bpm
+    D.tapTempo();
+    ok('tap tempo works out the speed', Math.abs(D.metro.bpm - 120) <= 2, 'got ' + D.metro.bpm);
+    // start/stop
+    $('#m-play').click();
+    await new Promise(r => setTimeout(r, 300));
+    ok('starting makes an audio context', D.metro.on === true && !!D.metro.ctx);
+    ok('button flips to stop', /Stop/.test($('#m-play').textContent) && $('#m-play').getAttribute('aria-pressed') === 'true');
+    ok('beats are scheduled ahead', D.metro.beat > 0);
+    $('#m-play').click();
+    ok('stopping clears the timer', D.metro.on === false && D.metro.timer === null);
+    ok('no dots left lit', $$('#m-beats .beat.on').length === 0);
+    // keyboard
+    d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'm', bubbles: true }));
+    await new Promise(r => setTimeout(r, 200));
+    ok('m toggles the metronome', D.metro.on === true);
+    d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'm', bubbles: true }));
+    ok('m stops it again', D.metro.on === false);
+    ok('nothing is fetched from the network', !/<script[^>]+src="http/.test(d.documentElement.innerHTML));
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  try { if (snap) w.localStorage.setItem('ph.piano.bpm', snap); else w.localStorage.removeItem('ph.piano.bpm'); } catch(e){}
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+});
+</script></body>
