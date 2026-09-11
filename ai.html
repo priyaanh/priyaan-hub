@@ -126,9 +126,10 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     <div class="card-head"><h2 id="h-manual">Use the free ChatGPT</h2><span class="muted small">no API key, nothing to pay</span></div>
     <p class="manual-note">The free ChatGPT can read your PDF and write the questions. This page gives you the prompt and turns its answer into a printable worksheet. Your PDF goes to ChatGPT directly — it does not need to be added above.</p>
     <ol class="steps big">
-      <li><button class="btn btn-primary btn-sm" id="copyPrompt">📋 Copy the prompt</button> <span class="small" id="copyState"></span></li>
-      <li><a class="btn btn-sm" href="https://chatgpt.com/" target="_blank" rel="noopener">Open ChatGPT ↗</a> and sign in with the free account.</li>
-      <li>In ChatGPT press <b>+</b>, attach the PDF, paste the prompt, and send it.</li>
+      <li><button class="btn btn-primary btn-sm" id="goChatGPT">📋 Copy prompt &amp; open ChatGPT ↗</button>
+        <button class="btn btn-sm btn-ghost" id="copyPrompt" title="Copy without leaving this page">Copy only</button>
+        <div class="small" id="copyState"></div></li>
+      <li>In ChatGPT press <b>+</b>, attach the PDF, and send. (The prompt should already be in the box — if not, paste it.)</li>
       <li>Copy ChatGPT's whole reply and paste it below.</li>
     </ol>
     <div class="field" style="margin-top:.9rem"><label for="pasteIn">Paste ChatGPT's reply</label>
@@ -412,7 +413,14 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     $('#pasteIn').value = '';
     show(set); renderSaved();
   }
-  async function copyPrompt() {
+  /** Opens ChatGPT with the prompt already in its composer, and copies it too in case the site ignores ?q=. */
+  async function goChatGPT() {
+    const text = manualPrompt();
+    await copyPrompt(true);
+    const url = 'https://chatgpt.com/?q=' + encodeURIComponent(text);
+    window.open(url.length < 7500 ? url : 'https://chatgpt.com/', '_blank', 'noopener');
+  }
+  async function copyPrompt(quiet) {
     const text = manualPrompt();
     let done = false;
     try { await navigator.clipboard.writeText(text); done = true; } catch (e) { /* file:// or denied */ }
@@ -422,7 +430,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       try { done = document.execCommand('copy'); } catch (e) { done = false; }
       ta.remove();
     }
-    $('#copyState').innerHTML = done ? '<span class="copied">Copied — now paste it into ChatGPT with the PDF attached</span>'
+    $('#copyState').innerHTML = done ? '<span class="copied">Copied' + (quiet ? ' — attach the PDF in the ChatGPT tab and send' : ' — now paste it into ChatGPT with the PDF attached') + '</span>'
       : 'Could not copy automatically. <a href="#" id="showPrompt">Show the prompt</a> and copy it by hand.';
     if (!done) {
       const link = $('#showPrompt');
@@ -620,7 +628,8 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderControls(); return; }
     if (e.target.closest('#genBtn')) { generate(false); return; }
     if (e.target.closest('#againBtn')) { generate(true); return; }
-    if (e.target.closest('#copyPrompt')) { copyPrompt(); return; }
+    if (e.target.closest('#goChatGPT')) { goChatGPT(); return; }
+    if (e.target.closest('#copyPrompt')) { copyPrompt(false); return; }
     if (e.target.closest('#buildBtn')) { buildFromPaste(); return; }
     const pt = e.target.closest('[data-prov]');
     if (pt) { state.settings.provider = pt.dataset.prov; apiKey = readKey(state.settings.provider); save(); renderControls(); return; }

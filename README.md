@@ -9,7 +9,7 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 | 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys, from 11 topic generators covering CPM chapters 1-9. Pick topics, count, level and seed; practice on screen with instant checking, or print. The same generator runs from the command line. |
 | 📝 Lesson Quizzes | `quizzes.html` | A separate quiz for each CPM Integrated II lesson 1.1.1 to 1.3.4: polygons, predictions from data, tile patterns, area models, describing graphs, angle pairs, transversals and triangles. 199 questions, many with drawn diagrams; 10 per attempt, with explanations and a history. |
 | 📖 Hindi Flashcards | `hindi.html` | About 400 words from every chapter of NCERT Malhar (मल्हार) Class 6 and Class 7, in Devanagari with transliteration, meaning, and a Hindi hint. Flip flashcards in either direction, rate them Again / Got it for a Leitner spaced review (due cards come back after 1, 3, 7, 21 days), take a 10-question quiz per chapter, add your own words, and print a two-column word list. |
-| 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day. |
+| 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day, plus any Google Tasks that are due or overdue. |
 | 📄 From a PDF | `ai.html` | Turns a chapter, worksheet or study guide into fresh practice problems or a multiple-choice quiz, laid out as a proper printable worksheet with an answer key. Works with the **free ChatGPT** (copy a prompt, paste its reply back) or, with an API key, with Claude or ChatGPT directly. |
 | 🗓️ Calendar &amp; Tasks | `calendar.html` | Google Calendar embedded (week / month / agenda) for as many Google accounts as you add, one-tap "add event" buttons for each activity, and Google Tasks: tick items off, add tasks with due dates, grouped into Overdue / Today / Coming up. |
 
@@ -31,7 +31,7 @@ node make_worksheet.js --topics linear,systems,exponents --count 20 --difficulty
 node test_im1.js        # self-test of every topic generator
 ```
 
-Output is a self-contained HTML file in `worksheets/` with the answer key on the last page. Open it and print.
+Output is a self-contained HTML file in `worksheets/` laid out like a real worksheet - numbered problems in two columns with work boxes, and the answer key on its own page. Open it and print.
 
 ## Turning a PDF into practice
 
@@ -47,7 +47,7 @@ Output is a self-contained HTML file in `worksheets/` with the answer key on the
 
 ## Use it offline / add to the home screen
 
-The hosted site installs a small service worker (`sw.js`) the first time you open it. After that every page you have visited keeps working with no internet, and updates are picked up automatically the next time you are online. On a phone or iPad, open https://priyaanh.github.io/priyaan-hub/ and use **Share → Add to Home Screen** (iOS) or **Install app** (Android/Chrome) to get a 🚀 icon that opens the hub full-screen. `manifest.webmanifest` and the `icon-*.png` files describe the app; nothing about this runs when the folder is opened from disk.
+The hosted site installs a small service worker (`sw.js`) the first time you open it. After that every page you have visited keeps working with no internet, and updates are picked up automatically the next time you are online. On a phone or iPad, open https://priyaanh.github.io/priyaan-hub/ and use **Share → Add to Home Screen** (iOS) or **Install app** (Android/Chrome) to get a 🚀 icon that opens the hub full-screen. Long-pressing that icon jumps straight to today's plan, piano practice, a new worksheet, or Hindi flashcards. `manifest.webmanifest` and the `icon-*.png` files describe the app; nothing about this runs when the folder is opened from disk.
 
 ## Merit badge workbooks offline
 

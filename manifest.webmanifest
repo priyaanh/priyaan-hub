@@ -8,8 +8,49 @@
   "background_color": "#f5f6fa",
   "theme_color": "#4f6bed",
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today's plan",
+      "short_name": "Plan",
+      "url": "./schedule.html",
+      "description": "What is on for today"
+    },
+    {
+      "name": "Log piano practice",
+      "short_name": "Piano",
+      "url": "./piano.html",
+      "description": "Start the practice timer"
+    },
+    {
+      "name": "Make a worksheet",
+      "short_name": "Worksheet",
+      "url": "./math.html",
+      "description": "Print Integrated Math 1 practice"
+    },
+    {
+      "name": "Hindi flashcards",
+      "short_name": "Hindi",
+      "url": "./hindi.html",
+      "description": "Review the words due today"
+    }
   ]
 }

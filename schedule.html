@@ -14,6 +14,12 @@ body[data-app="schedule"] .topbar .inner, body[data-app="schedule"] .container {
 
 /* Week header */
 .week-card { padding: .9rem 1.1rem; }
+/* Google Tasks that are due, read from the Calendar page's saved copy */
+.gtasks { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-top: .7rem; padding-top: .7rem; border-top: 1px dashed var(--border); }
+.gtasks .lbl { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+.gtasks .gt { background: var(--surface-2); border-radius: 999px; padding: .2rem .65rem; font-size: .84rem; display: inline-flex; gap: .35rem; align-items: center; }
+.gtasks .gt.late { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+.gtasks a.more { font-size: .82rem; }
 .week-nav { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .week-nav h2 { margin: 0; font-size: 1.15rem; flex: 1 1 14rem; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .week-nav .nav { display: inline-flex; gap: .35rem; }
@@ -176,6 +182,7 @@ input[type="number"].te-min { width: 5.5rem; flex: none; }
       <span class="count" id="weekCount" aria-live="polite">0 / 0</span>
     </div>
     <div class="cat-chips" id="catChips" aria-label="Progress by activity"></div>
+    <div class="gtasks no-print" id="gtasks" hidden></div>
   </section>
 
   <section class="stats" aria-label="Stats">
@@ -376,7 +383,7 @@ function $(sel, root) { return (root || document).querySelector(sel); }
 var el = {
   range: $('#weekRange'), tag: $('#weekTag'), prog: $('#weekProg'), bar: $('#weekBar'), count: $('#weekCount'), chips: $('#catChips'),
   stWeek: $('#stWeek'), stToday: $('#stToday'), stStreak: $('#stStreak'), stStreakLbl: $('#stStreakLbl'),
-  tabs: $('#dayTabs'), grid: $('#weekGrid'), panel: $('#editPanel'), teList: $('#teList'), editTitle: $('#editTitle'),
+  gtasks: $('#gtasks'), tabs: $('#dayTabs'), grid: $('#weekGrid'), panel: $('#editPanel'), teList: $('#teList'), editTitle: $('#editTitle'),
   btnEdit: $('#btnEdit'), btnCloseEdit: $('#btnCloseEdit'), btnPrint: $('#btnPrint'), btnExport: $('#btnExport'), btnImport: $('#btnImport'),
   btnPrev: $('#btnPrev'), btnToday: $('#btnToday'), btnNext: $('#btnNext'), btnAddTask: $('#btnAddTask'), btnReset: $('#btnReset')
 };
@@ -398,6 +405,25 @@ function renderHeader() {
     return '<span class="pill cat-chip cat-' + c + (b.done === b.total ? ' full' : '') + '" title="' + CATS[c].label + '">' +
       CATS[c].emoji + ' ' + b.done + '/' + b.total + '<span class="sr-only"> ' + CATS[c].label + '</span></span>';
   }).join('') || '<span class="muted small">Nothing planned this week — use ⚙ Edit plan to add activities.</span>';
+}
+
+/* Google Tasks due today or overdue, read (never written) from the Calendar page's cached copy. */
+function renderGoogleTasks() {
+  if (!el.gtasks) return;
+  var box = el.gtasks;
+  var cal = PH.load('ph.calendar.v1', null);
+  var items = (cal && cal.tasksCache && Array.isArray(cal.tasksCache.items)) ? cal.tasksCache.items : [];
+  var t = today();
+  var open = items.filter(function (x) { return x && x.status !== 'completed' && x.due && x.due.slice(0, 10) <= t; });
+  if (!open.length || view.monday !== PH.mondayOf(t)) { box.hidden = true; box.innerHTML = ''; return; }
+  open.sort(function (a, b) { return a.due.localeCompare(b.due); });
+  var shown = open.slice(0, 4);
+  box.hidden = false;
+  box.innerHTML = '<span class="lbl">Tasks due</span>' + shown.map(function (x) {
+    var late = x.due.slice(0, 10) < t;
+    return '<span class="gt' + (late ? ' late' : '') + '">' + (late ? '⚠️ ' : '☐ ') + esc(x.title) + '</span>';
+  }).join('') + (open.length > shown.length ? '<span class="gt">+' + (open.length - shown.length) + ' more</span>' : '') +
+    '<a class="more" href="calendar.html">open tasks →</a>';
 }
 
 /* ---------------- render: stats ---------------- */
@@ -488,7 +514,7 @@ function refreshColumn(iso) {
   cnt.textContent = s.done + '/' + s.total; cnt.setAttribute('aria-label', s.done + ' of ' + s.total + ' done');
   col.classList.toggle('complete', s.total > 0 && s.done === s.total);
 }
-function renderWeek() { renderHeader(); renderTabs(); renderGrid(); }
+function renderWeek() { renderHeader(); renderGoogleTasks(); renderTabs(); renderGrid(); }
 function refreshWeek() { renderWeek(); renderStats(); }
 function renderAll() { refreshWeek(); if (ui.editOpen) renderPanel(); }
 

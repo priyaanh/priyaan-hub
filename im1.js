@@ -699,23 +699,51 @@
     if (!ws || !Array.isArray(ws.problems)) throw new Error('renderWorksheet needs a worksheet from IM1.generate');
     var title = o.title || 'Integrated Math 1 Practice', name = o.name || '', showAnswers = o.showAnswers !== false;
     var topics = (ws.topics || []).map(function (id) { return TOPIC_BY_ID[id] ? TOPIC_BY_ID[id].name : id; });
-    var n = ws.problems.length, boxH = n <= 8 ? 2.4 : n <= 12 ? 1.9 : n <= 20 ? 1.45 : n <= 30 ? 1.1 : 0.85;
+    var n = ws.problems.length, boxH = n <= 8 ? 2.1 : n <= 12 ? 1.6 : n <= 20 ? 1.2 : n <= 30 ? 0.95 : 0.75;
     var diffName = ['', 'Warm-up', 'Standard', 'Challenge'][ws.difficulty] || '';
     var cmd = 'node make_worksheet.js --topics ' + (ws.topics || []).join(',') + ' --count ' + n + ' --difficulty ' + ws.difficulty + ' --seed ' + ws.seed;
-    var css = '@page{size:letter;margin:.6in .6in .7in}*{box-sizing:border-box}body{margin:0;font:11.5pt/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#111;background:#fff}' +
-      '.page{max-width:8.5in;margin:0 auto;padding:.5in .6in}@media screen{body{background:#e9ebf0}.page{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.18);margin:24px auto;min-height:11in}}' +
-      'header{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:14px}h1{font-size:16pt;margin:0}.sub{color:#555;font-size:9.5pt;margin-top:2px}' +
-      '.nameline{display:flex;gap:1.4em;font-size:11pt;white-space:nowrap}.blank{display:inline-block;min-width:2in;border-bottom:1px solid #111;padding:0 4px;text-align:left}.blank.short{min-width:1.3in}' +
-      'ol.problems{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px 26px}li.prob{break-inside:avoid;page-break-inside:avoid}.q{display:flex;gap:.5em;line-height:1.45}.q .n{font-weight:700;min-width:1.7em}.work{height:' + boxH + 'in;border:1px solid #c4c4c4;border-radius:4px;margin-top:6px}' +
-      'footer{margin-top:16px;padding-top:5px;border-top:1px solid #ccc;font-size:8pt;color:#666;display:flex;justify-content:space-between;gap:1em;flex-wrap:wrap}footer code{font-family:Menlo,Consolas,monospace;font-size:7.5pt}' +
-      '.key{page-break-before:always;break-before:page;margin-top:20px}.key h2{font-size:14pt;border-bottom:2px solid #111;padding-bottom:4px;margin:0 0 10px}.key ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:7px 26px}.key li{font-size:10pt;break-inside:avoid;display:flex;gap:.5em}.key .n{font-weight:700;min-width:1.7em}.key .a{font-weight:700}.key .w{color:#555;font-size:8.5pt;display:block}' +
-      'sup{font-size:.72em;line-height:0}@media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:0;max-width:none;min-height:0}}@media (max-width:600px){ol.problems,.key ol{grid-template-columns:1fr}.page{padding:.4in .35in}}';
-    var head = '<header><div><h1>' + esc(title) + '</h1><div class="sub">' + esc(topics.join(' · ')) + ' · Level ' + esc(ws.difficulty) + (diffName ? ' (' + diffName + ')' : '') + ' · ' + n + ' problems</div></div>' +
-      '<div class="nameline"><span>Name: <span class="blank">' + esc(name) + '</span></span><span>Date: <span class="blank short"></span></span></div></header>';
-    var items = ws.problems.map(function (p, i) { return '<li class="prob"><div class="q"><span class="n">' + (i + 1) + '.</span><span class="t">' + safe(p.question) + '</span></div><div class="work"></div></li>'; }).join('');
-    var foot = '<footer><span>Seed ' + esc(ws.seed) + ' · ' + esc((ws.topics || []).join(', ')) + ' · difficulty ' + esc(ws.difficulty) + ' · Priyaan’s Hub</span><span>Regenerate: <code>' + esc(cmd) + '</code></span></footer>';
+    var css = [
+      '@page{size:letter;margin:.5in .55in .55in}',
+      '*{box-sizing:border-box}',
+      'body{margin:0;color:#14161c;font:11pt/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+      '.page{max-width:8.5in;margin:0 auto;padding:.45in .5in}',
+      '@media screen{body{background:#e9ebf0}.page{background:#fff;box-shadow:0 2px 18px rgba(16,24,40,.18);margin:22px auto;min-height:11in;border-radius:3px}}',
+      'header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2.5px solid #14161c;padding-bottom:7px}',
+      'h1{font-size:17pt;margin:0;letter-spacing:-.01em;line-height:1.15}',
+      '.kicker{font-size:8.5pt;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#6b7280;margin-bottom:3px}',
+      '.meta{font-size:8.5pt;color:#6b7280;text-align:right;line-height:1.5;white-space:nowrap}',
+      '.idline{display:flex;gap:22px;margin:11px 0 16px;font-size:10.5pt;color:#374151}',
+      '.idline span{display:flex;gap:6px;align-items:baseline;flex:1}',
+      '.idline i{flex:1;border-bottom:1px solid #9aa0ab;min-width:1.3in;font-style:normal;color:#14161c}',
+      'ol.problems{list-style:none;margin:0;padding:0;columns:2;column-gap:26px}',
+      'li.prob{break-inside:avoid;page-break-inside:avoid;display:flex;gap:9px;margin:0 0 13px}',
+      '.num{flex:none;width:19px;height:19px;border-radius:50%;background:#14161c;color:#fff;font-size:9.5pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}',
+      '.body{flex:1;min-width:0}.t{overflow-wrap:anywhere}',
+      '.work{height:' + boxH + 'in;border:1px dashed #c3c8d2;border-radius:5px;margin-top:6px}',
+      '.key{page-break-before:always;break-before:page;padding-top:.15in}',
+      '.key h2{font-size:12.5pt;margin:0 0 8px;border-bottom:1.5px solid #14161c;padding-bottom:4px}',
+      '.key ol{list-style:none;margin:0;padding:0;columns:3;column-gap:22px;font-size:9.5pt}',
+      '.key li{break-inside:avoid;display:flex;gap:7px;margin:0 0 7px;align-items:baseline}',
+      '.key .n{flex:none;width:16px;height:16px;border-radius:50%;border:1px solid #9aa0ab;color:#4b5563;font-size:8pt;font-weight:700;display:flex;align-items:center;justify-content:center}',
+      '.key .a{flex:1;font-weight:600;overflow-wrap:anywhere}',
+      '.key .w{display:block;font-weight:400;color:#6b7280;font-size:8.8pt;margin-top:1px}',
+      'footer{margin-top:16px;border-top:1px solid #d5d9e0;padding-top:5px;font-size:8pt;color:#8b919c;display:flex;justify-content:space-between;gap:1em;flex-wrap:wrap}',
+      'footer code{font-family:Menlo,Consolas,monospace;font-size:7.5pt}',
+      'sup{font-size:.72em;line-height:0}',
+      '@media print{.page{box-shadow:none;margin:0;padding:0;max-width:none;min-height:0}}',
+      '@media (max-width:600px){ol.problems,.key ol{columns:1}.page{padding:.4in .35in}}'
+    ].join('');
+    var head = '<header><div><div class="kicker">Practice worksheet</div><h1>' + esc(title) + '</h1></div>' +
+      '<div class="meta">' + n + ' problems · level ' + esc(ws.difficulty) + (diffName ? ' ' + diffName : '') + '<br>' + esc(topics.join(' · ')) + '</div></header>' +
+      '<div class="idline"><span>Name <i>' + esc(name) + '</i></span><span>Date <i></i></span><span>Score <i></i></span></div>';
+    var items = ws.problems.map(function (p, i) {
+      return '<li class="prob"><span class="num">' + (i + 1) + '</span><div class="body"><div class="t">' + safe(p.question) + '</div><div class="work"></div></div></li>';
+    }).join('');
+    var foot = '<footer><span>Seed ' + esc(ws.seed) + ' · Priyaan’s Hub</span><span>Regenerate: <code>' + esc(cmd) + '</code></span></footer>';
     var key = showAnswers ? '<section class="key"><h2>Answer key — ' + esc(title) + ' (seed ' + esc(ws.seed) + ')</h2><ol>' +
-      ws.problems.map(function (p, i) { return '<li><span class="n">' + (i + 1) + '.</span><span><span class="a">' + safe(p.answer) + '</span>' + (p.work ? '<span class="w">' + safe(p.work) + '</span>' : '') + '</span></li>'; }).join('') + '</ol></section>' : '';
+      ws.problems.map(function (p, i) {
+        return '<li><span class="n">' + (i + 1) + '</span><span class="a">' + safe(p.answer) + (p.work ? '<span class="w">' + safe(p.work) + '</span>' : '') + '</span></li>';
+      }).join('') + '</ol><footer><span>' + esc(title) + ' · answer key</span><span>Priyaan’s Hub</span></footer></section>' : '';
     return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>' + esc(title) + ' — seed ' + esc(ws.seed) + '</title>\n<style>' + css + '</style>\n</head>\n<body>\n<div class="page">\n' + head + '\n<ol class="problems">\n' + items + '\n</ol>\n' + foot + '\n' + key + '\n</div>\n</body>\n</html>\n';
   }
 
