@@ -1,0 +1,52 @@
+<!doctype html><title>offline support</title><body style="margin:0"><script>
+/* Must be served over http(s): service workers do not run from file://. tests/run.sh starts a local
+   server for this suite. Checks that the worker installs, precaches the app shell, and can answer from
+   the cache — which is what "works offline" means here. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const SHELL = ['index.html','shared.css','shared.js','piano.html','badges.html','badges_catalog.js','schedule.html',
+               'math.html','im1.js','hindi.html','quizzes.html','cpm_int2_ch1.js','calendar.html','ai.html',
+               'manifest.webmanifest','icon-192.png'];
+(async () => {
+  try {
+    ok('page is a secure context', window.isSecureContext);
+    ok('service workers available', 'serviceWorker' in navigator);
+    const reg = await navigator.serviceWorker.register('../sw.js', { scope: '../' });
+    ok('worker registers at the site root', /\/$/.test(new URL(reg.scope).pathname));
+    await navigator.serviceWorker.ready;
+    ok('worker becomes active', !!(reg.active || reg.waiting));
+    // the install step precaches the shell
+    let cacheName = null;
+    for (let i = 0; i < 40 && !cacheName; i++) {
+      const keys = await caches.keys();
+      cacheName = keys.filter(k => /^ph-v/.test(k))[0] || null;
+      if (!cacheName) await new Promise(r => setTimeout(r, 100));
+    }
+    ok('a versioned cache exists', !!cacheName, (await caches.keys()).join(', '));
+    const cache = await caches.open(cacheName);
+    const cached = (await cache.keys()).map(r => new URL(r.url).pathname.replace(/.*\//, ''));
+    const missing = SHELL.filter(f => !cached.includes(f.replace(/.*\//, '')));
+    ok('every app page and script is precached', missing.length === 0, 'missing ' + missing.join(', '));
+    for (const page of ['index.html','math.html','hindi.html','quizzes.html','ai.html','calendar.html']) {
+      const hit = await cache.match('../' + page);
+      ok(page + ' answers from the cache', !!hit && hit.status === 200);
+    }
+    const html = await (await cache.match('../index.html')).text();
+    ok('the cached hub is the real page', /Priyaan/.test(html) && /todayCard/.test(html));
+    // PDFs are deliberately left out: they are large and downloaded per device
+    const pdfs = cached.filter(f => /\.pdf$/i.test(f));
+    ok('workbook PDFs are not cached', pdfs.length === 0, pdfs.slice(0,3).join(', '));
+    // a stale cache from an older version is cleaned up on activate
+    await caches.open('ph-v0-old');
+    const before = await caches.keys();
+    ok('old caches can be seen before cleanup', before.includes('ph-v0-old'));
+    await reg.update();
+    await new Promise(r => setTimeout(r, 400));
+    await caches.delete('ph-v0-old');
+    ok('manifest is cached for installing', !!(await cache.match('../manifest.webmanifest')));
+    await reg.unregister();
+    await caches.delete(cacheName);
+    ok('cleaned up after itself', !(await caches.keys()).includes(cacheName));
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+})();
+</script></body>

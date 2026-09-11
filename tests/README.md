@@ -29,6 +29,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `pianolog.html` | the printable piano practice log: the day grid, totals, the four-week window, notes and signature lines |
 | `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
 | `mobile.html` | every page at 390px and 320px: the document never scrolls sideways, and topbar buttons stay tappable |
+| `offline.html` | the service worker: registration, a versioned cache, the whole app shell precached, pages answering from cache, PDFs deliberately excluded (run over a local server via `tests/cdp.js`, since workers need a real origin and real time) |
 
 Notes for anyone extending these:
 

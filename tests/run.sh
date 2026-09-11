@@ -22,11 +22,27 @@ for page in index piano badges math quizzes hindi schedule calendar ai; do
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y mobile)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y mobile offline)
+
+# The offline suite needs a real origin: service workers do not run from file://.
+serve() {
+  PORT=8787
+  while lsof -i :$PORT >/dev/null 2>&1; do PORT=$((PORT+1)); done
+  python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+  SERVER_PID=$!
+  for _ in $(seq 1 50); do curl -sf "http://127.0.0.1:$PORT/shared.js" >/dev/null && break; done
+}
 for name in "${want[@]}"; do
   suite="tests/$name.html"
   [ -f "$suite" ] || { echo "▶ $name — no such suite"; fail=1; continue; }
-  "$CHROME" "${FLAGS[@]}" --virtual-time-budget=45000 --dump-dom "file://$ROOT/$suite" >/dev/null 2>"$TMP/$name.err"
+  if [ "$name" = "offline" ]; then
+    # real time, real origin: service workers need both
+    serve
+    CHROME="$CHROME" node tests/cdp.js "http://127.0.0.1:$PORT/$suite" 40000 "RESULTS" >"$TMP/$name.err" 2>&1
+    kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null
+  else
+    "$CHROME" "${FLAGS[@]}" --virtual-time-budget=45000 --dump-dom "file://$ROOT/$suite" >/dev/null 2>"$TMP/$name.err"
+  fi
   # each suite ends with "RESULTS <n> failed of <m>" — trust that over counting console lines, which
   # Chrome can drop when several runs are in flight.
   summary=$(grep -oE "RESULTS [0-9]+ failed of [0-9]+" "$TMP/$name.err" | tail -1)
