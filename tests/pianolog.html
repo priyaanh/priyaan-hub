@@ -1,0 +1,46 @@
+<!doctype html><title>piano log test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../piano.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+let phase=0, snap=null;
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  if (phase===0) {
+    phase=1; snap = w.localStorage.getItem('ph.piano.v1');
+    const T=w.PH.todayISO(), d1=w.PH.addDays(T,-1), d3=w.PH.addDays(T,-3), d40=w.PH.addDays(T,-40);
+    w.localStorage.setItem('ph.piano.v1', JSON.stringify({ version:1, settings:{dailyGoal:30},
+      pieces:[{id:'p1',name:'Study in C',group:'Trinity Grade 4',status:'learning',archived:false,createdAt:1},
+              {id:'p2',name:'Hanon No. 12',group:'Exercises',status:'learning',archived:false,createdAt:2},
+              {id:'p3',name:'Old piece',group:'Trinity Grade 3',status:'done',archived:true,createdAt:3}],
+      sessions:[{id:'s1',date:T,pieceId:'p1',minutes:20,note:'hands together at last',rating:4},
+                {id:'s2',date:T,pieceId:'p2',minutes:10,note:'',rating:3},
+                {id:'s3',date:d1,pieceId:'p1',minutes:25,note:'',rating:3},
+                {id:'s4',date:d3,pieceId:'p2',minutes:15,note:'metronome 80',rating:4},
+                {id:'s5',date:d40,pieceId:'p3',minutes:45,note:'too old to count',rating:5}] }));
+    w.location.reload(); return;
+  }
+  try {
+    const D = w.PHPianoDebug;
+    ok('debug hook available', !!D && typeof D.practiceLogHTML === 'function');
+    const html = D.practiceLogHTML(1);
+    ok('complete document', /^<!DOCTYPE html>/.test(html) && /<\/html>$/.test(html));
+    ok('names the student', /Priyaan Haldiya/.test(html));
+    ok('landscape page for a month of columns', /size:letter landscape/.test(html));
+    ok('rows for the pieces practised', /Study in C/.test(html) && /Hanon No\. 12/.test(html));
+    ok('leaves out pieces outside the window', !/Old piece/.test(html));
+    ok('per-piece totals', /class="tot">45</.test(html));
+    ok('daily total row', /class="sum"/.test(html) && /Minutes/.test(html));
+    ok('overall total and days practised', /70 minutes over 3 days/.test(html));
+    ok('weekly subtotals', /class="weeks"/.test(html) && /min<\/b>/.test(html));
+    ok('recent notes carried over', /hands together at last/.test(html) && /metronome 80/.test(html));
+    ok('signature lines for teacher and parent', /Teacher/.test(html) && /Parent/.test(html));
+    ok('self-contained', !/<script|https?:\/\//.test(html));
+    ok('button on the page', !!$('#btn-log'));
+    $('#btn-log').click();
+    await new Promise(r => setTimeout(r, 400));
+    const fr = d.getElementById('logFrame');
+    ok('print frame built', !!fr && /Piano practice log/.test(fr.srcdoc || ''));
+  } catch (e) { console.log('FAIL threw: ' + e.message); }
+  try { if (snap) w.localStorage.setItem('ph.piano.v1', snap); else w.localStorage.removeItem('ph.piano.v1'); } catch(e){}
+  console.log('RESULTS done');
+});
+</script></body>

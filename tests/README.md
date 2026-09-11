@@ -26,6 +26,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `quizprint.html` | printing a lesson quiz: diagrams, choice lists, answer key |
 | `badges.html` | the merit badge catalog, Trail to Eagle counting, filters, sorting, the workbook viewer |
 | `hindicards.html` | printable Hindi flashcards: sheet pagination, mirrored backs for duplex printing, cut lines |
+| `pianolog.html` | the printable piano practice log: the day grid, totals, the four-week window, notes and signature lines |
 
 Notes for anyone extending these:
 
