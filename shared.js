@@ -5,9 +5,22 @@ window.PH = (function () {
     try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; }
     catch (e) { return fallback; }
   }
+  var warnedFull = false;
   function save(key, val) {
     try { localStorage.setItem(key, JSON.stringify(val)); return true; }
-    catch (e) { console.warn('save failed', e); return false; }
+    catch (e) {
+      console.warn('save failed', e);
+      // A silent failure here loses the child's work without a word, so say it once per visit.
+      if (!warnedFull) {
+        warnedFull = true;
+        var full = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
+        setTimeout(function () {
+          toast(full ? 'This browser is out of space — back up on the hub page, then delete some old items'
+                     : 'Could not save: this browser is blocking storage (private window?)', 6000);
+        }, 0);
+      }
+      return false;
+    }
   }
   function todayISO(d) {
     d = d || new Date();

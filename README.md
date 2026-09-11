@@ -20,7 +20,8 @@ The hub page opens on a **Today** panel computed from the other apps' saved data
 
 - Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build.
 - Progress is saved in the browser's localStorage under keys named `ph.<app>.v1`. Each app also writes a short `summary` that the hub page shows on its card.
-- Data lives only in the browser you use. Use **Back up all data** on the hub page now and then, and **Restore** on a new device. API keys are deliberately left out of backups, so add those again per device.
+- Data lives only in the browser you use. Use **Back up all data** on the hub page now and then, and **Restore** on a new device. The footer says how long it has been, and nags in amber past a month. API keys are deliberately left out of backups, so add those again per device.
+- If the browser ever refuses to save (a full quota, or a private window), the page says so instead of losing the work quietly.
 - Works when opened directly from disk (`file://`) and when hosted on GitHub Pages.
 
 ## Math worksheets from the command line

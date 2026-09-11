@@ -6,7 +6,7 @@ const waitFor=async(cond,n)=>{for(let i=0;i<(n||40);i++){ if(cond()) return true
 let phase=0, snap={};
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
-  const KEYS=['ph.piano.v1','ph.schedule.v1','ph.calendar.v1','ph.hindi.v1','ph.math.v1','ph.quiz.v1','ph.badges.v1','ph.ai.key','ph.ai.key.openai'];
+  const KEYS=['ph.piano.v1','ph.schedule.v1','ph.calendar.v1','ph.hindi.v1','ph.math.v1','ph.quiz.v1','ph.badges.v1','ph.ai.key','ph.ai.key.openai','ph.meta.backupAt'];
   if (phase === 0) {
     phase = 1;
     KEYS.forEach(k => { snap[k] = w.localStorage.getItem(k); });
@@ -78,6 +78,26 @@ f.addEventListener('load', async () => {
     ok('backup EXCLUDES both API keys', !captured.text.includes('sk-ant-secret') && !captured.text.includes('sk-openai-secret')
         && !backup.data['ph.ai.key'] && !backup.data['ph.ai.key.openai']);
     ok('backup filename dated', /priyaan-hub-backup-\d{4}-\d{2}-\d{2}\.json/.test(captured.name));
+    ok('backup date remembered and shown', w.localStorage.getItem('ph.meta.backupAt') === w.PH.todayISO()
+        && /Backed up today/.test($('#backupAge').textContent));
+    // a stale backup is called out
+    w.localStorage.setItem('ph.meta.backupAt', w.PH.addDays(w.PH.todayISO(), -40));
+    w.PH_HUB.renderBackupAge();
+    ok('an old backup is flagged', /40 days ago/.test($('#backupAge').textContent) && $('#backupAge').classList.contains('stale'));
+    w.localStorage.removeItem('ph.meta.backupAt');
+    w.PH_HUB.renderBackupAge();
+    ok('never backed up is flagged', /Never backed up/.test($('#backupAge').textContent) && $('#backupAge').classList.contains('stale'));
+    // a full quota must not fail silently
+    const realSet = w.localStorage.setItem.bind(w.localStorage);
+    let toasted = '';
+    w.localStorage.setItem = () => { const e = new Error('full'); e.name = 'QuotaExceededError'; throw e; };
+    const okSave = w.PH.save('ph.test.quota', { a: 1 });
+    await new Promise(r => setTimeout(r, 50));
+    const toastEl = d.querySelector('.toast');
+    toasted = toastEl ? toastEl.textContent : '';
+    w.localStorage.setItem = realSet;
+    ok('save reports failure instead of returning true', okSave === false);
+    ok('a full browser tells the user', /out of space/.test(toasted));
     // a corrupt app key must not break the page
     w.localStorage.setItem('ph.piano.v1', '{not json');
   } catch (e) { console.log('FAIL threw: ' + e.message); }

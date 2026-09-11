@@ -47,6 +47,8 @@
   .app .summary .headline { font-weight: 700; color: var(--accent); }
   .app .summary .sub { font-size: .825rem; color: var(--muted); }
   .app .summary.none .headline { color: var(--muted); font-weight: 600; }
+  footer .age { font-size: .82rem; color: var(--muted); }
+  footer .age.stale { color: var(--warn); font-weight: 600; }
   .app .key { position: absolute; top: .7rem; right: .85rem; font-size: .7rem; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 5px; padding: .05rem .32rem; }
   .app:hover .key { color: var(--accent); }
   .app .open { align-self: flex-end; font-size: .85rem; font-weight: 700; color: var(--accent); }
@@ -135,7 +137,7 @@
   </section>
 
   <footer>
-    <span>Everything is saved in this browser only. Back up now and then — API keys are never included.</span>
+    <span>Everything is saved in this browser only. Back up now and then — API keys are never included.<br><span id="backupAge" class="age"></span></span>
     <span class="spacer"></span>
     <button class="btn btn-sm" id="backup">⬇ Back up all data</button>
     <button class="btn btn-sm" id="restore">⬆ Restore</button>
@@ -290,6 +292,8 @@
     }
   });
 
+  renderBackupAge();
+
   // 1-9 opens the matching app; ? names them.
   document.addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -300,7 +304,23 @@
     if (e.key === '?') PH.toast(cards.slice(0, 9).map((c, i) => (i + 1) + ' ' + c.querySelector('h2').textContent).join(' · '), 5000);
   });
 
+  /* Hook for tests/hub.html, which drives these directly. Exposes no data the page does not already show. */
+  window.PH_HUB = { renderBackupAge: renderBackupAge, tiles: function () { return tiles; } };
+
   // Backup / restore every ph.* key.
+  const BACKUP_AT = 'ph.meta.backupAt';
+  function renderBackupAge() {
+    const el = document.getElementById('backupAge'); if (!el) return;
+    let at = null; try { at = localStorage.getItem(BACKUP_AT); } catch (e) {}
+    const anyData = (() => { try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i);
+      if (k && k.startsWith('ph.') && k !== BACKUP_AT && !/^ph\.ai\.key/.test(k)) return true; } } catch (e) {} return false; })();
+    if (!anyData) { el.textContent = ''; return; }
+    if (!at) { el.textContent = 'Never backed up.'; el.className = 'age stale'; return; }
+    const days = PH.daysBetween(at, PH.todayISO());
+    el.textContent = days === 0 ? 'Backed up today.' : 'Last backup ' + days + ' day' + (days === 1 ? '' : 's') + ' ago.';
+    el.className = 'age' + (days > 30 ? ' stale' : '');
+  }
+
   const SECRET = /^ph\.ai\.key/;                          // API keys stay on the device — never in a backup file
   document.getElementById('backup').addEventListener('click', () => {
     const out = {};
@@ -309,6 +329,8 @@
       if (k && k.startsWith('ph.') && !SECRET.test(k)) out[k] = localStorage.getItem(k);
     }
     PH.download('priyaan-hub-backup-' + PH.todayISO() + '.json', JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(), data: out }, null, 2));
+    try { localStorage.setItem(BACKUP_AT, PH.todayISO()); } catch (e) {}
+    renderBackupAge();
     PH.toast('Backup downloaded (without API keys)');
   });
   document.getElementById('restore').addEventListener('click', async () => {
