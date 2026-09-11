@@ -200,7 +200,7 @@ details[open] summary { margin-bottom: .6rem; }
   function labelFor(src) { const s = String(src); return s.includes('@') ? s.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Calendar'; }
   function blank() {
     return { version: 2, settings: { calendars: [mkCal(DEFAULT_CAL, 'Priyaan', PALETTE[0], true)], mode: 'WEEK', tz: localTz, clientId: '', taskList: '' },
-      tasksCache: null, summary: { headline: '', sub: '' } };
+      tasksCache: null, eventsCache: null, summary: { headline: '', sub: '' } };
   }
   function normalize(raw) {
     const s = blank();
@@ -224,6 +224,12 @@ details[open] summary { margin-bottom: .6rem; }
     if (typeof st.tz === 'string' && st.tz.trim()) s.settings.tz = st.tz.trim();
     if (typeof st.clientId === 'string') s.settings.clientId = st.clientId.trim();
     if (typeof st.taskList === 'string') s.settings.taskList = st.taskList;
+    if (isObj(raw.eventsCache) && Array.isArray(raw.eventsCache.items)) {
+      s.eventsCache = { at: Number(raw.eventsCache.at) || 0,
+        items: raw.eventsCache.items.filter(isObj).map(e => ({ title: String(e.title || ''), start: String(e.start || ''),
+          end: String(e.end || ''), allDay: !!e.allDay, date: String(e.date || ''), calName: String(e.calName || ''),
+          color: /^#[0-9a-f]{6}$/i.test(e.color) ? e.color : '#4f6bed' })).filter(e => e.start && e.date) };
+    }
     if (isObj(raw.tasksCache) && Array.isArray(raw.tasksCache.items)) {
       s.tasksCache = { listId: String(raw.tasksCache.listId || ''), listTitle: String(raw.tasksCache.listTitle || ''),
         at: Number(raw.tasksCache.at) || 0,
@@ -372,7 +378,10 @@ details[open] summary { margin-bottom: .6rem; }
       });
     }
     all.sort((a, b) => a.start.localeCompare(b.start));
-    events = all; save(); renderUpcoming();
+    events = all;
+    state.eventsCache = { at: Date.now(), items: all.slice(0, 40).map(e => ({ title: e.title, start: e.start, end: e.end || '',
+      allDay: !!e.allDay, date: e.date, calName: e.calName, color: e.color })) };
+    save(); renderUpcoming();
     $('#upStatus').textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + (problems.length ? ' · could not read ' + problems.join(', ') : '');
     $('#signin').hidden = true; $('#refresh').hidden = false; $('#signout').hidden = false;
   }
@@ -488,7 +497,7 @@ details[open] summary { margin-bottom: .6rem; }
   }
   function signOut() {
     if (token && window.google && google.accounts && google.accounts.oauth2) { try { google.accounts.oauth2.revoke(token, () => {}); } catch (e) {} }
-    token = null; events = null; tasks = null; taskLists = null; save(); renderTasks();
+    token = null; events = null; tasks = null; taskLists = null; save(); renderTasks();   // caches stay for the hub
     $('#upcoming').innerHTML = '<div class="empty">Signed out. The calendar above still works.</div>';
     $('#upStatus').textContent = ''; $('#signin').hidden = false; $('#refresh').hidden = true; $('#signout').hidden = true;
   }

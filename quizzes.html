@@ -245,6 +245,70 @@ main > * + * { margin-top: 1rem; }
       items, i: 0, sel: null, checked: false, finished: false, given: [], started: Date.now(), timer: null, right: 0, seconds: 0 };
   }
 
+  /* ===================== Printable paper quiz ===================== */
+  function quizSheetHTML(q) {
+    const l = byId[q.lesson], title = l ? l.id + ' · ' + l.title : 'Mixed review';
+    const n = q.items.length;
+    const rows = q.items.map((it, i) =>
+      '<li class="prob"><span class="num">' + (i + 1) + '</span><div class="body">' +
+        (it.svg ? '<div class="fig">' + it.svg + '</div>' : '') +
+        '<div class="t">' + it.q + '</div>' +
+        (it.type === 'mc'
+          ? '<ol class="choices">' + it.choices.map(c => '<li>' + esc(c) + '</li>').join('') + '</ol>'
+          : '<div class="work"></div>') +
+      '</div></li>').join('');
+    const key = q.items.map((it, i) =>
+      '<li><span class="n">' + (i + 1) + '</span><span class="a">' +
+        (it.type === 'mc' ? String.fromCharCode(65 + it.answer) + ') ' + esc(it.choices[it.answer])
+                          : esc(String(it.answer)) + (it.unit ? ' ' + esc(it.unit) : '')) +
+        (it.explain ? '<span class="w">' + esc(it.explain) + '</span>' : '') + '</span></li>').join('');
+    const css = [
+      '@page{size:letter;margin:.5in .55in .55in}*{box-sizing:border-box}',
+      'body{margin:0;color:#14161c;font:11pt/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+      '.page{max-width:8.5in;margin:0 auto;padding:.45in .5in}',
+      '@media screen{body{background:#e9ebf0}.page{background:#fff;box-shadow:0 2px 18px rgba(16,24,40,.18);margin:22px auto;min-height:11in;border-radius:3px}}',
+      'header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2.5px solid #14161c;padding-bottom:7px}',
+      'h1{font-size:17pt;margin:0;letter-spacing:-.01em;line-height:1.15}',
+      '.kicker{font-size:8.5pt;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#6b7280;margin-bottom:3px}',
+      '.meta{font-size:8.5pt;color:#6b7280;text-align:right;line-height:1.5;white-space:nowrap}',
+      '.idline{display:flex;gap:22px;margin:11px 0 16px;font-size:10.5pt;color:#374151}',
+      '.idline span{display:flex;gap:6px;align-items:baseline;flex:1}.idline i{flex:1;border-bottom:1px solid #9aa0ab;min-width:1.3in;font-style:normal}',
+      'ol.problems{list-style:none;margin:0;padding:0;columns:2;column-gap:26px}',
+      'li.prob{break-inside:avoid;page-break-inside:avoid;display:flex;gap:9px;margin:0 0 14px}',
+      '.num{flex:none;width:19px;height:19px;border-radius:50%;background:#14161c;color:#fff;font-size:9.5pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}',
+      '.body{flex:1;min-width:0}.t{overflow-wrap:anywhere}',
+      '.fig{margin:0 0 6px}.fig svg{max-width:100%;height:auto;color:#14161c}',
+      '.work{height:1in;border:1px dashed #c3c8d2;border-radius:5px;margin-top:6px}',
+      'ol.choices{list-style:upper-alpha;margin:6px 0 0 1.15em;padding:0;font-size:10pt;color:#374151}ol.choices li{margin:1.5px 0;break-inside:avoid}',
+      '.key{page-break-before:always;break-before:page;padding-top:.15in}',
+      '.key h2{font-size:12.5pt;margin:0 0 8px;border-bottom:1.5px solid #14161c;padding-bottom:4px}',
+      '.key ol{list-style:none;margin:0;padding:0;columns:2;column-gap:22px;font-size:9.5pt}',
+      '.key li{break-inside:avoid;display:flex;gap:7px;margin:0 0 8px;align-items:baseline}',
+      '.key .n{flex:none;width:16px;height:16px;border-radius:50%;border:1px solid #9aa0ab;color:#4b5563;font-size:8pt;font-weight:700;display:flex;align-items:center;justify-content:center}',
+      '.key .a{flex:1;font-weight:600;overflow-wrap:anywhere}.key .w{display:block;font-weight:400;color:#6b7280;font-size:8.8pt;margin-top:2px}',
+      'footer{margin-top:16px;border-top:1px solid #d5d9e0;padding-top:5px;font-size:8pt;color:#8b919c;display:flex;justify-content:space-between}',
+      'sup{font-size:.72em;line-height:0}'
+    ].join('');
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>' + css + '</style></head><body><div class="page">' +
+      '<header><div><div class="kicker">' + esc(BANK.book || 'Core Connections Integrated II') + '</div><h1>' + esc(title) + '</h1></div>' +
+      '<div class="meta">' + n + ' questions<br>seed ' + q.seed + '</div></header>' +
+      '<div class="idline"><span>Name <i></i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
+      '<ol class="problems">' + rows + '</ol>' +
+      '<footer><span>Chapter ' + esc(BANK.chapter || 1) + ' · ' + esc(BANK.title || '') + '</span><span>Priyaan\'s Hub</span></footer>' +
+      '<section class="key"><h2>Answer key — ' + esc(title) + '</h2><ol>' + key + '</ol>' +
+      '<footer><span>' + esc(title) + ' · answer key</span><span>Priyaan\'s Hub</span></footer></section></div></body></html>';
+  }
+  function printQuiz(lessonId) {
+    const q = buildQuiz({ lesson: lessonId, seed: (Math.random() * 1e9) >>> 0 });
+    if (!q.items.length) { PH.toast('Could not build that quiz'); return; }
+    let frame = document.getElementById('printFrame');
+    if (!frame) { frame = document.createElement('iframe'); frame.id = 'printFrame'; frame.title = 'Printable quiz';
+      frame.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden'; document.body.appendChild(frame); }
+    frame.srcdoc = quizSheetHTML(q);
+    frame.onload = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { PH.toast('Could not open the print dialog'); } };
+    PH.toast('Printing ' + (byId[lessonId] ? lessonId : 'quiz') + ' — answers are on the last page');
+  }
+
   /* ===================== Answer checking ===================== */
   function normNum(s) {
     s = String(s).trim().toLowerCase().replace(/^[a-z]\s*=\s*/, '').replace(/[−–]/g, '-').replace(/,/g, '');
@@ -305,6 +369,7 @@ main > * + * { margin-top: 1rem; }
         '<div class="lt"><b>' + esc(l.title) + '</b><div class="focus" title="' + esc((l.focus || []).join(' · ')) + '">' + esc((l.focus || []).join(' · ')) + '</div></div>' +
         pill + '<span class="att">' + (n ? n + (n === 1 ? ' attempt' : ' attempts') : '') + '</span>' +
         '<button type="button" class="btn btn-sm btn-primary" data-start="' + esc(l.id) + '" aria-label="Start quiz ' + esc(l.id) + '">' + (n ? 'Quiz again' : 'Start quiz') + '</button>' +
+        '<button type="button" class="btn btn-sm btn-ghost" data-printq="' + esc(l.id) + '" title="Print this lesson as a paper quiz" aria-label="Print quiz ' + esc(l.id) + '">🖨️</button>' +
         '</div>';
     }).join('')).join('');
     const tried = attemptedLessonIds();
@@ -489,6 +554,7 @@ main > * + * { margin-top: 1rem; }
   document.querySelector('main').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.start) { startQuiz({ lesson: b.dataset.start, seed: newSeed() }); return; }
+    if (b.dataset.printq) { printQuiz(b.dataset.printq); return; }
     if (b.id === 'btn-mix') { const ids = attemptedLessonIds(); startQuiz({ lesson: MIX, seed: newSeed(), lessons: ids.length ? ids : LESSONS.map(l => l.id) }); return; }
     if (b.classList.contains('choice')) { select(Number(b.dataset.i)); return; }
     if (b.id === 'q-check') { check(); return; }
@@ -530,6 +596,6 @@ main > * + * { margin-top: 1rem; }
   showView('lessons');
   renderAll();
   // Exposed for automated checks only.
-  window.PHQuizDebug = { migrate, checkNum, checkText, canonPoly, buildQuiz, getQuiz: () => quiz, getState: () => state };
+  window.PHQuizDebug = { migrate, checkNum, checkText, canonPoly, buildQuiz, quizSheetHTML, printQuiz, getQuiz: () => quiz, getState: () => state };
 })();
 </script></body></html>
