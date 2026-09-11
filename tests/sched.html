@@ -1,0 +1,45 @@
+<!doctype html><title>schedule tasks test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1400px;border:0'; f.src='../schedule.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+let W=null; const tick=()=>new Promise(r=>{const fr=new W.FileReader(); fr.onloadend=r; fr.readAsText(new W.Blob(['x']));});
+let phase=0, snap=null;
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  if (phase===0) {
+    phase=1; snap = w.localStorage.getItem('ph.calendar.v1');
+    ok('no strip when there is no calendar data', $('#gtasks').hidden);
+    const T=w.PH.todayISO(), Y=w.PH.addDays(T,-1), TOM=w.PH.addDays(T,1);
+    w.localStorage.setItem('ph.calendar.v1', JSON.stringify({ version:2, settings:{calendars:[],mode:'WEEK',tz:'x',clientId:'',taskList:'L1'},
+      tasksCache:{ listId:'L1', listTitle:'My Tasks', at:Date.now(), items:[
+        {id:'1',title:'Late worksheet',due:Y+'T00:00:00.000Z',status:'needsAction'},
+        {id:'2',title:'Permission slip',due:T+'T00:00:00.000Z',status:'needsAction'},
+        {id:'3',title:'Science notes',due:T+'T00:00:00.000Z',status:'needsAction'},
+        {id:'4',title:'Book report',due:T+'T00:00:00.000Z',status:'needsAction'},
+        {id:'5',title:'Fifth thing',due:T+'T00:00:00.000Z',status:'needsAction'},
+        {id:'6',title:'Next week thing',due:TOM+'T00:00:00.000Z',status:'needsAction'},
+        {id:'7',title:'Finished thing',due:Y+'T00:00:00.000Z',status:'completed'}]}, summary:{} }));
+    w.location.reload(); return;
+  }
+  try {
+    ok('strip appears when tasks are due', !$('#gtasks').hidden);
+    const txt = $('#gtasks').textContent;
+    ok('shows overdue first and flags it', $$('#gtasks .gt')[0].classList.contains('late') && /Late worksheet/.test(txt));
+    ok('shows tasks due today', /Permission slip/.test(txt));
+    ok('hides tasks due later', !/Next week thing/.test(txt));
+    ok('hides completed tasks', !/Finished thing/.test(txt));
+    ok('caps the list and counts the rest', /\+1 more/.test(txt) && $$('#gtasks .gt').length === 5);
+    ok('links to the tasks page', !!$('#gtasks a[href="calendar.html"]'));
+    ok('strip is hidden when printing', $('#gtasks').classList.contains('no-print'));
+    ok('strip sits inside the week card', !!$('.week-card #gtasks'));
+    // a past/future week should not show today's tasks
+    $('#btnNext').click(); await tick();
+    ok('hidden when looking at another week', $('#gtasks').hidden);
+    $('#btnToday').click(); await tick();
+    ok('back this week, strip returns', !$('#gtasks').hidden);
+    // the plan itself still works
+    ok('week grid still renders', $$('.day-col').length === 7);
+  } catch (e) { console.log('FAIL threw: ' + e.message); }
+  try { if (snap) w.localStorage.setItem('ph.calendar.v1', snap); else w.localStorage.removeItem('ph.calendar.v1'); } catch(e){}
+  console.log('RESULTS done');
+});
+</script></body>

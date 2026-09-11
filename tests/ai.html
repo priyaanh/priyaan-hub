@@ -1,0 +1,114 @@
+<!doctype html><title>ai test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../ai.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);}; const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let W=null; const tick=()=>new Promise(r=>{const fr=new W.FileReader(); fr.onloadend=r; fr.readAsText(new W.Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||40);i++){ if(cond()) return true; await tick(); } return cond();};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  let snapA=null, snapK=null;
+  try { snapA=w.localStorage.getItem('ph.ai.v1'); snapK=w.localStorage.getItem('ph.ai.key'); var snapK2=w.localStorage.getItem('ph.ai.key.openai'); w.localStorage.removeItem('ph.ai.v1'); w.localStorage.removeItem('ph.ai.key'); w.localStorage.removeItem('ph.ai.key.openai'); } catch(e){}
+  let captured = null;
+  w.fetch = async (url, opts) => {                       // stand in for the Anthropic API
+    captured = { url, opts, body: JSON.parse(opts.body) };
+    return { ok: true, status: 200, json: async () => ({
+      stop_reason: 'end_turn', usage: { input_tokens: 12000, output_tokens: 3000 },
+      content: [{ type: 'text', text: JSON.stringify({ title: 'Unit 3 · Equations', source_summary: 'Solving two-step equations.',
+        problems: [
+          { question: 'Solve for x: 3x + 4 = 19', choices: ['x = 5','x = 6','x = 7','x = 4'], answer: 'x = 5', work: '3x = 15, x = 5', topic: 'Two-step equations' },
+          { question: 'Solve for x: 2x - 7 = 9', choices: ['x = 8','x = 1','x = 16','x = 5'], answer: 'x = 8', work: '2x = 16, x = 8', topic: 'Two-step equations' }
+        ] }) }] }) };
+  };
+  try {
+    $('[data-prov="claude"]').click(); await tick();   // free mode is the default now; this suite covers the API paths
+    ok('key state starts empty', /No Claude key/.test($('#keyState').textContent));
+    ok('generate disabled with no file', $('#genBtn').disabled);
+    // save a key
+    $('#keyIn').value = 'sk-ant-test123'; $('#saveKey').click(); await sleep(50);
+    ok('key saved + masked', w.localStorage.getItem('ph.ai.key') === 'sk-ant-test123' && /^•+$/.test($('#keyIn').value));
+    ok('key state shows saved', /Claude key saved/.test($('#keyState').textContent));
+    // feed a fake PDF through the real file path
+    const bytes = new w.Uint8Array([0x25,0x50,0x44,0x46,0x2d,0x31,0x2e,0x34,10,37,37,69,79,70]);   // same realm as the page, or FileReader never fires
+    const file = new w.File([bytes], 'Chapter 3.pdf', { type: 'application/pdf' });
+    const dt = new w.DataTransfer(); dt.items.add(file);
+    const inp = $('#fileIn'); inp.files = dt.files; inp.dispatchEvent(new w.Event('change', { bubbles: true }));
+    await waitFor(() => !$('#fileBox').hidden);
+    ok('file shown after pick', !$('#fileBox').hidden && $('#fileBox').textContent.includes('Chapter 3.pdf'));
+    ok('generate enabled with a file', !$('#genBtn').disabled);
+    // quiz mode, 5 questions
+    $('[data-kind="quiz"]').click(); $('[data-count="5"]').click(); await sleep(50);
+    ok('kind + count selected', $('[data-kind="quiz"]').classList.contains('on') && $('[data-count="5"]').classList.contains('on'));
+    $('#focusIn').value = 'word problems';
+    $('#genBtn').click(); await waitFor(() => !$('#outCard').hidden);
+    // check the request we would send
+    const b = captured.body;
+    ok('posts to the Anthropic messages API', captured.url === 'https://api.anthropic.com/v1/messages');
+    ok('sends api key + version headers', captured.opts.headers['x-api-key'] === 'sk-ant-test123' && captured.opts.headers['anthropic-version'] === '2023-06-01');
+    ok('sends browser-access header', captured.opts.headers['anthropic-dangerous-direct-browser-access'] === 'true');
+    ok('model is claude-opus-5', b.model === 'claude-opus-5');
+    ok('asks for json_schema output', b.output_config.format.type === 'json_schema' && b.output_config.format.schema.required.includes('problems'));
+    ok('no deprecated thinking/budget_tokens', !b.thinking && !b.budget_tokens);
+    const content = b.messages[0].content;
+    ok('pdf sent as a base64 document block first', content[0].type === 'document' && content[0].source.media_type === 'application/pdf' && content[0].source.data.length > 0);
+    ok('prompt carries count, kind and focus', /5 NEW practice quiz questions/.test(content[1].text) && /word problems/.test(content[1].text));
+    // results
+    ok('result card shown', !$('#outCard').hidden && $('#outMeta').textContent.includes('Quiz'));
+    ok('2 problems rendered', $$('.prob').length === 2);
+    ok('choices rendered as buttons', $$('.choice').length === 8);
+    ok('cost reported', /cost about \$0\.1[0-9]/.test($('#genNote').textContent));
+    ok('saved to the set list', $$('[data-open]').length === 1);
+    // answer one right, one wrong
+    $$('[data-pick="0:0"]')[0].click(); await sleep(60);
+    ok('right answer marked', $$('.prob')[0].classList.contains('right') && $$('.choice')[0].classList.contains('ok'));
+    $$('[data-pick="1:1"]')[0].click(); await sleep(60);
+    ok('wrong answer marked and truth shown', $$('.prob')[1].classList.contains('wrong') && $$('.prob')[1].textContent.includes('x = 8'));
+    $('#finishBtn').click(); await sleep(60);
+    const saved = JSON.parse(w.localStorage.getItem('ph.ai.v1'));
+    ok('score saved 1/2', saved.sets[0].score.right === 1 && saved.sets[0].score.total === 2);
+    ok('hub summary set', /1 set from PDFs/.test(saved.summary.headline));
+    ok('api key NOT in exported state', !JSON.stringify(saved).includes('sk-ant-test123'));
+    // ---- ChatGPT (OpenAI) provider ----
+    let oaCap = null;
+    w.fetch = async (url, opts) => { oaCap = { url, opts, body: JSON.parse(opts.body) };
+      return { ok: true, status: 200, json: async () => ({ usage: { input_tokens: 9000, output_tokens: 2000 },
+        output: [{ content: [{ type: 'output_text', text: JSON.stringify({ title: 'Ch 4 practice', source_summary: 'Slope.',
+          problems: [{ question: 'Find the slope through (0,0) and (2,6)', choices: [], answer: '3', work: '6/2 = 3', topic: 'Slope' }] }) }] }] }) };
+    };
+    $('[data-prov="openai"]').click(); await tick();
+    ok('provider tab switches to ChatGPT', $('#keyLabel').textContent === 'OpenAI API key' && /No ChatGPT key/.test($('#keyState').textContent));
+    ok('model list is OpenAI models', Array.from($('#modelIn').options).every(o => /^gpt-/.test(o.value)));
+    $('#keyIn').value = 'sk-openai-test'; $('#saveKey').click(); await tick();
+    ok('separate key per provider', w.localStorage.getItem('ph.ai.key.openai') === 'sk-openai-test' && w.localStorage.getItem('ph.ai.key') === 'sk-ant-test123');
+    $('[data-kind="worksheet"]').click();
+    $('#genBtn').click(); await waitFor(() => !!oaCap && /Ch 4 practice/.test($('#outSummary').textContent + $('#saved').textContent), 60);
+    ok('posts to the OpenAI responses API', oaCap.url === 'https://api.openai.com/v1/responses');
+    ok('bearer auth, no anthropic headers', oaCap.opts.headers.Authorization === 'Bearer sk-openai-test' && !oaCap.opts.headers['x-api-key']);
+    ok('default OpenAI model used', oaCap.body.model === 'gpt-5.6-terra');
+    ok('pdf sent as input_file data url', oaCap.body.input[0].content[0].type === 'input_file' && oaCap.body.input[0].content[0].file_data.startsWith('data:application/pdf;base64,'));
+    ok('strict json_schema requested', oaCap.body.text.format.type === 'json_schema' && oaCap.body.text.format.strict === true && oaCap.body.text.format.name === 'practice_set');
+    ok('worksheet problems parsed from output array', $$('.prob').length === 1 && $('#plist').textContent.includes('Find the slope'));
+    ok('cost uses the OpenAI price', /cost about \$?\d/.test($('#genNote').textContent) && /ChatGPT/.test($('#genNote').textContent));
+    ok('saved set records which AI wrote it', /by ChatGPT/.test($('#saved').textContent));
+    // switching back keeps the Claude key
+    $('[data-prov="claude"]').click(); await tick();
+    ok('switching back restores the Claude key', /Claude key saved/.test($('#keyState').textContent));
+    $('[data-prov="openai"]').click(); await tick();
+    // error handling
+    w.fetch = async () => ({ ok: false, status: 401, json: async () => ({ error: { message: 'invalid api key' } }) });
+    $('#genBtn').click(); await waitFor(() => /⚠️/.test($('#genNote').textContent), 60);
+    ok('401 shows a friendly message', /API key was not accepted/.test($('#genNote').textContent));
+    w.fetch = async () => ({ ok: true, status: 200, json: async () => ({ output: [{ content: [{ type: 'refusal', refusal: 'no' }] }] }) });
+    $('#genBtn').click(); await waitFor(() => /⚠️/.test($('#genNote').textContent), 60);
+    ok('OpenAI refusal handled', /declined/.test($('#genNote').textContent));
+    $('[data-prov="claude"]').click(); await tick();
+    w.fetch = async () => ({ ok: true, status: 200, json: async () => ({ stop_reason: 'refusal', content: [] }) });
+    $('#genBtn').click(); await waitFor(() => /⚠️/.test($('#genNote').textContent), 60);
+    ok('Claude refusal handled', /declined/.test($('#genNote').textContent));
+    w.fetch = async () => { throw new Error('network down'); };
+    $('#genBtn').click(); await waitFor(() => /⚠️/.test($('#genNote').textContent), 60);
+    ok('network error handled', /Could not reach|offline/.test($('#genNote').textContent));
+  } catch (e) { R.push('FAIL threw: ' + e.message); }
+  try { if (snapA) w.localStorage.setItem('ph.ai.v1', snapA); else w.localStorage.removeItem('ph.ai.v1');
+        if (snapK) w.localStorage.setItem('ph.ai.key', snapK); else w.localStorage.removeItem('ph.ai.key'); w.localStorage.removeItem('ph.ai.key.openai'); } catch(e){}
+  console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
+});
+</script></body>

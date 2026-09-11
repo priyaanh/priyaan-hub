@@ -1,0 +1,86 @@
+<!doctype html><title>hub test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1400px;border:0'; f.src='../index.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+let W=null; const tick=()=>new Promise(r=>{const fr=new W.FileReader(); fr.onloadend=r; fr.readAsText(new W.Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||40);i++){ if(cond()) return true; await tick(); } return cond();};
+let phase=0, snap={};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const KEYS=['ph.piano.v1','ph.schedule.v1','ph.calendar.v1','ph.hindi.v1','ph.math.v1','ph.quiz.v1','ph.badges.v1','ph.ai.key','ph.ai.key.openai'];
+  if (phase === 0) {
+    phase = 1;
+    KEYS.forEach(k => { snap[k] = w.localStorage.getItem(k); });
+    ok('today panel hidden with no data', $('#todayCard').hidden);
+    const T = w.PH.todayISO(), Y = w.PH.addDays(T,-1), D2 = w.PH.addDays(T,-2), TOM = w.PH.addDays(T,1);
+    const dow = new Date(T + 'T00:00:00').getDay();
+    w.localStorage.setItem('ph.piano.v1', JSON.stringify({ version:1, pieces:[], settings:{dailyGoal:30},
+      sessions:[{date:T,minutes:12},{date:Y,minutes:35},{date:D2,minutes:30}] }));
+    w.localStorage.setItem('ph.schedule.v1', JSON.stringify({ version:1,
+      tasks:[{id:'a',name:'Piano practice',cat:'piano',days:[dow],time:'17:00',minutes:30,active:true,order:0},
+             {id:'b',name:'Hindi reading',cat:'hindi',days:[dow],time:'19:30',minutes:20,active:true,order:1},
+             {id:'c',name:'Scouts',cat:'scouts',days:[(dow+1)%7],time:'19:00',minutes:90,active:true,order:2}],
+      checks:{ [T]: { a:true } }, extras:{}, dayNotes:{} }));
+    w.localStorage.setItem('ph.calendar.v1', JSON.stringify({ version:2, settings:{calendars:[],mode:'WEEK',tz:'America/Los_Angeles',clientId:'',taskList:'L1'},
+      tasksCache:{ listId:'L1', listTitle:'My Tasks', at:Date.now(), items:[
+        {id:'1',title:'Late worksheet',due:Y+'T00:00:00.000Z',status:'needsAction'},
+        {id:'2',title:'Permission slip',due:T+'T00:00:00.000Z',status:'needsAction'},
+        {id:'3',title:'Later thing',due:TOM+'T00:00:00.000Z',status:'needsAction'},
+        {id:'4',title:'Done thing',due:T+'T00:00:00.000Z',status:'completed'}]},
+      eventsCache:{ at:Date.now(), items:[
+        {title:'Dentist',      start:T+'T09:00:00', end:T+'T09:45:00', allDay:false, date:T, calName:'Priyaan', color:'#d64292'},
+        {title:'Scouts troop meeting', start:T+'T23:30:00', end:T+'T23:59:00', allDay:false, date:T, calName:'Priyaan', color:'#2f8f4e'},
+        {title:'Someone else tomorrow', start:TOM+'T10:00:00', end:'', allDay:false, date:TOM, calName:'Priyaan', color:'#4f6bed'}]},
+      summary:{} }));
+    w.localStorage.setItem('ph.hindi.v1', JSON.stringify({ version:1, days:{ [T]:1, [Y]:1 },
+      progress:{ 'c6-01:सिंधु':{box:1,due:T,last:T}, 'c6-01:नत':{box:0,due:Y,last:Y}, 'c6-02:गोल':{box:3,due:TOM,last:T} }, quizzes:[], custom:[], settings:{} }));
+    w.localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, attempts:[{id:'x',date:T,lesson:'1.3.1',right:8,total:10,kind:'full',ts:Date.now()}], settings:{}, summary:{} }));
+    w.localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, history:[{id:'m',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:9,total:10}}], settings:{}, summary:{} }));
+    w.localStorage.setItem('ph.badges.v1', JSON.stringify({ version:1, done:{ 'kayaking:1a':{date:T,by:''}, 'kayaking:1b':{date:Y,by:''}, 'canoeing:2':{date:w.PH.addDays(T,-30),by:''} }, notes:{}, counselors:{}, targetDates:{}, custom:[], hidden:[], catalog:{}, summary:{} }));
+    w.localStorage.setItem('ph.ai.key', 'sk-ant-secret');
+    w.localStorage.setItem('ph.ai.key.openai', 'sk-openai-secret');
+    w.location.reload(); return;
+  }
+  const restore = () => { Object.keys(snap).forEach(k => { if (snap[k] == null) w.localStorage.removeItem(k); else w.localStorage.setItem(k, snap[k]); }); };
+  if (phase === 2) {
+    ok('page survives a corrupt app key', !$('#todayCard').hidden && $$('.tile').length === 6);
+    ok('the other tiles still work', /1 of 2/.test($('#tiles').textContent) && /17 \/ 20/.test($('#tiles').textContent));
+    restore();
+    console.log('RESULTS done');
+    return;
+  }
+  try {
+    ok('today panel appears with data', !$('#todayCard').hidden);
+    const txt = $('#tiles').textContent;
+    ok('7 tiles rendered', $$('.tile').length === 7);
+    const calTile = $('[data-tile="calendar"]');
+    ok('calendar tile counts today only', /2 events/.test(calTile.textContent));
+    ok('calendar tile names the next one still to come', /Scouts troop meeting/.test(calTile.textContent));
+    ok('number badges on the first nine cards', $$('.apps .app .key').length === Math.min(9, $$('.apps .app').length)
+        && $$('.apps .app .key')[0].textContent === '1');
+    ok('piano tile shows minutes vs goal', /12 \/ 30 min/.test(txt) && /Keep going/.test(txt));
+    ok('piano bar at 40%', $('[data-tile="piano"] .bar i').style.width === '40%');
+    ok('plan tile counts today only', /1 of 2/.test(txt));
+    ok('next up names the unchecked item with its time', /Hindi reading/.test($('#nextUp').textContent) && /19:30/.test($('#nextUp').textContent) && !$('#nextUp').hidden);
+    ok('tasks tile counts overdue + today, not tomorrow', /2 due/.test(txt) && /1 overdue/.test(txt));
+    ok('tasks tile flagged late', $('[data-tile="tasks"]').classList.contains('late'));
+    ok('hindi tile counts due cards', /2 due/.test($('[data-tile="hindi"]').textContent) && /2 reviewed today/.test($('[data-tile="hindi"]').textContent));
+    ok('maths tile adds quiz + worksheet scores', /17 \/ 20/.test(txt) && /practised today/.test(txt));
+    ok('badges tile counts total and this week', /3 signed off/.test(txt) && /2 this week/.test(txt));
+    ok('piano streak chip shows 3 days', /3-day piano/.test($('#streaks').textContent));
+    ok('hindi streak chip shows 2 days', /2-day Hindi/.test($('#streaks').textContent));
+    ok('tiles link to their apps', $$('.tile').every(a => /\.html$/.test(a.getAttribute('href'))));
+    // backup must not contain the API keys
+    let captured = null;
+    w.PH.download = (name, text) => { captured = { name, text }; };
+    $('#backup').click(); await waitFor(() => !!captured);
+    const backup = JSON.parse(captured.text);
+    ok('backup includes app data', !!backup.data['ph.piano.v1'] && Object.keys(backup.data).length >= 7);
+    ok('backup EXCLUDES both API keys', !captured.text.includes('sk-ant-secret') && !captured.text.includes('sk-openai-secret')
+        && !backup.data['ph.ai.key'] && !backup.data['ph.ai.key.openai']);
+    ok('backup filename dated', /priyaan-hub-backup-\d{4}-\d{2}-\d{2}\.json/.test(captured.name));
+    // a corrupt app key must not break the page
+    w.localStorage.setItem('ph.piano.v1', '{not json');
+  } catch (e) { console.log('FAIL threw: ' + e.message); }
+  phase = 2; w.location.reload();
+});
+</script></body>

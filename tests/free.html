@@ -1,0 +1,78 @@
+<!doctype html><title>free mode test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1500px;border:0'; f.src='../ai.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+let W=null; const tick=()=>new Promise(r=>{const fr=new W.FileReader(); fr.onloadend=r; fr.readAsText(new W.Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||40);i++){ if(cond()) return true; await tick(); } return cond();};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  let snapA=null; try { snapA=w.localStorage.getItem('ph.ai.v1'); w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
+  try {
+    // free mode is the default for a new visitor
+    ok('free mode is the default', $('[data-prov="free"]').classList.contains('on') && !$('#manualCard').hidden);
+    ok('no key needed pill', /No key needed/.test($('#keyState').textContent));
+    ok('key box and paid steps hidden', $$('#setupCard .key-row').every(r => r.hidden) && $('#setupCard details').hidden);
+    ok('Make it button hidden in free mode', $('#genBtn').hidden);
+    ok('drop zone explains the PDF goes to ChatGPT', !$('#dropHint').hidden);
+    ok('has the one-click handoff button', !!$('#goChatGPT'));
+    // the prompt we hand to ChatGPT
+    $('[data-kind="quiz"]').click(); $('[data-count="15"]').click(); $('#focusIn').value = 'section 2.3';
+    const pr = w.PH_AI.manualPrompt();
+    ok('prompt asks for the chosen count and kind', /15 NEW practice quiz questions/.test(pr));
+    ok('prompt carries the focus text', /section 2\.3/.test(pr));
+    ok('prompt says to attach the PDF', /attaching a PDF/i.test(pr));
+    ok('prompt demands one json block', /```json/.test(pr) && /NOTHING but one JSON object/.test(pr));
+    ok('prompt shows 4 choices for a quiz', /"A option","B option","C option","D option"/.test(pr));
+    $('[data-kind="worksheet"]').click();
+    ok('worksheet prompt asks for empty choices', /"choices": \[\]/.test(w.PH_AI.manualPrompt()));
+    // one-click handoff: copies and opens ChatGPT with the prompt in the URL
+    let opened = null; w.open = (url, target) => { opened = { url, target }; return null; };
+    $('#goChatGPT').click(); await waitFor(() => !!opened, 30);
+    ok('handoff opens chatgpt.com', /^https:\/\/chatgpt\.com\/\?q=/.test(opened.url) && opened.target === '_blank');
+    ok('prompt travels in the url', decodeURIComponent(opened.url.split('?q=')[1]).includes('NEW practice'));
+    ok('handoff reports copy or offers a fallback', /Copied/.test($('#copyState').textContent) || !!$('#showPrompt'));
+    if ($('#showPrompt')) { $('#showPrompt').click(); await tick();
+      ok('fallback puts the prompt where it can be copied', /NEW practice/.test($('#pasteIn').value)); $('#pasteIn').value=''; }
+    else ok('fallback not needed (clipboard worked)', true);
+    ok('copy-only button still there', !!$('#copyPrompt'));
+    // parsing: fenced json
+    const fenced = 'Sure! Here you go:\n\n```json\n' + JSON.stringify({ title:'Unit 3 · Equations', source_summary:'Two-step equations.',
+      problems:[{question:'Solve 3x + 4 = 19', choices:[], answer:'x = 5', work:'3x = 15', topic:'Equations'},
+                {question:'Solve 2x - 7 = 9', choices:[], answer:'x = 8', work:'2x = 16', topic:'Equations'}] }) + '\n```\n\nHope that helps!';
+    let out = w.PH_AI.parseReply(fenced);
+    ok('parses a fenced json reply', out && out.problems.length === 2 && out.title === 'Unit 3 · Equations');
+    ok('ignores chat prose around it', w.PH_AI.parseReply('Here is the JSON: ' + JSON.stringify({problems:[{question:'q',answer:'a'}]}) + ' let me know!').problems.length === 1);
+    // parsing: plain numbered list fallback
+    const plain = '1. What is the slope through (0,0) and (2,6)?\nAnswer: 3\nWork: 6/2 = 3\n\n2. Solve for x: x + 4 = 10\nA) 4\nB) 6\nC) 14\nD) 40\nAnswer: B\n';
+    out = w.PH_AI.parseReply(plain);
+    ok('falls back to a numbered list', out && out.problems.length === 2 && out.problems[0].answer === '3');
+    ok('turns "Answer: B" into the option text', out.problems[1].answer === '6' && out.problems[1].choices.length === 4);
+    ok('rejects junk', w.PH_AI.parseReply('sorry I cannot help with that') === null);
+    // build from paste
+    $('#pasteIn').value = fenced;
+    $('#buildBtn').click(); await waitFor(() => !$('#outCard').hidden);
+    ok('builds the set from the paste', $$('.prob').length === 2 && /Unit 3/.test($('#outSummary').textContent + $('#saved').textContent));
+    ok('marked as made by free ChatGPT', /by Free ChatGPT/.test($('#saved').textContent));
+    ok('paste box cleared and confirmed', $('#pasteIn').value === '' && /Built 2/.test($('#buildNote').textContent));
+    ok('no regenerate button in free mode', $('#againBtn').hidden);
+    const saved = JSON.parse(w.localStorage.getItem('ph.ai.v1'));
+    ok('saved offline like any other set', saved.sets.length === 1 && saved.sets[0].problems.length === 2);
+    // the printable sheet
+    const html = w.PH_AI.sheetHTML();
+    ok('sheet is a complete document', /^<!DOCTYPE html>/.test(html) && /<\/html>$/.test(html));
+    ok('sheet has a title, name line and answer key', /Unit 3/.test(html) && /Name/.test(html) && /Answer key/.test(html));
+    ok('answer key starts a new page', /page-break-before:always/.test(html));
+    ok('two-column problems with work boxes', /columns:2/.test(html) && /\.work\{height:/.test(html));
+    ok('sheet is self-contained', !/<script|https?:\/\//.test(html));
+    ok('answers appear only in the key', (html.match(/x = 5/g) || []).length === 1);
+    // bad paste
+    $('#pasteIn').value = 'nope';
+    $('#buildBtn').click(); await tick();
+    ok('bad paste explained, nothing saved', /⚠️/.test($('#buildNote').textContent) && JSON.parse(w.localStorage.getItem('ph.ai.v1')).sets.length === 1);
+    // switching to a paid provider restores that UI
+    $('[data-prov="claude"]').click(); await tick();
+    ok('switching to Claude shows the key box again', $('#manualCard').hidden && !$$('#setupCard .key-row')[0].hidden && !$('#genBtn').hidden);
+  } catch (e) { console.log('FAIL threw: ' + e.message + ' @ ' + (e.stack||'').split('\n')[1]); }
+  try { if (snapA) w.localStorage.setItem('ph.ai.v1', snapA); else w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
+  console.log('RESULTS done');
+});
+</script></body>

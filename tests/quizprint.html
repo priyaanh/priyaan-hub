@@ -1,0 +1,34 @@
+<!doctype html><title>quiz print test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../quizzes.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  try {
+    ok('every lesson row has a print button', $$('[data-printq]').length === 10);
+    const q = w.PHQuizDebug.buildQuiz({ lesson: '1.3.2', seed: 12345 });
+    const html = w.PHQuizDebug.quizSheetHTML(q);
+    ok('complete document', /^<!DOCTYPE html>/.test(html) && /<\/html>$/.test(html));
+    ok('names the lesson and book', /1\.3\.2/.test(html) && /Integrated II/.test(html));
+    ok('has a name/date/score rule', /Name/.test(html) && /Score/.test(html));
+    ok('all 10 questions printed', (html.match(/class="prob"/g) || []).length === 10);
+    ok('diagrams travel into the sheet', /<svg/.test(html));
+    ok('multiple choice printed as a lettered list', /ol class="choices"/.test(html));
+    ok('answer key on its own page', /page-break-before:always/.test(html) && /Answer key/.test(html));
+    ok('key gives the letter and the text', /class="a">[A-D]\)/.test(html));
+    ok('explanations in the key', /class="w"/.test(html));
+    ok('self-contained: no scripts or links out', !/<script|<link|https?:\/\//.test(html));
+    // a lesson whose questions are all generated still prints
+    const q2 = w.PHQuizDebug.buildQuiz({ lesson: '1.3.4', seed: 777 });
+    ok('generated questions print too', (w.PHQuizDebug.quizSheetHTML(q2).match(/class="prob"/g) || []).length === 10);
+    // the print button builds a frame rather than navigating away
+    let printed = false;
+    const realPrint = w.print; 
+    $$('[data-printq]')[0].click();
+    await new Promise(r => setTimeout(r, 400));
+    const fr = d.getElementById('printFrame');
+    ok('print frame created with the sheet', !!fr && /class="prob"/.test(fr.srcdoc || ''));
+    ok('page did not navigate away', !!d.querySelector('[data-printq]'));
+  } catch (e) { console.log('FAIL threw: ' + e.message); }
+  console.log('RESULTS done');
+});
+</script></body>

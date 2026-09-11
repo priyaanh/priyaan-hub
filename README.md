@@ -60,6 +60,16 @@ node fetch_workbooks.js kayak    # just the badges whose name contains "kayak"
 
 The page then shows **Workbook · offline** and opens the local file. The PDFs stay on your device: USSSP allows local Scouting use but not re-publishing, so `badges/pdf/*.pdf` is ignored by git and only an empty `manifest.js` is in the repository. Re-run the script when workbooks are updated.
 
+## Tests
+
+```bash
+./tests/run.sh
+```
+
+Loads every page in headless Chrome and fails on any console error, runs eight browser suites (about 190
+checks) that drive the real pages with the network stubbed, then runs the 142,148 maths-generator checks in
+`test_im1.js`. See `tests/README.md`.
+
 ## Editing the content
 
 - Piano pieces: edit the default list near the top of the script in `piano.html`, or add pieces in the app.

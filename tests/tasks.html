@@ -1,0 +1,93 @@
+<!doctype html><title>tasks test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1400px;border:0'; f.src='../calendar.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+let W=null; const tick=()=>new Promise(r=>{const fr=new W.FileReader(); fr.onloadend=r; fr.readAsText(new W.Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||60);i++){ if(cond()) return true; await tick(); } return cond();};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  let snap=null; try { snap=w.localStorage.getItem('ph.calendar.v1'); w.localStorage.removeItem('ph.calendar.v1'); } catch(e){}
+  const calls = [];
+  const TODAY = w.PH.todayISO(), YEST = w.PH.addDays(TODAY,-1), TOM = w.PH.addDays(TODAY,1);
+  let store = [
+    { id:'t1', title:'Finish Unit 3 worksheet', notes:'pages 4-5', due: YEST+'T00:00:00.000Z', status:'needsAction', position:'001' },
+    { id:'t2', title:'Piano: Hanon 12',        due: TODAY+'T00:00:00.000Z', status:'needsAction', position:'002' },
+    { id:'t3', title:'Kayaking merit badge form', due: TOM+'T00:00:00.000Z', status:'needsAction', position:'003' },
+    { id:'t4', title:'Read Malhar ch. 5',      status:'needsAction', position:'004' },
+    { id:'t5', title:'Turn in permission slip', due: TODAY+'T00:00:00.000Z', status:'completed', position:'005' }
+  ];
+  w.fetch = async (url, opts) => {
+    const m = String(url), method = (opts && opts.method) || 'GET';
+    calls.push(method + ' ' + m.replace('https://tasks.googleapis.com/tasks/v1',''));
+    const json = b => ({ ok:true, status:200, json: async () => b });
+    if (m.includes('/users/@me/lists')) return json({ items: [ {id:'L1', title:'My Tasks'}, {id:'L2', title:'School'} ] });
+    if (/\/lists\/L1\/tasks\?/.test(m)) return json({ items: store });
+    if (/\/lists\/L2\/tasks\?/.test(m)) return json({ items: [ { id:'s1', title:'Science fair idea', status:'needsAction', position:'001' } ] });
+    if (method === 'PATCH') { const id = m.split('/').pop(); const body = JSON.parse(opts.body);
+      const t = store.find(x=>x.id===id); if (t) t.status = body.status; return json(t); }
+    if (method === 'POST' && /\/lists\/L1\/tasks$/.test(m)) { const b = JSON.parse(opts.body);
+      store.push({ id:'new1', title:b.title, due:b.due||'', status:'needsAction', position:'009' }); return json(store[store.length-1]); }
+    if (method === 'DELETE') { const id = m.split('/').pop(); store = store.filter(x=>x.id!==id); return { ok:true, status:204, json: async()=>null }; }
+    if (m.includes('googleapis.com/calendar')) return json({ items: [] });
+    return json({});
+  };
+  try {
+    ok('tasks card explains the sign-in before setup', $('#taskBox').textContent.includes('no public embed'));
+    ok('add-task form hidden before sign-in', $('#addTask').hidden);
+    // pretend the token arrived
+    w.PH_CAL.setToken('fake-token'); w.PH_CAL.loadTasks();
+    await waitFor(() => $$('.task').length > 0);
+    ok('lists fetched then tasks fetched', calls[0].includes('/users/@me/lists') && calls[1].includes('/lists/L1/tasks'));
+    ok('5 tasks rendered', $$('.task').length === 5);
+    const groups = $$('.tgroup h3').map(h => h.textContent);
+    ok('grouped Overdue/Today/Coming up/No date/Done', groups.join('|') === 'Overdue · 1|Today · 1|Coming up · 1|No date · 1|Done · 1');
+    ok('overdue styled and labelled', $('.tgroup.over .task').classList.contains('overdue') && $('.tgroup.over').textContent.includes('Yesterday'));
+    ok('today label', $('.tgroup.today').textContent.includes('Today'));
+    ok('tomorrow label', $$('.tgroup')[2].textContent.includes('Tomorrow'));
+    ok('notes shown', $('.tgroup.over .tn').textContent === 'pages 4-5');
+    ok('completed task struck through', $$('.task.done').length === 1);
+    ok('list chips shown for 2 lists', !$('#taskLists').hidden && $$('[data-list]').length === 2);
+    ok('add form now visible', !$('#addTask').hidden);
+    // tick one off
+    const cb = $('[data-task="t2"]'); cb.checked = true; cb.dispatchEvent(new w.Event('change', {bubbles:true}));
+    await waitFor(() => calls.some(c => c.startsWith('PATCH')));
+    ok('PATCH sent for the ticked task', calls.some(c => c === 'PATCH /lists/L1/tasks/t2'));
+    await waitFor(() => $$('.task.done').length === 2);
+    ok('ticked task moves to Done', $$('.task.done').length === 2 && store.find(t=>t.id==='t2').status === 'completed');
+    // add one
+    $('#newTask').value = 'Practice scales'; $('#newDue').value = TOM;
+    $('#addTask').dispatchEvent(new w.Event('submit', {bubbles:true, cancelable:true}));
+    await waitFor(() => store.some(t => t.title === 'Practice scales'));
+    ok('POST creates the task with a date-only due', store.find(t=>t.title==='Practice scales').due === TOM + 'T00:00:00.000Z');
+    await waitFor(() => $$('.task').length === 6);
+    ok('new task appears', $('#taskBox').textContent.includes('Practice scales'));
+    // delete one
+    $('[data-deltask="t4"]').click();
+    await waitFor(() => !store.some(t => t.id === 't4') && !$('#taskBox').textContent.includes('Read Malhar'));
+    ok('DELETE sent and row removed', calls.some(c => c === 'DELETE /lists/L1/tasks/t4') && !$('#taskBox').textContent.includes('Read Malhar'));
+    // switch list
+    $('[data-list="L2"]').click();
+    await waitFor(() => $('#taskBox').textContent.includes('Science fair'));
+    ok('switching list loads it', $$('.task').length === 1 && $('[data-list="L2"]').getAttribute('aria-pressed') === 'true');
+    // saved state + hub summary + offline copy
+    const saved = JSON.parse(w.localStorage.getItem('ph.calendar.v1'));
+    ok('list choice saved', saved.settings.taskList === 'L2');
+    ok('tasks cached for offline', saved.tasksCache && saved.tasksCache.items.length === 1);
+    w.PH_CAL.setList('L1'); w.PH_CAL.loadTasks();
+    await waitFor(() => $('#taskBox').textContent.includes('Piano'));
+    const saved2 = JSON.parse(w.localStorage.getItem('ph.calendar.v1'));
+    ok('hub summary counts tasks due', /task/.test(saved2.summary.headline) || /task/.test(saved2.summary.sub));
+    // signed out: cached copy, read-only
+    w.PH_CAL.signOut();
+    await waitFor(() => $('#addTask').hidden);
+    ok('signed out shows the saved copy', $('.stale') && $('#taskBox').textContent.includes('last saved copy'));
+    ok('checkboxes disabled when signed out', $$('[data-task]').every(c => c.disabled) && $$('.task').length > 0);
+    // API error surfaces
+    w.fetch = async () => ({ ok:false, status:403, json: async () => ({ error: { message: 'Tasks API has not been used in project' } }) });
+    w.PH_CAL.setToken('fake-token'); w.PH_CAL.loadTasks();
+    await waitFor(() => /Tasks API has not been used/.test($('#taskStatus').textContent));
+    ok('API error shown to the user', /Tasks API has not been used/.test($('#taskStatus').textContent));
+  } catch (e) { console.log('FAIL threw: ' + e.message + ' @ ' + (e.stack||'').split('\n')[1]); }
+  try { if (snap) w.localStorage.setItem('ph.calendar.v1', snap); else w.localStorage.removeItem('ph.calendar.v1'); } catch(e){}
+  console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
+});
+</script></body>
