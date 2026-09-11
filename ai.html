@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="shared.css"><style>
 main > * + * { margin-top: 1rem; }
 .drop { border: 2px dashed var(--border); border-radius: var(--radius); padding: 1.6rem 1rem; text-align: center; background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s; }
-.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop:hover, .drop.over { border-color: var(--accent-text); background: var(--accent-soft); }
 .drop .big { font-size: 2rem; line-height: 1; }
 .drop h3 { margin: .5rem 0 .2rem; }
 .file { display: flex; gap: .7rem; align-items: center; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
@@ -13,11 +13,11 @@ main > * + * { margin-top: 1rem; }
 .file .fi .sz { font-size: .8rem; color: var(--muted); }
 .opts { display: grid; gap: .9rem; grid-template-columns: 1fr; margin-top: 1rem; }
 @media (min-width: 760px) { .opts { grid-template-columns: auto auto 1fr; align-items: end; } }
-.tabs .tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); box-shadow: none; }
+.tabs .tab.on { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-text); box-shadow: none; }
 .countbtns { display: flex; gap: .3rem; }
-.countbtns .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.countbtns .btn.on { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-text); }
 .gen-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
-.spin { display: inline-block; width: 1rem; height: 1rem; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: sp .7s linear infinite; vertical-align: -.15rem; }
+.spin { display: inline-block; width: 1rem; height: 1rem; border: 2px solid var(--border); border-top-color: var(--accent-text); border-radius: 50%; animation: sp .7s linear infinite; vertical-align: -.15rem; }
 @keyframes sp { to { transform: rotate(360deg); } }
 .note { font-size: .85rem; color: var(--muted); }
 .key-row { display: grid; gap: .6rem; grid-template-columns: 1fr; }
@@ -29,14 +29,14 @@ main > * + * { margin-top: 1rem; }
 .prob.right { border-color: var(--ok); background: var(--ok-soft); }
 .prob.wrong { border-color: var(--danger); background: var(--danger-soft); }
 .prob .qline { display: flex; gap: .55rem; line-height: 1.5; }
-.prob .n { font-weight: 800; color: var(--accent); min-width: 1.6rem; font-variant-numeric: tabular-nums; }
+.prob .n { font-weight: 800; color: var(--accent-text); min-width: 1.6rem; font-variant-numeric: tabular-nums; }
 .prob .qt { flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .prob .tag { font-size: .7rem; color: var(--muted); margin-top: .25rem; }
 .choices { display: grid; gap: .35rem; margin: .55rem 0 0; }
 .choice { display: flex; gap: .5rem; align-items: flex-start; text-align: left; padding: .45rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; color: inherit; width: 100%; }
-.choice:hover { border-color: var(--accent); background: var(--surface-2); }
+.choice:hover { border-color: var(--accent-text); background: var(--surface-2); }
 .choice .lt { font-weight: 700; color: var(--muted); flex: none; }
-.choice.pick { border-color: var(--accent); background: var(--accent-soft); }
+.choice.pick { border-color: var(--accent-text); background: var(--accent-soft); }
 .choice.ok { border-color: var(--ok); background: var(--ok-soft); }
 .choice.no { border-color: var(--danger); background: var(--danger-soft); }
 .ans-row { display: flex; gap: .4rem; margin-top: .5rem; }
@@ -52,6 +52,7 @@ main > * + * { margin-top: 1rem; }
 details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 .steps { margin: .5rem 0 0 1.1rem; padding: 0; font-size: .9rem; } .steps li { margin: .3rem 0; }
 .steps.big { font-size: .95rem; } .steps.big li { margin: .55rem 0; }
+#goChatGPT { white-space: normal; text-align: left; }
 .manual-note { background: var(--accent-soft); border-radius: var(--radius-sm); padding: .6rem .75rem; font-size: .88rem; margin: 0 0 .8rem; }
 #pasteIn { font-family: var(--mono); font-size: .82rem; min-height: 7rem; }
 .copied { color: var(--ok); font-weight: 600; }
@@ -97,7 +98,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       </div>
     </div>
     <p class="note" id="dropHint" hidden>Using the free ChatGPT? You attach the PDF inside ChatGPT instead — adding it here is optional, and only names the worksheet.</p>
-    <input type="file" id="fileIn" accept="application/pdf,image/png,image/jpeg,image/webp" hidden>
+    <input type="file" id="fileIn" accept="application/pdf,image/png,image/jpeg,image/webp" aria-label="Choose a PDF or photo" hidden>
     <div id="fileBox" hidden></div>
 
     <div class="opts">

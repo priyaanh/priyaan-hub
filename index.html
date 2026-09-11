@@ -18,7 +18,7 @@
     overflow: hidden;
   }
   .app::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--accent); }
-  .app:hover { transform: translateY(-2px); border-color: var(--accent); text-decoration: none; }
+  .app:hover { transform: translateY(-2px); border-color: var(--accent-text); text-decoration: none; }
   .app .top { display: flex; align-items: center; gap: .75rem; }
   .app .emoji { font-size: 1.9rem; width: 3rem; height: 3rem; display: grid; place-items: center; border-radius: 12px; background: var(--accent-soft); }
   .app h2 { margin: 0; font-size: 1.15rem; }
@@ -30,7 +30,7 @@
   .today-head .when { color: var(--muted); font-size: .875rem; }
   .today-head .spacer { flex: 1; }
   .next-up { font-size: .95rem; margin: .35rem 0 0; }
-  .next-up b { color: var(--accent); }
+  .next-up b { color: var(--accent-text); }
   .tiles { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); margin-top: .8rem; }
   .tile { display: flex; flex-direction: column; gap: .15rem; padding: .6rem .7rem; border-radius: var(--radius-sm); background: var(--surface-2); border-left: 3px solid var(--tc, var(--accent)); text-decoration: none; color: inherit; }
   .tile:hover { text-decoration: none; background: color-mix(in srgb, var(--tc, var(--accent)) 12%, var(--surface-2)); }
@@ -44,14 +44,14 @@
   .bar > i { display: block; height: 100%; background: var(--tc, var(--accent)); border-radius: 999px; }
   .streaks { display: flex; gap: .5rem; flex-wrap: wrap; }
   .app .summary { display: flex; flex-direction: column; gap: .1rem; padding: .6rem .75rem; border-radius: var(--radius-sm); background: var(--surface-2); min-height: 3.4rem; justify-content: center; }
-  .app .summary .headline { font-weight: 700; color: var(--accent); }
+  .app .summary .headline { font-weight: 700; color: var(--accent-text); }
   .app .summary .sub { font-size: .825rem; color: var(--muted); }
   .app .summary.none .headline { color: var(--muted); font-weight: 600; }
   footer .age { font-size: .82rem; color: var(--muted); }
   footer .age.stale { color: var(--warn); font-weight: 600; }
   .app .key { position: absolute; top: .7rem; right: .85rem; font-size: .7rem; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 5px; padding: .05rem .32rem; }
-  .app:hover .key { color: var(--accent); }
-  .app .open { align-self: flex-end; font-size: .85rem; font-weight: 700; color: var(--accent); }
+  .app:hover .key { color: var(--accent-text); }
+  .app .open { align-self: flex-end; font-size: .85rem; font-weight: 700; color: var(--accent-text); }
   .app[data-app="piano"]    { --accent:#7c5cff; --accent-soft:rgba(124,92,255,.15); }
   .app[data-app="badges"]   { --accent:#2f8f4e; --accent-soft:rgba(47,143,78,.15); }
   .app[data-app="math"]     { --accent:#2f6fed; --accent-soft:rgba(47,111,237,.15); }

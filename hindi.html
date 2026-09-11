@@ -13,15 +13,15 @@ main > * + * { margin-top: 1rem; }
   padding: .55rem .75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface);
   color: var(--text); font: inherit; cursor: pointer; transition: background .12s, border-color .12s;
 }
-.chip:hover { border-color: var(--accent); background: var(--surface-2); }
+.chip:hover { border-color: var(--accent-text); background: var(--surface-2); }
 .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.chip[aria-pressed="true"] { border-color: var(--accent-text); background: var(--accent-soft); }
 .chip .t { font-weight: 700; display: flex; gap: .45rem; align-items: baseline; }
 .chip .t .n { color: var(--muted); font-size: .8rem; font-weight: 700; min-width: 1.2rem; }
 .chip .m { font-size: .78rem; color: var(--muted); }
 .chip .progress { height: 4px; }
 .chip.due { flex: 1 1 100%; max-width: none; flex-direction: row; align-items: center; justify-content: space-between; }
-.chip.due .t { color: var(--accent); }
+.chip.due .t { color: var(--accent-text); }
 @media (max-width: 560px) { .chip { flex-basis: 100%; max-width: none; } }
 
 /* ---- flashcards ---- */
@@ -66,7 +66,7 @@ main > * + * { margin-top: 1rem; }
   display: flex; align-items: center; gap: .7rem; text-align: left; padding: .7rem .9rem; border-radius: var(--radius-sm);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 1.05rem; cursor: pointer; min-width: 0;
 }
-.q-opt:hover { border-color: var(--accent); background: var(--surface-2); }
+.q-opt:hover { border-color: var(--accent-text); background: var(--surface-2); }
 .q-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .q-opt .n { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--surface-2); font-size: .8rem; font-weight: 700; color: var(--muted); flex: none; }
 .q-opt .o { overflow-wrap: anywhere; }
@@ -78,7 +78,7 @@ main > * + * { margin-top: 1rem; }
 .q-feedback.ok { color: var(--ok); } .q-feedback.bad { color: var(--danger); }
 .q-feedback .ans { font-weight: 600; color: var(--text); }
 .q-score { text-align: center; padding: 1.25rem 1rem .5rem; }
-.q-score .big { font-size: 2.6rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
+.q-score .big { font-size: 2.6rem; font-weight: 800; color: var(--accent-text); line-height: 1.1; }
 .q-hist { font-size: .875rem; color: var(--muted); margin-top: .75rem; }
 .q-hist li { padding: .35rem 0; }
 

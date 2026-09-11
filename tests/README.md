@@ -30,6 +30,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `metronome.html` | the metronome: tempo clamping and memory, tempo names, beats per bar, tap tempo, start/stop, the keyboard shortcuts |
 | `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
 | `mobile.html` | every page at 390px and 320px: the document never scrolls sideways, and topbar buttons stay tappable |
+| `contrast.html` | every page, light and dark: text meets WCAG AA against the background actually behind it (4.5:1, or 3:1 for large text) |
 | `offline.html` | the service worker: registration, a versioned cache, the whole app shell precached, pages answering from cache, PDFs deliberately excluded (run over a local server via `tests/cdp.js`, since workers need a real origin and real time) |
 
 Notes for anyone extending these:
@@ -38,6 +39,10 @@ Notes for anyone extending these:
 - `--virtual-time-budget` fast-forwards timers, so `setTimeout` does **not** wait for real work such as
   `FileReader`. Wait on a condition, advancing real time with a real async operation each turn (see the
   `tick()`/`waitFor()` helpers the suites share).
+- Suites that walk several pages run through `tests/cdp.js` in **real time**. Under `--virtual-time-budget`
+  the clock races ahead, so a wall-clock wait for the next page expires instantly and every check
+  silently runs against the page you just left. Sample colours only after a real settle delay, too, or
+  CSS transitions are caught mid-fade.
 - Do not wait on an iframe's `load` event alone when the page is `calendar.html`: it embeds Google Calendar,
   which never finishes loading in a test, so everything after it goes unchecked. The multi-page suites
   proceed once the page itself has rendered.

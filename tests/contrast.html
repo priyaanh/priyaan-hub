@@ -1,0 +1,78 @@
+<!doctype html><title>text contrast</title><body style="margin:0"><script>
+/* Text has to be readable in whichever scheme the browser is in. Walks the visible text on every page,
+   works out the contrast against the first opaque background behind it, and applies WCAG AA:
+   4.5:1 for normal text, 3:1 for large text. Run twice by tests/run.sh — once light, once dark. */
+const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai'];
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1000px;border:0'; document.body.appendChild(f);
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+async function load(src, w) {
+  if (w) f.style.width = w + 'px';
+  const want = src.replace(/^\.\.\//, '');
+  let loaded = false; f.onload = () => { loaded = true; };
+  f.src = src;
+  /* Wait for the NEW document: breaking as soon as some element exists would match the page we just left,
+     and every check would silently run against the wrong page. calendar.html embeds Google Calendar, which
+     never finishes loading, so do not wait on the load event alone either. */
+  const deadline = Date.now() + 15000;
+  for (let i = 0; i < 5000 && Date.now() < deadline; i++) {
+    await tick();
+    try {
+      const d = f.contentDocument;
+      if (d && d.location && d.location.href.indexOf(want) >= 0 && d.readyState !== 'loading' && d.querySelector('main')) break;
+    } catch (e) { /* mid-navigation */ }
+  }
+  for (let i = 0; i < 8; i++) await tick();
+  await new Promise(r => setTimeout(r, 500));   // let CSS transitions settle, or colours read mid-fade
+}
+/* Chrome serialises color-mix() as color(srgb r g b / a) with 0-1 components; rgb() uses 0-255. */
+const parse = c => {
+  const str = String(c || ''); const m = str.match(/[\d.]+/g); if (!m) return null;
+  let v = m.map(Number);
+  if (/^color\(/.test(str)) v = [v[0] * 255, v[1] * 255, v[2] * 255].concat(v.length > 3 ? [v[3]] : []);
+  return v;
+};
+const lum = rgb => { const a = rgb.slice(0,3).map(v => { v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); });
+  return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2]; };
+const ratio = (a, b) => { const l1 = lum(a), l2 = lum(b); return (Math.max(l1,l2) + 0.05) / (Math.min(l1,l2) + 0.05); };
+function bgOf(el, win) {
+  let node = el;
+  while (node && node.nodeType === 1) {
+    const c = parse(win.getComputedStyle(node).backgroundColor);
+    if (c && (c.length < 4 || c[3] > 0.85)) return c;
+    node = node.parentElement;
+  }
+  return [255,255,255];
+}
+(async () => {
+  for (const page of PAGES) {
+    await load('../' + page + '.html');
+    const d = f.contentDocument, win = f.contentWindow;
+    const els = Array.from(d.querySelectorAll('p, span, label, h1, h2, h3, a, button, td, th, li, div'))
+      .filter(el => {
+        const txt = (el.textContent || '').trim();
+        if (!txt) return false;
+        if (!/[A-Za-z0-9\u0900-\u097F]/.test(txt)) return false;      // emoji and symbols are coloured by the font
+        if (!el.textContent || !el.textContent.trim()) return false;
+        if (Array.from(el.children).some(c => (c.textContent || '').trim())) return false;   // leaf text only
+        const r = el.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return false;
+        const cs = win.getComputedStyle(el);
+        return cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.3;
+      });
+    const bad = [];
+    els.forEach(el => {
+      const cs = win.getComputedStyle(el);
+      const fg = parse(cs.color); if (!fg) return;
+      if (fg.length > 3 && fg[3] < 0.7) return;                       // deliberately faded
+      const size = parseFloat(cs.fontSize), bold = Number(cs.fontWeight) >= 700;
+      const large = size >= 24 || (bold && size >= 18.66);
+      const need = large ? 3 : 4.5;
+      const got = ratio(fg, bgOf(el, win));
+      if (got < need) bad.push(el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : '') +
+        ' "' + el.textContent.trim().slice(0, 18) + '" ' + got.toFixed(2) + ':1');
+    });
+    ok(page + ': text meets WCAG AA (' + els.length + ' checked)', bad.length === 0, bad.slice(0, 5).join(' | '));
+  }
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+})();
+</script></body>

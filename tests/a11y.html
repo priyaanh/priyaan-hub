@@ -9,11 +9,19 @@ const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.rea
    the iframe's load event alone: proceed once the page itself has rendered. */
 async function load(src, w) {
   if (w) f.style.width = w + 'px';
+  const want = src.replace(/^\.\.\//, '');
   let loaded = false; f.onload = () => { loaded = true; };
   f.src = src;
-  for (let i = 0; i < 120 && !loaded; i++) {
+  /* Wait for the NEW document: breaking as soon as some element exists would match the page we just left,
+     and every check would silently run against the wrong page. calendar.html embeds Google Calendar, which
+     never finishes loading, so do not wait on the load event alone either. */
+  const deadline = Date.now() + 15000;
+  for (let i = 0; i < 5000 && Date.now() < deadline; i++) {
     await tick();
-    try { const d = f.contentDocument; if (d && d.readyState !== 'loading' && d.querySelector('.topbar, .today-card, main')) break; } catch (e) {}
+    try {
+      const d = f.contentDocument;
+      if (d && d.location && d.location.href.indexOf(want) >= 0 && d.readyState !== 'loading' && d.querySelector('main')) break;
+    } catch (e) { /* mid-navigation */ }
   }
   for (let i = 0; i < 8; i++) await tick();
 }
@@ -40,7 +48,7 @@ const desc = el => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.c
     const unnamed = $$('button, a[href], [role="button"], [role="radio"], [role="tab"]').filter(vis).filter(el => !name(el));
     ok(page + ': every control has a name', unnamed.length === 0, unnamed.slice(0,4).map(desc).join(', '));
 
-    const unlabelled = $$('input, select, textarea').filter(el => el.type !== 'hidden').filter(el =>
+    const unlabelled = $$('input, select, textarea').filter(el => el.type !== 'hidden' && !el.hidden && el.offsetParent !== null).filter(el =>
       !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby') && !el.closest('label') &&
       !(el.id && d.querySelector('label[for="' + CSS.escape(el.id) + '"]')));
     ok(page + ': every input has a label', unlabelled.length === 0, unlabelled.slice(0,4).map(desc).join(', '));

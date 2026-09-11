@@ -67,9 +67,10 @@ The page then shows **Workbook · offline** and opens the local file. The PDFs s
 ./tests/run.sh
 ```
 
-Loads every page in headless Chrome and fails on any console error, runs eight browser suites (about 190
-checks) that drive the real pages with the network stubbed, then runs the 142,148 maths-generator checks in
-`test_im1.js`. See `tests/README.md`.
+Loads every page in headless Chrome and fails on any console error, runs sixteen browser suites (about 460
+checks) that drive the real pages with the network stubbed — including accessibility, phone layout, WCAG
+contrast in both light and dark, and the offline service worker — then runs the 142,148 maths-generator
+checks in `test_im1.js`. See `tests/README.md`.
 
 ## Editing the content
 

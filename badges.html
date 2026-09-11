@@ -19,7 +19,7 @@ a.btn:hover { text-decoration: none; }
 .bcard .em { font-size: 1.7rem; width: 2.8rem; height: 2.8rem; display: grid; place-items: center; border-radius: 12px; background: var(--accent-soft); flex: none; }
 .bcard h3 { margin: 0; font-size: 1.05rem; }
 .bcard .meta { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; font-size: .8rem; color: var(--muted); margin-top: .15rem; }
-.pct { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.pct { font-weight: 800; color: var(--accent-text); font-variant-numeric: tabular-nums; }
 .pct.ok { color: var(--ok); }
 .bcard .foot { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: auto; }
 .bcard.earned .em { background: var(--ok-soft); }
@@ -37,7 +37,7 @@ a.btn:hover { text-decoration: none; }
 .fields { display: grid; gap: .75rem; grid-template-columns: 1fr 1fr; margin-top: 1rem; }
 .actions { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-top: .9rem; }
 .actions .spacer { flex: 1; }
-.btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-text); color: var(--accent); }
 .confirm { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; font-size: .85rem; color: var(--danger); font-weight: 600; }
 
 /* ---- requirement list ---- */
@@ -47,7 +47,7 @@ a.btn:hover { text-decoration: none; }
 .kids .req { border-top-color: color-mix(in srgb, var(--border) 60%, transparent); }
 .req-row { display: flex; align-items: flex-start; gap: .25rem; }
 .reqs .check { flex: 1; margin: 0; font-size: 1rem; color: var(--text); font-weight: 400; }
-.req .num { font-weight: 700; color: var(--accent); margin-right: .4rem; font-variant-numeric: tabular-nums; }
+.req .num { font-weight: 700; color: var(--accent-text); margin-right: .4rem; font-variant-numeric: tabular-nums; }
 .req.parent > .req-row .check { cursor: default; }
 .req.parent > .req-row .check:hover { background: transparent; }
 .req.parent > .req-row .txt { font-weight: 600; }
@@ -60,7 +60,7 @@ a.btn:hover { text-decoration: none; }
 .req-meta { display: flex; gap: .3rem; align-items: center; flex: none; padding-top: .4rem; }
 .pill.date { background: var(--ok-soft); color: var(--ok); }
 .note-btn { color: var(--muted); padding: .3rem .5rem; }
-.note-btn.has { color: var(--accent); }
+.note-btn.has { color: var(--accent-text); }
 .note-box, .note-view { margin: 0 .7rem .45rem 2.6rem; }
 .note-box textarea { font-size: .9rem; min-height: 3.2rem; }
 .note-view { font-size: .875rem; color: var(--muted); white-space: pre-wrap; background: var(--surface-2); padding: .35rem .6rem; border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
@@ -88,11 +88,12 @@ a.btn:hover { text-decoration: none; }
 .eagle-cols .lbl { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin-bottom: .3rem; }
 .eagle-cols .lbl b { color: var(--text); text-transform: none; letter-spacing: 0; font-size: .95rem; margin-right: .3rem; }
 .chips { display: flex; gap: .3rem; flex-wrap: wrap; }
-.chips .pill { font-weight: 600; }
+.chips .pill { font-weight: 600; white-space: normal; }   /* 'Environmental Science / Sustainability' must wrap on a phone */
+.chips { min-width: 0; }
 .chips .pill.todo { background: var(--surface); color: var(--muted); border: 1px dashed var(--border); }
 .eagle .done-msg { color: var(--ok); font-weight: 700; }
 .tab .cnt { color: var(--muted); font-weight: 600; font-size: .78em; margin-left: .2rem; }
-.tab[aria-pressed="true"] .cnt { color: var(--accent); }
+.tab[aria-pressed="true"] .cnt { color: var(--accent-text); }
 .cat-kbd { margin-left: auto; }
 /* in-page workbook viewer */
 .pdf-dlg { width: min(96vw, 1100px); height: 92vh; max-width: none; max-height: none; padding: 0; border: 0; border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: var(--shadow); overflow: hidden; }

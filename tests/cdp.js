@@ -8,9 +8,10 @@ const { spawn } = require('child_process');
 const url = process.argv[2];
 const maxMs = Number(process.argv[3] || 30000);
 const stopOn = process.argv[4] || null;
+const dark = process.argv.includes('--dark');          // emulate prefers-color-scheme: dark
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const port = 9400 + Math.floor(Math.random() * 400);
-const chrome = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--remote-debugging-port=' + port,
+const chrome = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--allow-file-access-from-files', '--remote-debugging-port=' + port,
   '--window-size=1280,1000', 'about:blank'], { stdio: 'ignore' });
 let sawError = false;
 
@@ -45,6 +46,7 @@ let sawError = false;
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
   await send('Runtime.enable', {}, sessionId);
   await send('Page.enable', {}, sessionId);
+  if (dark) await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] }, sessionId);
   await send('Page.navigate', { url }, sessionId);
   const timer = setTimeout(done, maxMs);
   await finished;

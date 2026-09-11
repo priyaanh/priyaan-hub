@@ -5,9 +5,9 @@ main > * + * { margin-top: 1rem; }
 /* topic picker */
 .chapters { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 .topic { display: flex; gap: .6rem; align-items: flex-start; padding: .5rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; background: var(--surface); }
-.topic:hover { border-color: var(--accent); background: var(--surface-2); }
-.topic input { margin: .2rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--accent); flex: none; cursor: pointer; }
-.topic.on { border-color: var(--accent); background: var(--accent-soft); }
+.topic:hover { border-color: var(--accent-text); background: var(--surface-2); }
+.topic input { margin: .2rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--accent-text); flex: none; cursor: pointer; }
+.topic.on { border-color: var(--accent-text); background: var(--accent-soft); }
 .topic .tn { font-weight: 600; font-size: .93rem; display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; }
 .topic .tn .ch { font-size: .72rem; font-weight: 700; color: var(--muted); background: var(--surface-2); padding: .05rem .35rem; border-radius: 999px; }
 .topic.on .tn .ch { background: var(--surface); }
@@ -15,7 +15,7 @@ main > * + * { margin-top: 1rem; }
 .opts { display: grid; gap: .9rem; grid-template-columns: 1fr; margin-top: 1rem; }
 @media (min-width: 760px) { .opts { grid-template-columns: auto auto auto 1fr; align-items: end; } }
 .countbtns { display: flex; gap: .3rem; }
-.countbtns .btn.on, .tabs .tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.countbtns .btn.on, .tabs .tab.on { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-text); }
 .tabs .tab.on { box-shadow: none; }
 .seedrow { display: flex; gap: .4rem; align-items: flex-end; }
 .seedrow .input { width: 7.5rem; }
@@ -27,7 +27,7 @@ main > * + * { margin-top: 1rem; }
 .prob.right { border-color: var(--ok); background: var(--ok-soft); }
 .prob.wrong { border-color: var(--danger); background: var(--danger-soft); }
 .prob .qline { display: flex; gap: .55rem; line-height: 1.5; }
-.prob .n { font-weight: 800; color: var(--accent); min-width: 1.5rem; font-variant-numeric: tabular-nums; }
+.prob .n { font-weight: 800; color: var(--accent-text); min-width: 1.5rem; font-variant-numeric: tabular-nums; }
 .prob .qt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .prob .tag { font-size: .7rem; color: var(--muted); margin-top: .2rem; }
 .ans-row { display: flex; gap: .4rem; margin-top: .5rem; align-items: center; }

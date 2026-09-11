@@ -22,7 +22,7 @@ for page in index piano badges math quizzes hindi schedule calendar ai; do
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome offline)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub free ai tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark offline)
 
 # The offline suite needs a real origin: service workers do not run from file://.
 serve() {
@@ -33,9 +33,18 @@ serve() {
   for _ in $(seq 1 50); do curl -sf "http://127.0.0.1:$PORT/shared.js" >/dev/null && break; done
 }
 for name in "${want[@]}"; do
-  suite="tests/$name.html"
+  suite="tests/${name%-dark}.html"
   [ -f "$suite" ] || { echo "▶ $name — no such suite"; fail=1; continue; }
-  if [ "$name" = "offline" ]; then
+  case "$name" in
+    a11y|mobile|contrast|contrast-dark) realtime=1 ;;
+    *) realtime=0 ;;
+  esac
+  if [ "$realtime" = 1 ]; then
+    # Suites that walk several pages need REAL time: --virtual-time-budget races the clock forward, so a
+    # wall-clock wait for the next page to load expires instantly and the checks run against the wrong page.
+    darkflag=""; [ "$name" = "contrast-dark" ] && darkflag="--dark"
+    CHROME="$CHROME" node tests/cdp.js "file://$ROOT/$suite" 180000 "RESULTS" $darkflag >"$TMP/$name.err" 2>&1
+  elif [ "$name" = "offline" ]; then
     # real time, real origin: service workers need both
     serve
     CHROME="$CHROME" node tests/cdp.js "http://127.0.0.1:$PORT/$suite" 40000 "RESULTS" >"$TMP/$name.err" 2>&1
