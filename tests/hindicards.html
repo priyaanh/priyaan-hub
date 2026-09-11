@@ -1,0 +1,41 @@
+<!doctype html><title>hindi flashcards test</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../hindi.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  try {
+    const D = w.PHHindiDebug;
+    ok('debug hook available', !!D && typeof D.flashcardHTML === 'function');
+    const cards = D.cardsOf('c6-01');
+    ok('chapter 1 has its words', cards.length >= 14);
+    const html = D.flashcardHTML(cards, 'मातृभूमि');
+    ok('complete document', /^<!DOCTYPE html>/.test(html) && /<\/html>$/.test(html));
+    ok('every word appears on a front', cards.every(c => html.includes(c.hi)));
+    ok('meanings appear on the backs', cards.every(c => html.includes(c.en)));
+    ok('devanagari marked with lang=hi', /class="hi" lang="hi"/.test(html));
+    const sheets = (html.match(/class="sheet"/g) || []).length;
+    ok('sheets come in front/back pairs', sheets === Math.ceil(cards.length / 9) * 2);
+    ok('nine cards to a page', /grid-template-columns:repeat\(3,1fr\)/.test(html) && /repeat\(3,2\.9in\)/.test(html));
+    ok('pages break after each sheet', /page-break-after:always/.test(html));
+    ok('cut lines are dashed', /border:1px dashed/.test(html));
+    ok('self-contained', !/<script|https?:\/\//.test(html));
+    // backs must mirror the fronts so duplex printing lines up
+    const sec = html.split('<section class="sheet">');
+    const frontOrder = (sec[1].match(/class="hi" lang="hi">([^<]+)/g) || []).map(x => x.split('>').pop());
+    const backOrder = (sec[2].match(/class="en">([^<]+)/g) || []).map(x => x.split('>').pop());
+    const byHi = {}; cards.forEach(c => byHi[c.hi] = c.en);
+    const expected = [];
+    for (let r = 0; r < 9; r += 3) expected.push.apply(expected, frontOrder.slice(r, r + 3).reverse());
+    ok('backs mirror the fronts row by row', backOrder.join('|') === expected.map(h => byHi[h]).join('|'));
+    ok('padding cells keep the grid square', (sec[1].match(/class="card/g) || []).length === 9);
+    // empty deck is handled
+    ok('an empty deck does not build a sheet', D.cardsOf('mine').length === 0);
+    ok('the print button is on the page', !!$('#btn-cards'));
+    $('#btn-cards').click();
+    await new Promise(r => setTimeout(r, 400));
+    const fr = d.getElementById('cardFrame');
+    ok('print frame built with the cards', !!fr && /class="sheet"/.test(fr.srcdoc || ''));
+  } catch (e) { console.log('FAIL threw: ' + e.message); }
+  console.log('RESULTS done');
+});
+</script></body>
