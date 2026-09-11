@@ -51,6 +51,10 @@ main > * + * { margin-top: 1rem; }
 #printFrame { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }
 details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 .steps { margin: .5rem 0 0 1.1rem; padding: 0; font-size: .9rem; } .steps li { margin: .3rem 0; }
+.steps.big { font-size: .95rem; } .steps.big li { margin: .55rem 0; }
+.manual-note { background: var(--accent-soft); border-radius: var(--radius-sm); padding: .6rem .75rem; font-size: .88rem; margin: 0 0 .8rem; }
+#pasteIn { font-family: var(--mono); font-size: .82rem; min-height: 7rem; }
+.copied { color: var(--ok); font-weight: 600; }
 </style></head>
 <body data-app="ai">
 <header class="topbar"><div class="inner">
@@ -65,7 +69,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   <section class="card" id="setupCard" aria-labelledby="h-key">
     <div class="card-head"><h2 id="h-key">Connect an AI</h2>
       <div class="tabs" id="provTabs" role="group" aria-label="Which AI to use">
-        <button class="tab" data-prov="claude">Claude</button><button class="tab" data-prov="openai">ChatGPT</button>
+        <button class="tab" data-prov="free">Free ChatGPT · no key</button><button class="tab" data-prov="claude">Claude API</button><button class="tab" data-prov="openai">ChatGPT API</button>
       </div>
     </div>
     <p class="note">This page sends your PDF straight to <span id="provName">Claude</span> and gets practice problems back. Either service works — pick whichever account you already have. Both need an API key, which is stored <b>only in this browser</b> and never leaves it except in the request to <span id="provName2">Anthropic</span>. Use a key with a spending limit, and don't add one on a shared computer.</p>
@@ -85,13 +89,14 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   </section>
 
   <section class="card" aria-labelledby="h-src">
-    <div class="card-head"><h2 id="h-src">1 · Pick the PDF</h2><span class="muted small">a chapter, a worksheet, notes, a study guide</span></div>
+    <div class="card-head"><h2 id="h-src">1 · Pick the PDF</h2><span class="muted small" id="srcHint">a chapter, a worksheet, notes, a study guide</span></div>
     <div id="dropWrap">
       <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a PDF or picture">
         <div class="big">📄</div><h3>Drop a PDF here</h3>
         <div class="note">or click to choose · PDF or a photo of a page · up to 20 MB</div>
       </div>
     </div>
+    <p class="note" id="dropHint" hidden>Using the free ChatGPT? You attach the PDF inside ChatGPT instead — adding it here is optional, and only names the worksheet.</p>
     <input type="file" id="fileIn" accept="application/pdf,image/png,image/jpeg,image/webp" hidden>
     <div id="fileBox" hidden></div>
 
@@ -117,10 +122,26 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     </div>
   </section>
 
+  <section class="card" id="manualCard" hidden aria-labelledby="h-manual">
+    <div class="card-head"><h2 id="h-manual">Use the free ChatGPT</h2><span class="muted small">no API key, nothing to pay</span></div>
+    <p class="manual-note">The free ChatGPT can read your PDF and write the questions. This page gives you the prompt and turns its answer into a printable worksheet. Your PDF goes to ChatGPT directly — it does not need to be added above.</p>
+    <ol class="steps big">
+      <li><button class="btn btn-primary btn-sm" id="copyPrompt">📋 Copy the prompt</button> <span class="small" id="copyState"></span></li>
+      <li><a class="btn btn-sm" href="https://chatgpt.com/" target="_blank" rel="noopener">Open ChatGPT ↗</a> and sign in with the free account.</li>
+      <li>In ChatGPT press <b>+</b>, attach the PDF, paste the prompt, and send it.</li>
+      <li>Copy ChatGPT's whole reply and paste it below.</li>
+    </ol>
+    <div class="field" style="margin-top:.9rem"><label for="pasteIn">Paste ChatGPT's reply</label>
+      <textarea id="pasteIn" placeholder='{ "title": "Unit 3 practice", "problems": [ … ] }' spellcheck="false" autocomplete="off"></textarea></div>
+    <div class="row" style="margin-top:.6rem"><button class="btn btn-primary" id="buildBtn">Build the worksheet</button>
+      <span class="note" id="buildNote"></span></div>
+  </section>
+
   <section class="card" id="outCard" hidden aria-labelledby="h-out">
     <div class="card-head"><h2 id="h-out">Result</h2>
       <div class="row no-print" style="gap:.4rem">
         <span class="pill" id="outMeta"></span>
+        <button class="btn btn-sm" id="againBtn" hidden title="Same PDF, different questions">🔄 Another set</button>
         <button class="btn btn-sm" id="answersBtn" aria-pressed="false">👁 Answers</button>
         <button class="btn btn-sm" id="printBtn">🖨️ Print</button>
         <button class="btn btn-sm" id="dlBtn">⬇ Download</button>
@@ -145,6 +166,10 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   const MAX_BYTES = 20 * 1024 * 1024;
   /* Two providers, same job. Prices are per million tokens, used only to show what a run cost. */
   const PROVIDERS = {
+    free: {
+      name: 'Free ChatGPT', vendor: 'ChatGPT', manual: true, keyStore: '', placeholder: '',
+      keyLabel: '', console: 'https://chatgpt.com/', consoleName: 'chatgpt.com', models: [], steps: []
+    },
     claude: {
       name: 'Claude', vendor: 'Anthropic', keyStore: 'ph.ai.key', placeholder: 'sk-ant-…',
       keyLabel: 'Anthropic API key', console: 'https://console.anthropic.com/', consoleName: 'console.anthropic.com',
@@ -169,7 +194,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   const esc = PH.esc;
 
   /* ---------------- state ---------------- */
-  function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10, provider: 'claude', models: {} }, summary: { headline: '', sub: '' } }; }
+  function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10, provider: 'free', models: {} }, summary: { headline: '', sub: '' } }; }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
   function normalize(raw) {
     const s = blank();
@@ -199,9 +224,9 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   }
   let state = normalize(PH.load(KEY, null));
   const prov = () => PROVIDERS[state.settings.provider];
-  const modelId = () => state.settings.models[state.settings.provider] || prov().models[0].id;
+  const modelId = () => state.settings.models[state.settings.provider] || (prov().models[0] || {}).id;
   const modelInfo = () => prov().models.filter(m => m.id === modelId())[0] || prov().models[0];
-  function readKey(which) { try { return localStorage.getItem(PROVIDERS[which].keyStore) || ''; } catch (e) { return ''; } }
+  function readKey(which) { const st = PROVIDERS[which] && PROVIDERS[which].keyStore; if (!st) return ''; try { return localStorage.getItem(st) || ''; } catch (e) { return ''; } }
   let apiKey = readKey(state.settings.provider);
   function save() { state.summary = buildSummary(); PH.save(KEY, state); }
   function buildSummary() {
@@ -259,8 +284,9 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     },
     required: ['title', 'source_summary', 'problems'], additionalProperties: false
   };
-  function prompt(kind, count, focus) {
+  function prompt(kind, count, focus, vary) {
     return 'You are making practice for Priyaan, a 7th grader in California. The attached document is his class material.\n\n' +
+      (vary ? 'This is a second set on the same material, so use different numbers, contexts and question order than an obvious first attempt.\n\n' : '') +
       'Write ' + count + ' NEW practice ' + (kind === 'quiz' ? 'quiz questions' : 'problems') + ' that test the same skills as the document. ' +
       'Do not copy its questions word for word: change the numbers, names and situations, and keep the same kind of thinking and the same level.\n\n' +
       (kind === 'quiz'
@@ -271,6 +297,16 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       'Keep "work" to one to three short lines a student could follow.' +
       (focus ? '\n\nThe parent asked you to focus on: ' + focus : '') +
       '\n\nIf the document has no material that can be practised (for example it is a permission slip), return an empty "problems" array and say why in "source_summary".';
+  }
+  /** Same instructions, plus the bits a chat window needs: attach the file yourself, answer in one JSON block. */
+  function manualPrompt() {
+    const kind = state.settings.kind, count = state.settings.count, focus = $('#focusIn').value.trim();
+    return 'I am attaching a PDF of my 7th grader\'s class material.\n\n' + prompt(kind, count, focus) +
+      '\n\nReply with NOTHING but one JSON object in a ```json code block, in exactly this shape:\n' +
+      '{\n  "title": "short title for the set",\n  "source_summary": "one sentence on what the document covers",\n  "problems": [\n' +
+      '    { "question": "...", "choices": ' + (kind === 'quiz' ? '["A option","B option","C option","D option"]' : '[]') +
+      ', "answer": "...", "work": "one to three short lines", "topic": "1-4 words" }\n  ]\n}\n' +
+      'No commentary before or after the code block.';
   }
   async function callClaude(text) {
     const doc = file.mime === 'application/pdf'
@@ -326,14 +362,83 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (res.status === 429) msg = prov().vendor + ' is rate-limiting, or the account is out of credit. Try again in a minute.';
     return new Error(msg);
   }
-  async function generate() {
+  /** ChatGPT's reply → the same shape generate() produces. Tolerates code fences, stray prose, and plain numbered lists. */
+  function parseReply(raw) {
+    let t = String(raw || '').trim();
+    if (!t) return null;
+    const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence) t = fence[1].trim();
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a >= 0 && b > a) {
+      try {
+        const o = JSON.parse(t.slice(a, b + 1));
+        if (o && Array.isArray(o.problems) && o.problems.length) return o;
+      } catch (e) { /* fall through to the text reader */ }
+    }
+    // Fallback: "1. question …  Answer: x" style lists, with optional A)–D) choices.
+    const lines = String(raw).split(/\r?\n/);
+    const problems = []; let cur = null;
+    const push = () => { if (cur && cur.question && cur.answer) problems.push(cur); cur = null; };
+    lines.forEach(line => {
+      const start = line.match(/^\s*(\d{1,2})[.)]\s+(.*)$/);
+      const ans = line.match(/^\s*(?:answer|ans)\s*[:\-]\s*(.+)$/i);
+      const work = line.match(/^\s*(?:work|solution|why)\s*[:\-]\s*(.+)$/i);
+      const choice = line.match(/^\s*\(?([a-dA-D])[.)]\s+(.+)$/);
+      if (start) { push(); cur = { question: start[2].trim(), choices: [], answer: '', work: '', topic: '' }; return; }
+      if (!cur) return;
+      if (ans) { cur.answer = ans[1].trim(); return; }
+      if (work) { cur.work = work[1].trim(); return; }
+      if (choice) { cur.choices.push(choice[2].trim()); return; }
+      if (line.trim() && !cur.answer) cur.question += ' ' + line.trim();
+    });
+    push();
+    if (!problems.length) return null;
+    problems.forEach(p => { if (p.choices.length && p.answer.length === 1) {          // "Answer: B" → the option text
+      const i = 'abcd'.indexOf(p.answer.toLowerCase()); if (i >= 0 && p.choices[i]) p.answer = p.choices[i]; } });
+    return { title: '', source_summary: '', problems: problems };
+  }
+  function buildFromPaste() {
+    const out = parseReply($('#pasteIn').value);
+    if (!out) { $('#buildNote').textContent = '⚠️ Could not find questions in that. Paste ChatGPT\'s whole reply, including the JSON block.'; return; }
+    const problems = out.problems.filter(p => p && p.question && p.answer).map(p => ({
+      question: String(p.question), answer: String(p.answer), work: String(p.work || ''),
+      topic: String(p.topic || ''), choices: Array.isArray(p.choices) ? p.choices.map(String) : [] }));
+    if (!problems.length) { $('#buildNote').textContent = '⚠️ No complete questions in that reply — each one needs a question and an answer.'; return; }
+    const kind = problems.some(p => p.choices.length) ? 'quiz' : state.settings.kind;
+    const set = { id: PH.uid(), date: PH.todayISO(), kind: kind, title: out.title || (file ? file.name.replace(/\.[^.]+$/, '') : 'Practice set'),
+      source: file ? file.name : 'ChatGPT', summary: out.source_summary || '', score: null, by: 'Free ChatGPT', problems: problems };
+    state.sets.unshift(set); state.sets = state.sets.slice(0, 60); save();
+    $('#buildNote').innerHTML = '<span class="copied">✅ Built ' + problems.length + ' ' + (kind === 'quiz' ? 'questions' : 'problems') + '</span>';
+    $('#pasteIn').value = '';
+    show(set); renderSaved();
+  }
+  async function copyPrompt() {
+    const text = manualPrompt();
+    let done = false;
+    try { await navigator.clipboard.writeText(text); done = true; } catch (e) { /* file:// or denied */ }
+    if (!done) {
+      const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px'; document.body.appendChild(ta); ta.select();
+      try { done = document.execCommand('copy'); } catch (e) { done = false; }
+      ta.remove();
+    }
+    $('#copyState').innerHTML = done ? '<span class="copied">Copied — now paste it into ChatGPT with the PDF attached</span>'
+      : 'Could not copy automatically. <a href="#" id="showPrompt">Show the prompt</a> and copy it by hand.';
+    if (!done) {
+      const link = $('#showPrompt');
+      if (link) link.addEventListener('click', ev => { ev.preventDefault(); $('#pasteIn').value = text; $('#pasteIn').select(); $('#copyState').textContent = 'The prompt is in the box below — copy it, then replace it with the reply.'; });
+    }
+  }
+
+  async function generate(vary) {
+    if (prov().manual) { PH.toast('Use the free ChatGPT steps below'); return; }
     if (!apiKey) { PH.toast('Add your ' + prov().keyLabel + ' first'); $('#keyIn').focus(); return; }
     if (!file) { PH.toast('Pick a PDF first'); return; }
     const kind = state.settings.kind, count = state.settings.count, focus = $('#focusIn').value.trim();
     setBusy(true, 'Reading the document and writing questions… this takes 20–60 seconds.');
     try {
       const call = state.settings.provider === 'openai' ? callOpenAI : callClaude;
-      const reply = await call(prompt(kind, count, focus));
+      const reply = await call(prompt(kind, count, focus, vary));
       let out; try { out = JSON.parse(reply.json); } catch (e) { setBusy(false, '⚠️ Could not read the response. Try again.'); return; }
       const problems = (out.problems || []).filter(p => p && p.question && p.answer);
       if (!problems.length) { setBusy(false, '⚠️ ' + (out.source_summary || 'Nothing practisable in that document.')); return; }
@@ -362,6 +467,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   let cur = null, marks = {}, showAns = false;
   function show(set) {
     cur = set; marks = {}; showAns = false;
+    $('#againBtn').hidden = !!prov().manual;
     $('#answersBtn').setAttribute('aria-pressed', 'false');
     $('#outCard').hidden = false;
     renderOut();
@@ -396,29 +502,67 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     $('#scoreLbl').textContent = right + ' right of ' + done + ' answered' + (done < cur.problems.length ? ' (' + cur.problems.length + ' total)' : '');
   }
   function sheetHTML() {
+    const quiz = cur.kind === 'quiz';
+    const n = cur.problems.length;
+    const boxH = n <= 8 ? 1.7 : n <= 12 ? 1.35 : n <= 20 ? 1.05 : 0.8;   // work space shrinks as the count grows
+    const made = PH.fmtDate(cur.date, { month: 'long', day: 'numeric', year: 'numeric' });
     const rows = cur.problems.map((p, i) =>
-      '<li class="prob"><div class="q"><span class="n">' + (i + 1) + '.</span><span>' + esc(p.question) + '</span></div>' +
-      (p.choices.length ? '<div class="ch">' + p.choices.map((c, j) => '<span>' + 'ABCD'[j] + ') ' + esc(c) + '</span>').join('') + '</div>' : '<div class="work"></div>') +
-      '</li>').join('');
-    const key = cur.problems.map((p, i) => '<li><b>' + (i + 1) + '.</b> ' + esc(p.answer) + (p.work ? ' <span class="w">— ' + esc(p.work) + '</span>' : '') + '</li>').join('');
-    return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(cur.title) + '</title><style>' +
-      '@page{size:letter;margin:.6in}*{box-sizing:border-box}body{margin:0;font:11.5pt/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#111;background:#fff}' +
-      '.page{max-width:8.5in;margin:0 auto;padding:.4in .5in}@media screen{body{background:#e9ebf0}.page{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.18);margin:20px auto}}' +
-      'header{border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:14px}h1{font-size:15pt;margin:0}.sub{color:#555;font-size:9.5pt;margin-top:3px}' +
-      '.nameline{display:flex;gap:1.4em;font-size:11pt;margin-top:8px}.blank{display:inline-block;min-width:2in;border-bottom:1px solid #111}' +
-      'ol.problems{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}li.prob{break-inside:avoid}' +
-      '.q{display:flex;gap:.5em}.q .n{font-weight:700;min-width:1.6em}.work{height:1.3in;border:1px solid #c4c4c4;border-radius:4px;margin-top:6px}' +
-      '.ch{display:grid;gap:2px;margin:6px 0 0 2em;font-size:10.5pt}' +
-      '.key{page-break-before:always;padding-top:.2in}.key h2{font-size:13pt;border-bottom:1px solid #111;padding-bottom:4px}' +
-      '.key ol{list-style:none;padding:0;columns:2;gap:24px}.key li{margin:0 0 5px;break-inside:avoid;font-size:10.5pt}.key .w{color:#555}' +
-      '</style></head><body><div class="page"><header><h1>' + esc(cur.title) + '</h1>' +
-      '<div class="sub">Made from ' + esc(cur.source) + ' · ' + cur.problems.length + ' questions</div>' +
-      '<div class="nameline"><span>Name: <span class="blank"></span></span><span>Date: <span class="blank"></span></span></div></header>' +
+      '<li class="prob"><span class="num">' + (i + 1) + '</span><div class="body">' +
+        '<div class="qt">' + esc(p.question) + '</div>' +
+        (quiz && p.choices.length
+          ? '<ol class="choices">' + p.choices.map(c => '<li>' + esc(c) + '</li>').join('') + '</ol>'
+          : '<div class="work"></div>') +
+      '</div></li>').join('');
+    const key = cur.problems.map((p, i) =>
+      '<li><span class="kn">' + (i + 1) + '</span><span class="ka">' + esc(p.answer) +
+      (p.work ? '<span class="kw">' + esc(p.work) + '</span>' : '') + '</span></li>').join('');
+    const css = [
+      '@page{size:letter;margin:.5in .55in .55in}',
+      '*{box-sizing:border-box}',
+      'body{margin:0;color:#14161c;font:11pt/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+      '.page{max-width:8.5in;margin:0 auto;padding:.45in .5in}',
+      '@media screen{body{background:#e9ebf0}.page{background:#fff;box-shadow:0 2px 18px rgba(16,24,40,.18);margin:22px auto;min-height:11in;border-radius:3px}}',
+      'header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2.5px solid #14161c;padding-bottom:7px}',
+      'h1{font-size:17pt;margin:0;letter-spacing:-.01em;line-height:1.15}',
+      '.kicker{font-size:8.5pt;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#6b7280;margin-bottom:3px}',
+      '.meta{font-size:8.5pt;color:#6b7280;text-align:right;line-height:1.5;white-space:nowrap}',
+      '.idline{display:flex;gap:22px;margin:11px 0 16px;font-size:10.5pt;color:#374151}',
+      '.idline span{display:flex;gap:6px;align-items:baseline;flex:1}',
+      '.idline i{flex:1;border-bottom:1px solid #9aa0ab;min-width:1.4in;font-style:normal}',
+      'ol.problems{list-style:none;margin:0;padding:0;columns:2;column-gap:26px}',
+      'li.prob{break-inside:avoid;page-break-inside:avoid;display:flex;gap:9px;margin:0 0 13px}',
+      '.num{flex:none;width:19px;height:19px;border-radius:50%;background:#14161c;color:#fff;font-size:9.5pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}',
+      '.body{flex:1;min-width:0}',
+      '.qt{white-space:pre-wrap;overflow-wrap:anywhere}',
+      '.work{height:' + boxH + 'in;border:1px dashed #c3c8d2;border-radius:5px;margin-top:6px}',
+      'ol.choices{list-style:upper-alpha;margin:6px 0 0 1.15em;padding:0;font-size:10pt;color:#374151}',
+      'ol.choices li{margin:1.5px 0;break-inside:avoid}',
+      '.key{page-break-before:always;break-before:page;padding-top:.15in}',
+      '.key h2{font-size:12.5pt;margin:0 0 8px;border-bottom:1.5px solid #14161c;padding-bottom:4px}',
+      '.key ol{list-style:none;margin:0;padding:0;columns:3;column-gap:22px;font-size:9.5pt}',
+      '.key li{break-inside:avoid;display:flex;gap:7px;margin:0 0 7px;align-items:baseline}',
+      '.kn{flex:none;width:16px;height:16px;border-radius:50%;border:1px solid #9aa0ab;color:#4b5563;font-size:8pt;font-weight:700;display:flex;align-items:center;justify-content:center}',
+      '.ka{flex:1;font-weight:600;overflow-wrap:anywhere}',
+      '.kw{display:block;font-weight:400;color:#6b7280;font-size:8.8pt;margin-top:1px}',
+      'footer{margin-top:16px;border-top:1px solid #d5d9e0;padding-top:5px;font-size:8pt;color:#8b919c;display:flex;justify-content:space-between}'
+    ].join('');
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>' + esc(cur.title) + '</title><style>' + css + '</style></head><body>' +
+      '<div class="page"><header><div><div class="kicker">' + (quiz ? 'Practice quiz' : 'Practice worksheet') + '</div><h1>' + esc(cur.title) + '</h1></div>' +
+      '<div class="meta">' + n + ' questions<br>' + esc(made) + '</div></header>' +
+      '<div class="idline"><span>Name <i></i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
       '<ol class="problems">' + rows + '</ol>' +
-      '<div class="key"><h2>Answer key</h2><ol>' + key + '</ol></div></div></body></html>';
+      '<footer><span>' + (cur.source && cur.source !== cur.by ? 'From ' + esc(cur.source) + (cur.by ? ' · ' : '') : '') + (cur.by ? 'questions by ' + esc(cur.by) : '') + '</span><span>Priyaan\'s Hub</span></footer>' +
+      '<section class="key"><h2>Answer key</h2><ol>' + key + '</ol>' +
+      '<footer><span>' + esc(cur.title) + ' · answer key</span><span>Priyaan\'s Hub</span></footer></section>' +
+      '</div></body></html>';
   }
   function renderSaved() {
-    if (!state.sets.length) { $('#saved').innerHTML = '<div class="empty">Nothing yet. Pick a PDF above and press <b>Make it</b>.</div>'; return; }
+    if (!state.sets.length) {
+      $('#saved').innerHTML = '<div class="empty">Nothing yet. ' + (prov().manual
+        ? 'Copy the prompt, run it in ChatGPT, and paste the reply above.'
+        : 'Pick a PDF above and press <b>Make it</b>.') + '</div>';
+      return;
+    }
     $('#saved').innerHTML = state.sets.map(s => '<div class="saved-row">' +
       '<div class="meta"><div class="t">' + (s.kind === 'quiz' ? '❓ ' : '📝 ') + esc(s.title) + '</div>' +
       '<div class="s">' + esc(PH.fmtDate(s.date, { month: 'short', day: 'numeric' })) + ' · ' + s.problems.length + ' questions · ' + esc(s.source) + (s.by ? ' · by ' + esc(s.by) : '') + '</div></div>' +
@@ -427,11 +571,21 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       '<button class="btn btn-sm btn-ghost btn-danger" data-del="' + esc(s.id) + '" aria-label="Delete">✕</button></div></div>').join('');
   }
   function renderControls() {
-    const P = prov();
+    const P = prov(), manual = !!P.manual;
     $$('#kindTabs .tab').forEach(t => { const on = t.dataset.kind === state.settings.kind; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
     $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
     $$('#provTabs .tab').forEach(t => { const on = t.dataset.prov === state.settings.provider; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
-    $('#genBtn').disabled = !file;
+    $('#genBtn').disabled = !file || manual;
+    $('#genBtn').hidden = manual;
+    $('#manualCard').hidden = !manual;
+    $('#againBtn').hidden = manual || !cur;
+    $$('#setupCard .key-row').forEach(r => { r.hidden = manual; });
+    $('#setupCard').querySelector('details').hidden = manual;
+    $('#setupCard').querySelector('.note').hidden = manual;
+    $('#dropHint').hidden = !manual;
+    $('#h-src').textContent = manual ? '1 · What to make' : '1 · Pick the PDF';
+    $('#srcHint').textContent = manual ? 'the PDF itself goes to ChatGPT' : 'a chapter, a worksheet, notes, a study guide';
+    if (manual) { renderControlsManual(); return; }
     $('#provName').textContent = P.name; $('#provName2').textContent = P.vendor;
     $('#keyLabel').textContent = P.keyLabel; $('#keyIn').placeholder = P.placeholder;
     $('#keyState').textContent = apiKey ? P.name + ' key saved in this browser' : 'No ' + P.name + ' key yet';
@@ -442,6 +596,12 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       esc(m.label) + ' · $' + m.in + '/$' + m.out + ' per million tokens</option>').join('');
     $('#keySteps').innerHTML = P.steps.map(t => '<li>' + t + '</li>').join('') +
       '<li>Each worksheet costs a few cents on the default model. The exact cost is shown after every run.</li>';
+  }
+  function renderControlsManual() {
+    renderSaved();
+    $('#keyState').textContent = 'No key needed';
+    $('#keyState').className = 'pill ok';
+    $('#copyState').textContent = '';
   }
   function renderAll() { renderControls(); renderFile(); renderSaved(); }
 
@@ -458,7 +618,10 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (kt) { state.settings.kind = kt.dataset.kind; save(); renderControls(); return; }
     const cb = e.target.closest('[data-count]');
     if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderControls(); return; }
-    if (e.target.closest('#genBtn')) { generate(); return; }
+    if (e.target.closest('#genBtn')) { generate(false); return; }
+    if (e.target.closest('#againBtn')) { generate(true); return; }
+    if (e.target.closest('#copyPrompt')) { copyPrompt(); return; }
+    if (e.target.closest('#buildBtn')) { buildFromPaste(); return; }
     const pt = e.target.closest('[data-prov]');
     if (pt) { state.settings.provider = pt.dataset.prov; apiKey = readKey(state.settings.provider); save(); renderControls(); return; }
     if (e.target.closest('#saveKey')) {
@@ -514,6 +677,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 
   /* Hook for this repo's automated tests: they stub window.fetch, since a real API call needs a paid key. */
   window.PH_AI = { generate: generate, state: function () { return state; }, setKey: function (k) { apiKey = k; },
+    parseReply: parseReply, manualPrompt: manualPrompt, sheetHTML: function () { return sheetHTML(); },
     setProvider: function (p) { state.settings.provider = p; apiKey = readKey(p); renderControls(); } };
 })();
 </script>
