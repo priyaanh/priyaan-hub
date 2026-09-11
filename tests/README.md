@@ -31,6 +31,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
 | `mobile.html` | every page at 390px and 320px: the document never scrolls sideways, and topbar buttons stay tappable |
 | `contrast.html` | every page, light and dark: text meets WCAG AA against the background actually behind it (4.5:1, or 3:1 for large text) |
+| `hostile.html` | every page seeded with script payloads in every text field, then with wrong-typed values, then with corrupt JSON: nothing executes, payloads show as text, pages still render |
 | `offline.html` | the service worker: registration, a versioned cache, the whole app shell precached, pages answering from cache, PDFs deliberately excluded (run over a local server via `tests/cdp.js`, since workers need a real origin and real time) |
 
 Notes for anyone extending these:

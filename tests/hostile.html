@@ -1,0 +1,101 @@
+<!doctype html><title>hostile data</title><body style="margin:0"><script>
+/* Text reaching these pages comes from people and from other services (Google Tasks titles, ChatGPT
+   output, anything typed). Seed every text field with markup and script payloads, then check that nothing
+   executes and the text is shown literally. Also seed nonsense of the wrong types and check the page
+   still renders instead of going blank. */
+const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai'];
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1000px;border:0'; document.body.appendChild(f);
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+async function load(src) {
+  const want = src.replace(/^\.\.\//, '');
+  let loaded = false; f.onload = () => { loaded = true; }; f.src = src;
+  const deadline = Date.now() + 15000;
+  for (let i = 0; i < 5000 && Date.now() < deadline; i++) {
+    await tick();
+    try { const d = f.contentDocument;
+      if (d && d.location && d.location.href.indexOf(want) >= 0 && d.readyState !== 'loading' && d.querySelector('main')) break; } catch (e) {}
+  }
+  await new Promise(r => setTimeout(r, 600));
+}
+const XSS = '<img src=x onerror="window.__pwned=1">';
+const XSS2 = '"><script>window.__pwned=2<\/script>';
+const MARK = 'ZZpayloadZZ';
+const bad = (extra) => XSS + MARK + (extra || '');
+const T = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+const SEED = {
+  'ph.piano.v1': { version:1, settings:{ dailyGoal: 30 },
+    pieces:[{id:'p1',name:bad(' piece'),group:XSS2,status:'learning',archived:false,createdAt:1}],
+    sessions:[{id:'s1',date:T,pieceId:'p1',minutes:20,note:bad(' note'),rating:4}] },
+  'ph.badges.v1': { version:1, done:{ 'kayaking:1a':{date:T,by:bad(' counsellor')} },
+    notes:{ 'kayaking:1a': bad(' note') }, counselors:{ kayaking: bad(' name') }, targetDates:{}, hidden:[],
+    custom:[{id:'cx',name:bad(' badge'),emoji:'🎖️',edition:XSS2,reqs:[{id:'1',text:bad(' requirement'),children:[]}]}],
+    catalog:{ camping:{ status:'earned', date:T } }, summary:{ headline: bad(' summary'), sub: XSS2 } },
+  'ph.math.v1': { version:1, settings:{ topics:['linear'], count:10, difficulty:2, name: bad(' student') },
+    history:[{id:'h1',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:bad(' name'),score:{right:9,total:10}}],
+    summary:{ headline: bad(''), sub: XSS2 } },
+  'ph.quiz.v1': { version:1, attempts:[{id:'a1',date:T,ts:Date.now(),lesson:'1.1.1',right:8,total:10,kind:'full',seconds:60,missed:[]}],
+    settings:{ lastLesson: XSS2 }, summary:{ headline: bad(''), sub: XSS2 } },
+  'ph.hindi.v1': { version:1, progress:{}, quizzes:[], days:{},
+    custom:[{ ch:'mine', hi: bad(' शब्द'), tr: XSS2, en: bad(' meaning'), hint: XSS2 }],
+    settings:{ cls:6, ch:'mine', dir:'hi-en', speak:false }, summary:{ headline: bad(''), sub: XSS2 } },
+  'ph.schedule.v1': { version:1,
+    tasks:[{id:'t1',name:bad(' task'),cat:'piano',days:[0,1,2,3,4,5,6],time:XSS2,minutes:30,active:true,order:0}],
+    checks:{}, extras:{ [T]: [{ id:'e1', name: bad(' extra'), cat:'other', done:false }] },
+    dayNotes:{ [T]: bad(' day note') }, summary:{ headline: bad(''), sub: XSS2 } },
+  'ph.calendar.v1': { version:2,
+    settings:{ calendars:[{id:'c1',src:bad('@example.com'),name:bad(' calendar'),color:'#d64292',on:true}],
+      mode:'WEEK', tz:'America/Los_Angeles', clientId:'', taskList:'L1' },
+    tasksCache:{ listId:'L1', listTitle:bad(' list'), at:Date.now(),
+      items:[{id:'1',title:bad(' task'),notes:XSS2,due:T+'T00:00:00.000Z',status:'needsAction'}] },
+    eventsCache:{ at:Date.now(), items:[{title:bad(' event'),start:T+'T09:00:00',end:'',allDay:false,date:T,calName:XSS2,color:'#d64292'}] },
+    summary:{ headline: bad(''), sub: XSS2 } },
+  'ph.ai.v1': { version:1, settings:{ kind:'worksheet', count:10, provider:'free', models:{} },
+    sets:[{id:'s1',date:T,kind:'quiz',title:bad(' title'),source:bad(' source.pdf'),summary:XSS2,by:XSS2,score:null,
+      problems:[{question:bad(' question'),answer:bad(' answer'),work:XSS2,topic:XSS2,choices:[bad(' choice'),XSS2,'c','d']}]}],
+    summary:{ headline: bad(''), sub: XSS2 } }
+};
+const JUNK = { version:'x', settings:42, sets:'nope', history:{}, tasks:7, pieces:null, progress:[], attempts:'', done:[],
+  calendars:{}, tasksCache:{ items:'no' }, summary:[] };
+
+(async () => {
+  // ---- part 1: hostile text ----
+  await load('../index.html');
+  /* The Storage object belongs to the document that created it, so re-acquire it after every navigation
+     or setItem throws SecurityError once the iframe has moved on. */
+  const store = () => f.contentWindow.localStorage;
+  const seed = obj => Object.keys(SEED).forEach(k => store().setItem(k, JSON.stringify(obj === 'self' ? SEED[k] : obj)));
+  const snap = {};
+  Object.keys(SEED).forEach(k => { snap[k] = store().getItem(k); });
+  seed('self');
+  for (const page of PAGES) {
+    await load('../' + page + '.html');
+    const w = f.contentWindow, d = f.contentDocument;
+    ok(page + ': no injected script ran', !w.__pwned, 'window.__pwned = ' + w.__pwned);
+    ok(page + ': no injected element in the DOM', d.querySelectorAll('img[onerror], img[src="x"]').length === 0);
+    const shows = (d.body.textContent || '').includes(MARK);
+    const renders = !!d.querySelector('main') && (d.body.textContent || '').trim().length > 40;
+    ok(page + ': still renders with hostile data', renders);
+    if (['piano','badges','hindi','schedule','calendar','ai','index','math','quizzes'].includes(page))
+      ok(page + ': payload shown as text, not markup', !shows || d.body.innerHTML.includes('&lt;img'), 'raw <img survived');
+  }
+  // ---- part 2: junk of the wrong types ----
+  await load('../index.html'); seed(JUNK);
+  for (const page of PAGES) {
+    await load('../' + page + '.html');
+    const d = f.contentDocument;
+    ok(page + ': survives wrong-typed state', !!d.querySelector('main') && (d.body.textContent || '').trim().length > 40);
+  }
+  // ---- part 3: outright broken JSON ----
+  await load('../index.html'); Object.keys(SEED).forEach(k => store().setItem(k, '{"oops": '));
+  for (const page of PAGES) {
+    await load('../' + page + '.html');
+    const d = f.contentDocument;
+    ok(page + ': survives corrupt JSON', !!d.querySelector('main') && (d.body.textContent || '').trim().length > 40);
+  }
+  await load('../index.html');
+  Object.keys(SEED).forEach(k => { if (snap[k] == null) store().removeItem(k); else store().setItem(k, snap[k]); });
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+})();
+</script></body>
