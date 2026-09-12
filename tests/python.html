@@ -1,0 +1,61 @@
+<!doctype html><title>python practice</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1400px;border:0'; f.src='../python.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  let snap=null; try { snap=w.localStorage.getItem('ph.python.v1'); w.localStorage.removeItem('ph.python.v1'); } catch(e){}
+  try {
+    ok('eight topics offered', $$('[data-topic]').length === 8);
+    ok('all topics on by default', $$('[data-topic].on').length === 8);
+    ok('no round running yet', $('#quizCard').hidden && !$('#setupCard').hidden);
+    // narrow to one topic and start
+    const ids = $$('[data-topic]').map(b => b.dataset.topic);
+    for (const id of ids.slice(1)) { const b = d.querySelector('[data-topic="' + id + '"]'); b.click(); await tick(); }
+    ok('one topic left', $$('[data-topic].on').length === 1 && $$('[data-topic].on')[0].dataset.topic === ids[0]);
+    $('[data-count="5"]').click(); await tick();
+    $('#startBtn').click(); await tick();
+    ok('round starts', !$('#quizCard').hidden && /Question 1 of 5/.test($('#which').textContent));
+    ok('code is shown and highlighted', $('#qCode').textContent.length > 3 && /class="(kw|str|num|fn)"/.test($('#qCode').innerHTML));
+    ok('only the chosen topic is asked', $('#qTopic').textContent === w.PY.TOPICS.filter(t => t.id === ids[0])[0].name);
+    // answer everything correctly
+    for (let i = 0; i < 5; i++) {
+      const q = w.PH_PY.getRound().set.questions[i];
+      if (q.choices) { const idx = q.choices.indexOf(q.answer); d.querySelector('[data-pick="' + idx + '"]').click(); }
+      else { $('#typed').value = q.answer; $('#checkBtn').click(); }
+      await tick();
+      if (i === 0) ok('a right answer is confirmed', /Correct/.test($('#verdict').textContent) && !$('#verdict').hidden);
+      $('#nextBtn').click(); await tick();
+    }
+    ok('finishes with a perfect score', !$('#doneCard').hidden && $('#finalScore').textContent.trim() === '5 / 5');
+    ok('no retry offered when nothing was missed', $('#missedAgainBtn').hidden);
+    ok('round saved', JSON.parse(w.localStorage.getItem('ph.python.v1')).rounds[0].right === 5);
+    ok('history and stats update', /5\/5/.test($('#hist').textContent) && /100%/.test($('#stats').textContent));
+    // a wrong answer
+    $('#againBtn').click(); await tick();
+    const q0 = w.PH_PY.getRound().set.questions[0];
+    if (q0.choices) { const wrongIdx = q0.choices.findIndex(c => c !== q0.answer); d.querySelector('[data-pick="' + wrongIdx + '"]').click(); }
+    else { $('#typed').value = 'definitely not right'; $('#checkBtn').click(); }
+    await tick();
+    ok('a wrong answer shows the right one and why', /Not quite/.test($('#verdict').textContent)
+      && $('#verdict').textContent.includes(q0.answer) && $('#verdict').querySelector('.why'));
+    ok('choices lock after answering', !q0.choices || $$('#qAnswer .choice').every(b => b.disabled));
+    // keyboard: Enter moves on
+    d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await tick();
+    ok('Enter moves to the next question', /Question 2 of/.test($('#which').textContent));
+    // stop and come back
+    $('#quitBtn').click(); await tick();
+    ok('stopping returns to the topics', !$('#setupCard').hidden && $('#quizCard').hidden);
+    ok('settings remembered', JSON.parse(w.localStorage.getItem('ph.python.v1')).settings.count === 5);
+    // the generator itself
+    const set = w.PY.generate({ count: 8, seed: 123 });
+    ok('same seed, same questions', JSON.stringify(set) === JSON.stringify(w.PY.generate({ count: 8, seed: 123 })));
+    ok('every question has code, a prompt and an answer', set.questions.every(q => q.code && q.prompt && q.answer !== ''));
+    ok('checker accepts its own answers', set.questions.every(q => w.PY.checkAnswer(q, q.answer)));
+    ok('checker is not fooled by anything', set.questions.every(q => !w.PY.checkAnswer(q, 'zzz')));
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  try { if (snap) w.localStorage.setItem('ph.python.v1', snap); else w.localStorage.removeItem('ph.python.v1'); } catch(e){}
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+});
+</script></body>

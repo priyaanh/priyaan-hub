@@ -1,0 +1,353 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Practice · Priyaan's Hub</title>
+<link rel="stylesheet" href="shared.css"><style>
+main > * + * { margin-top: 1rem; }
+.topic-pills { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .2rem; }
+.topic-pill { font-size: .8rem; font-weight: 600; padding: .25rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+.topic-pill.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+.opts { display: grid; gap: .9rem; grid-template-columns: 1fr; margin-top: 1rem; }
+@media (min-width: 760px) { .opts { grid-template-columns: auto auto 1fr; align-items: end; } }
+.countbtns { display: flex; gap: .3rem; }
+.countbtns .btn.on, .tabs .tab.on { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-fill); box-shadow: none; }
+pre.code { background: #0f172a; color: #e2e8f0; border-radius: var(--radius-sm); padding: .85rem 1rem; overflow-x: auto;
+  font-family: var(--mono); font-size: .92rem; line-height: 1.5; margin: 0 0 .8rem; white-space: pre; tab-size: 4; }
+pre.code .kw { color: #c084fc; } pre.code .str { color: #86efac; } pre.code .num { color: #fca5a5; } pre.code .fn { color: #7dd3fc; } pre.code .cm { color: #94a3b8; }
+.qhead { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: .6rem; flex-wrap: wrap; }
+.qhead .which { font-weight: 700; }
+.qhead .tag { font-size: .78rem; color: var(--muted); }
+.prompt { font-weight: 600; margin: 0 0 .6rem; }
+.choices { display: grid; gap: .4rem; }
+@media (min-width: 620px) { .choices.four { grid-template-columns: 1fr 1fr; } }
+.choice { display: flex; gap: .55rem; align-items: center; text-align: left; padding: .55rem .7rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; font-family: var(--mono); color: inherit; }
+.choice:hover { border-color: var(--accent); background: var(--surface-2); }
+.choice .lt { font-weight: 700; color: var(--muted); font-family: var(--font); }
+.choice.ok { border-color: var(--ok); background: var(--ok-soft); }
+.choice.no { border-color: var(--danger); background: var(--danger-soft); }
+.ans-row { display: flex; gap: .45rem; }
+.ans-row .input { flex: 1; min-width: 0; font-family: var(--mono); }
+.verdict { margin-top: .7rem; font-size: .95rem; }
+.verdict .ok { color: var(--ok); font-weight: 700; } .verdict .no { color: var(--danger); font-weight: 700; }
+.verdict .why { color: var(--muted); display: block; margin-top: .2rem; font-size: .9rem; }
+.progress-row { display: flex; align-items: center; gap: .7rem; margin-bottom: .8rem; }
+.progress-row .progress { flex: 1; }
+.result-big { font-size: 2.2rem; font-weight: 800; color: var(--accent-text); }
+.review { list-style: none; margin: .8rem 0 0; padding: 0; }
+.review li { border-top: 1px solid var(--border); padding: .55rem 0; display: flex; gap: .6rem; align-items: flex-start; }
+.review .mark { flex: none; font-weight: 800; }
+.review code { font-family: var(--mono); font-size: .85rem; background: var(--surface-2); padding: .05rem .3rem; border-radius: 4px; }
+.hrow { display: flex; gap: .7rem; align-items: center; padding: .5rem 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.hrow:first-child { border-top: 0; }
+.hrow .meta { flex: 1; min-width: 10rem; font-size: .9rem; }
+.hrow .meta .s { font-size: .8rem; color: var(--muted); }
+</style></head>
+<body data-app="python">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <h1 class="title"><span class="emoji">🐍</span><span class="name">Python Practice</span></h1>
+  <div class="spacer"></div>
+  <button type="button" class="btn btn-sm" id="exportBtn">⬇<span class="lbl"> Export</span></button>
+  <button type="button" class="btn btn-sm" id="importBtn">⬆<span class="lbl"> Import</span></button>
+</div></header>
+<main class="container">
+
+  <div class="stats" id="stats"></div>
+
+  <section class="card" id="setupCard" aria-labelledby="h-set">
+    <div class="card-head"><h2 id="h-set">Start a round</h2><span class="muted small">questions made on this device</span></div>
+    <div class="topic-pills" id="topicPills"></div>
+    <div class="opts">
+      <div class="field"><label>How many questions</label>
+        <div class="countbtns" id="countBtns">
+          <button class="btn btn-sm" data-count="5">5</button><button class="btn btn-sm" data-count="10">10</button>
+          <button class="btn btn-sm" data-count="15">15</button><button class="btn btn-sm" data-count="20">20</button>
+        </div>
+      </div>
+      <div class="field"><label>Level</label>
+        <div class="tabs" id="diffTabs" role="group" aria-label="Level">
+          <button class="tab" data-diff="1">1 · Warm-up</button><button class="tab" data-diff="2">2 · Standard</button><button class="tab" data-diff="3">3 · Challenge</button>
+        </div>
+      </div>
+      <div class="field"><label for="seedIn">Seed</label>
+        <div class="row" style="gap:.4rem"><input class="input" id="seedIn" type="number" min="1" step="1" style="width:7.5rem" aria-label="Seed">
+          <button class="btn btn-sm" id="newSeed" title="New random seed">🔀</button></div></div>
+    </div>
+    <div class="row" style="margin-top:1rem"><button class="btn btn-primary" id="startBtn">▶ Start</button>
+      <span class="muted small" id="setupNote"></span></div>
+  </section>
+
+  <section class="card" id="quizCard" hidden aria-labelledby="h-quiz">
+    <div class="card-head"><h2 id="h-quiz">Question</h2><button class="btn btn-sm btn-ghost" id="quitBtn">Stop</button></div>
+    <div class="progress-row">
+      <span class="which" id="which"></span>
+      <div class="progress" id="qProg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i style="width:0%"></i></div>
+      <span class="small muted" id="scoreSoFar"></span>
+    </div>
+    <div class="qhead"><span class="tag" id="qTopic"></span></div>
+    <pre class="code" id="qCode" aria-label="Python code"></pre>
+    <p class="prompt" id="qPrompt"></p>
+    <div id="qAnswer"></div>
+    <div class="verdict" id="verdict" hidden></div>
+    <div class="row" style="margin-top:.9rem"><button class="btn btn-primary" id="nextBtn" hidden>Next →</button></div>
+  </section>
+
+  <section class="card" id="doneCard" hidden aria-labelledby="h-done">
+    <div class="card-head"><h2 id="h-done">Round finished</h2><span class="muted small" id="doneMeta"></span></div>
+    <div class="row" style="gap:1rem;align-items:baseline"><span class="result-big" id="finalScore"></span><span id="finalNote"></span></div>
+    <ul class="review" id="review"></ul>
+    <div class="row" style="margin-top:1rem"><button class="btn btn-primary" id="againBtn">Another round</button>
+      <button class="btn" id="missedAgainBtn" hidden>🔁 Just the ones I missed</button>
+      <button class="btn btn-ghost" id="backBtn">Back to topics</button></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-hist">
+    <div class="card-head"><h2 id="h-hist">Past rounds</h2><button class="btn btn-sm btn-ghost btn-danger" id="clearHist" hidden>Clear</button></div>
+    <div id="hist"></div>
+  </section>
+</main>
+<script src="shared.js"></script><script src="pyquiz.js"></script><script>
+(function () {
+  'use strict';
+  const KEY = 'ph.python.v1';
+  const $ = s => document.querySelector(s), $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
+  const esc = PH.esc;
+
+  /* ---------------- state ---------------- */
+  function blank() {
+    return { version: 1, rounds: [], settings: { topics: [], count: 10, difficulty: 2 }, summary: { headline: '', sub: '' } };
+  }
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const validISO = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime());
+  const ALL = PY.TOPICS.map(t => t.id);
+  function normalize(raw) {
+    const s = blank();
+    if (!isObj(raw)) return s;
+    const st = isObj(raw.settings) ? raw.settings : {};
+    if (Array.isArray(st.topics)) s.settings.topics = st.topics.filter(t => ALL.indexOf(t) >= 0);
+    if (isFinite(st.count)) s.settings.count = Math.min(40, Math.max(1, Math.round(st.count)));
+    if ([1, 2, 3].indexOf(st.difficulty) >= 0) s.settings.difficulty = st.difficulty;
+    if (Array.isArray(raw.rounds)) s.rounds = raw.rounds.filter(isObj).map(r => ({
+      id: typeof r.id === 'string' && r.id ? r.id : PH.uid(),
+      date: validISO(r.date) ? r.date : PH.todayISO(),
+      right: isFinite(r.right) ? Math.max(0, Math.round(r.right)) : 0,
+      total: isFinite(r.total) ? Math.max(1, Math.round(r.total)) : 1,
+      seed: isFinite(r.seed) ? Math.round(r.seed) : 0,
+      topics: Array.isArray(r.topics) ? r.topics.filter(t => ALL.indexOf(t) >= 0) : [],
+      difficulty: [1, 2, 3].indexOf(r.difficulty) >= 0 ? r.difficulty : 2
+    })).slice(0, 100);
+    return s;
+  }
+  const stored = PH.load(KEY, null);
+  let state = normalize(stored);
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+  function streak() {
+    const days = {}; state.rounds.forEach(r => days[r.date] = 1);
+    let n = 0, d = PH.todayISO();
+    if (!days[d]) d = PH.addDays(d, -1);
+    while (days[d]) { n++; d = PH.addDays(d, -1); }
+    return n;
+  }
+  function buildSummary() {
+    if (!state.rounds.length) return { headline: '', sub: '' };
+    const last = state.rounds[0];
+    const best = state.rounds.reduce((b, r) => Math.max(b, Math.round(r.right / r.total * 100)), 0);
+    const names = last.topics.map(id => (PY.TOPICS.filter(t => t.id === id)[0] || {}).name).filter(Boolean);
+    const st = streak();
+    return { headline: 'Last round ' + last.right + '/' + last.total,
+      sub: (names.length && names.length < 4 ? names.slice(0, 2).join(' · ') : state.rounds.length + ' rounds') +
+        ' · best ' + best + '%' + (st > 1 ? ' · 🔥 ' + st + ' days' : '') };
+  }
+
+  /* ---------------- a round ---------------- */
+  let round = null;
+  function startRound(opts) {
+    const picked = state.settings.topics.length ? state.settings.topics : null;
+    const set = opts && opts.questions ? { questions: opts.questions, seed: 0, difficulty: state.settings.difficulty, topics: picked || ALL }
+      : PY.generate({ topics: picked, count: state.settings.count, difficulty: state.settings.difficulty,
+        seed: Number($('#seedIn').value) || undefined });
+    if (!set.questions.length) { PH.toast('Pick at least one topic'); return; }
+    round = { set: set, i: 0, given: [], right: 0, checked: false, started: Date.now() };
+    $('#seedIn').value = set.seed || $('#seedIn').value;
+    $('#setupCard').hidden = true; $('#doneCard').hidden = true; $('#quizCard').hidden = false;
+    renderQuestion();
+    $('#quizCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function colourPython(code) {                                  // tiny highlighter: strings, numbers, keywords, calls
+    const KW = ['def', 'return', 'if', 'elif', 'else', 'for', 'while', 'in', 'and', 'or', 'not', 'True', 'False', 'None', 'import'];
+    let out = esc(code);
+    out = out.replace(/(&#39;[^&]*?&#39;|&quot;[^&]*?&quot;)/g, '<span class="str">$1</span>');
+    out = out.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
+    KW.forEach(k => { out = out.replace(new RegExp('\\b' + k + '\\b(?![^<]*<\\/span>)', 'g'), '<span class="kw">' + k + '</span>'); });
+    out = out.replace(/\b(print|len|range|sorted|type|int|str|append|pop|get|split|upper)\b(?=\()/g, '<span class="fn">$1</span>');
+    return out;
+  }
+  function renderQuestion() {
+    const q = round.set.questions[round.i], n = round.set.questions.length;
+    $('#which').textContent = 'Question ' + (round.i + 1) + ' of ' + n;
+    $('#qProg').querySelector('i').style.width = Math.round(round.i / n * 100) + '%';
+    $('#qProg').setAttribute('aria-valuenow', String(Math.round(round.i / n * 100)));
+    $('#scoreSoFar').textContent = round.right + ' right so far';
+    $('#qTopic').textContent = q.topicName;
+    $('#qCode').innerHTML = colourPython(q.code);
+    $('#qPrompt').textContent = q.prompt;
+    $('#verdict').hidden = true; $('#nextBtn').hidden = true;
+    round.checked = false;
+    if (q.choices && q.choices.length) {
+      $('#qAnswer').innerHTML = '<div class="choices' + (q.choices.length === 4 ? ' four' : '') + '">' + q.choices.map((c, i) =>
+        '<button type="button" class="choice" data-pick="' + i + '"><span class="lt">' + 'ABCD'[i] + '</span><span>' + esc(c) + '</span></button>').join('') + '</div>';
+    } else {
+      $('#qAnswer').innerHTML = '<div class="ans-row"><input class="input" id="typed" placeholder="What is printed?" autocomplete="off" ' +
+        'autocapitalize="off" spellcheck="false" aria-label="Your answer"><button class="btn" id="checkBtn">Check</button></div>';
+      const t = $('#typed'); if (t) t.focus();
+    }
+  }
+  function answer(given) {
+    if (round.checked) return;
+    const q = round.set.questions[round.i];
+    const ok = PY.checkAnswer(q, given);
+    round.checked = true;
+    round.given.push({ q: q, given: String(given), ok: ok });
+    if (ok) round.right++;
+    $$('#qAnswer .choice').forEach((b, i) => {
+      const label = q.choices[i];
+      if (label === q.answer) b.classList.add('ok');
+      else if (String(given) === label) b.classList.add('no');
+      b.disabled = true;
+    });
+    const typed = $('#typed'); if (typed) { typed.disabled = true; const cb = $('#checkBtn'); if (cb) cb.disabled = true; }
+    $('#verdict').hidden = false;
+    $('#verdict').innerHTML = (ok ? '<span class="ok">✓ Correct</span>' : '<span class="no">✗ Not quite</span> — it prints <code>' + esc(q.answer) + '</code>') +
+      (q.explain ? '<span class="why">' + esc(q.explain) + '</span>' : '');
+    $('#scoreSoFar').textContent = round.right + ' right so far';
+    $('#nextBtn').hidden = false;
+    $('#nextBtn').textContent = round.i + 1 >= round.set.questions.length ? 'See the result →' : 'Next →';
+    $('#nextBtn').focus();
+  }
+  function next() {
+    if (round.i + 1 >= round.set.questions.length) return finish();
+    round.i++; renderQuestion();
+  }
+  function finish() {
+    const n = round.set.questions.length, secs = Math.round((Date.now() - round.started) / 1000);
+    state.rounds.unshift({ id: PH.uid(), date: PH.todayISO(), right: round.right, total: n,
+      seed: round.set.seed || 0, topics: round.set.topics || [], difficulty: round.set.difficulty || 2 });
+    state.rounds = state.rounds.slice(0, 100); save();
+    $('#quizCard').hidden = true; $('#doneCard').hidden = false;
+    const pct = Math.round(round.right / n * 100);
+    $('#finalScore').textContent = round.right + ' / ' + n;
+    $('#finalNote').textContent = pct === 100 ? 'Every one right.' : pct >= 80 ? 'Nicely done.' : pct >= 50 ? 'Getting there — look at the ones below.' : 'Worth another go.';
+    $('#doneMeta').textContent = Math.floor(secs / 60) + 'm ' + (secs % 60) + 's · seed ' + (round.set.seed || '—');
+    $('#review').innerHTML = round.given.map((g, i) =>
+      '<li><span class="mark" style="color:var(--' + (g.ok ? 'ok' : 'danger') + ')">' + (g.ok ? '✓' : '✗') + '</span>' +
+      '<span><b>' + (i + 1) + '.</b> ' + esc(g.q.prompt) + ' <code>' + esc((g.q.code || '').split('\n').pop()) + '</code>' +
+      (g.ok ? '' : '<br><span class="muted small">you said <code>' + esc(g.given) + '</code>, it prints <code>' + esc(g.q.answer) + '</code></span>') +
+      '</span></li>').join('');
+    const missed = round.given.filter(g => !g.ok);
+    $('#missedAgainBtn').hidden = !missed.length;
+    $('#missedAgainBtn').dataset.n = String(missed.length);
+    renderHistory(); renderStats();
+    $('#doneCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ---------------- setup, stats, history ---------------- */
+  function renderSetup() {
+    const chosen = state.settings.topics;
+    $('#topicPills').innerHTML = PY.TOPICS.map(t => {
+      const on = !chosen.length || chosen.indexOf(t.id) >= 0;
+      return '<button type="button" class="topic-pill' + (on ? ' on' : '') + '" data-topic="' + esc(t.id) + '" aria-pressed="' + on +
+        '" title="' + esc(t.description) + '">' + esc(t.name) + '</button>';
+    }).join('');
+    $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
+    $$('#diffTabs .tab').forEach(b => { const on = Number(b.dataset.diff) === state.settings.difficulty;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    if (!$('#seedIn').value) $('#seedIn').value = (Math.random() * 999999 | 0) + 1;
+    const n = chosen.length || PY.TOPICS.length;
+    $('#setupNote').textContent = n + (n === 1 ? ' topic' : ' topics') + ' · ' + state.settings.count + ' questions';
+  }
+  function renderStats() {
+    const rounds = state.rounds;
+    const asked = rounds.reduce((n, r) => n + r.total, 0);
+    const right = rounds.reduce((n, r) => n + r.right, 0);
+    const best = rounds.reduce((b, r) => Math.max(b, Math.round(r.right / r.total * 100)), 0);
+    $('#stats').innerHTML = [
+      ['Rounds', rounds.length], ['Questions answered', asked],
+      ['Overall', asked ? Math.round(right / asked * 100) + '%' : '—'], ['Best round', rounds.length ? best + '%' : '—']
+    ].map(([lbl, num]) => '<div class="stat"><div class="num">' + esc(String(num)) + '</div><div class="lbl">' + lbl + '</div></div>').join('');
+  }
+  function renderHistory() {
+    $('#clearHist').hidden = !state.rounds.length;
+    if (!state.rounds.length) { $('#hist').innerHTML = '<div class="empty">No rounds yet. Pick some topics and press <b>Start</b>.</div>'; return; }
+    $('#hist').innerHTML = state.rounds.slice(0, 20).map(r => {
+      const pct = Math.round(r.right / r.total * 100);
+      const names = r.topics.length && r.topics.length < PY.TOPICS.length
+        ? r.topics.map(id => (PY.TOPICS.filter(t => t.id === id)[0] || {}).name).filter(Boolean).join(' · ') : 'All topics';
+      return '<div class="hrow"><div class="meta"><b>' + r.right + '/' + r.total + '</b> · ' + esc(names) +
+        '<div class="s">' + esc(PH.fmtDate(r.date, { month: 'short', day: 'numeric' })) + ' · level ' + r.difficulty + (r.seed ? ' · seed ' + r.seed : '') + '</div></div>' +
+        '<span class="pill ' + (pct >= 80 ? 'ok' : pct >= 50 ? 'warn' : 'danger') + '">' + pct + '%</span></div>';
+    }).join('');
+  }
+  function renderAll() { renderSetup(); renderStats(); renderHistory(); }
+
+  /* ---------------- events ---------------- */
+  document.addEventListener('click', e => {
+    const tp = e.target.closest('[data-topic]');
+    if (tp) {
+      const all = PY.TOPICS.map(t => t.id);
+      let chosen = state.settings.topics.length ? state.settings.topics.slice() : all.slice();
+      const i = chosen.indexOf(tp.dataset.topic);
+      if (i >= 0) chosen.splice(i, 1); else chosen.push(tp.dataset.topic);
+      if (!chosen.length) chosen = all.slice();
+      state.settings.topics = chosen.length === all.length ? [] : chosen;
+      save(); renderSetup(); return;
+    }
+    const cb = e.target.closest('[data-count]');
+    if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderSetup(); return; }
+    const db = e.target.closest('[data-diff]');
+    if (db) { state.settings.difficulty = Number(db.dataset.diff); save(); renderSetup(); return; }
+    if (e.target.closest('#newSeed')) { $('#seedIn').value = (Math.random() * 999999 | 0) + 1; return; }
+    if (e.target.closest('#startBtn') || e.target.closest('#againBtn')) { $('#seedIn').value = (Math.random() * 999999 | 0) + 1; startRound(); return; }
+    if (e.target.closest('#missedAgainBtn')) {
+      const missed = round ? round.given.filter(g => !g.ok).map(g => g.q) : [];
+      if (missed.length) startRound({ questions: missed });
+      return;
+    }
+    if (e.target.closest('#backBtn') || e.target.closest('#quitBtn')) {
+      $('#quizCard').hidden = true; $('#doneCard').hidden = true; $('#setupCard').hidden = false; renderAll(); return;
+    }
+    const pk = e.target.closest('[data-pick]');
+    if (pk) { const q = round.set.questions[round.i]; answer(q.choices[Number(pk.dataset.pick)]); return; }
+    if (e.target.closest('#checkBtn')) { const t = $('#typed'); if (t) answer(t.value); return; }
+    if (e.target.closest('#nextBtn')) { next(); return; }
+    if (e.target.closest('#clearHist')) { state.rounds = []; save(); renderAll(); PH.toast('History cleared'); return; }
+    if (e.target.closest('#exportBtn')) { PH.download('priyaan-python-' + PH.todayISO() + '.json', JSON.stringify(state, null, 2)); return; }
+    if (e.target.closest('#importBtn')) { importJSON(); return; }
+  });
+  document.addEventListener('keydown', e => {
+    if (!round || $('#quizCard').hidden) return;
+    const typing = /^(input|textarea)$/i.test((e.target && e.target.tagName) || '');
+    if (e.key === 'Enter') {
+      if (typing) { e.preventDefault(); answer(e.target.value); return; }
+      if (!$('#nextBtn').hidden) { e.preventDefault(); next(); return; }
+    }
+    if (typing || round.checked) return;
+    const q = round.set.questions[round.i];
+    const n = parseInt(e.key, 10);
+    if (q.choices && n >= 1 && n <= q.choices.length) { e.preventDefault(); answer(q.choices[n - 1]); }
+  });
+  async function importJSON() {
+    const text = await PH.pickFile('application/json'); if (!text) return;
+    let obj; try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+    if (isObj(obj) && isObj(obj.data) && typeof obj.data[KEY] === 'string') { try { obj = JSON.parse(obj.data[KEY]); } catch (e) { obj = null; } }
+    const inc = normalize(obj);
+    if (!inc.rounds.length) { PH.toast('No Python rounds in that file'); return; }
+    const seen = {}; state.rounds.concat(inc.rounds).forEach(r => { seen[r.id] = r; });
+    state.rounds = Object.keys(seen).map(k => seen[k]).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 100);
+    state.settings = inc.settings;
+    save(); renderAll(); PH.toast('Imported — ' + state.rounds.length + ' rounds');
+  }
+
+  renderAll();
+  if (stored) save();
+  window.PH_PY = { startRound, answer, next, finish, getRound: () => round, state: () => state, colourPython };
+})();
+</script>
+</body></html>

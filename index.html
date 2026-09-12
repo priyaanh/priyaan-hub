@@ -71,6 +71,7 @@
   .app[data-app="schedule"] { --accent:#0f9d9a; --accent-soft:rgba(15,157,154,.15); }
   .app[data-app="calendar"] { --accent:#d64292; --accent-soft:rgba(214,66,146,.15); }
   .app[data-app="ai"]       { --accent:#0d9488; --accent-soft:rgba(13,148,136,.15); }
+  .app[data-app="python"]   { --accent:#3572a5; --accent-soft:rgba(53,114,165,.16); }
   footer { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: .875rem; }
   footer .spacer { flex: 1; }
 </style>
@@ -132,6 +133,12 @@
       <div class="top"><span class="emoji">📅</span><h2>Weekly Plan</h2></div>
       <p class="desc">One week, every activity: piano, dance, Scouts, math, and Hindi, with checkboxes for each day.</p>
       <div class="summary none" data-key="ph.schedule.v1"><span class="headline">This week is empty</span><span class="sub">Open to plan the week</span></div>
+      <span class="open">Open →</span>
+    </a>
+    <a class="app" data-app="python" href="python.html">
+      <div class="top"><span class="emoji">🐍</span><h2>Python Practice</h2></div>
+      <p class="desc">Short rounds on types, strings, lists, loops, if/else, functions, dictionaries and errors. Read the code, say what it prints.</p>
+      <div class="summary none" data-key="ph.python.v1"><span class="headline">No rounds yet</span><span class="sub">Pick topics and start</span></div>
       <span class="open">Open →</span>
     </a>
     <a class="app" data-app="ai" href="ai.html">

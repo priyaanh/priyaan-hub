@@ -2,7 +2,7 @@
 
 Two kinds, both run by `./tests/run.sh`:
 
-- **`../test_im1.js`** and **`../test_grades.js`** — the maths generators, in Node. Generates 1,260 problems per topic per level and
+- **`../test_im1.js`**, **`../test_grades.js`** and **`../test_pyquiz.js`** — the generators, in Node. The Python one executes every snippet with python3 and compares the real output with the claimed answer. Generates 1,260 problems per topic per level and
   checks them: no junk in the text, deterministic for a seed, no duplicates in a sheet, and, where the
   question can be re-solved, that the answer is actually right (substituting back into equations, systems
   and inequalities, recomputing slopes, midpoints, distances, sequence terms and exponential values).
@@ -31,6 +31,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
 | `mobile.html` | every page at 390px and 320px: the document never scrolls sideways, and topbar buttons stay tappable |
 | `contrast.html` | every page, light and dark: text meets WCAG AA against the background actually behind it (4.5:1, or 3:1 for large text) |
+| `python.html` | the Python app: topic choice, a round end to end, right and wrong answers, the keyboard, saved rounds |
 | `gradesheet.html` | the by-grade worksheet maker: grade and topic choice, seeds, instant generation, printing |
 | `hostile.html` | every page seeded with script payloads in every text field, then with wrong-typed values, then with corrupt JSON: nothing executes, payloads show as text, pages still render |
 | `offline.html` | the service worker: registration, a versioned cache, the whole app shell precached, pages answering from cache, PDFs deliberately excluded (run over a local server via `tests/cdp.js`, since workers need a real origin and real time) |

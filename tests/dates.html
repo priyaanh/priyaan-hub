@@ -1,0 +1,56 @@
+<!doctype html><title>date helpers</title><body style="margin:0"><script>
+/* Streaks, due dates and week ranges all rest on these four helpers. Daylight saving and year ends are
+   where date maths usually breaks, so check those explicitly. */
+const f=document.createElement('iframe'); f.style.cssText='width:800px;height:400px;border:0'; f.src='../index.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+f.addEventListener('load', () => {
+  const PH = f.contentWindow.PH;
+  try {
+    // addDays must step one calendar day even across a daylight-saving change
+    const springForward = '2026-03-07';        // US DST starts 8 March 2026
+    ok('addDays crosses the spring change', PH.addDays(springForward, 1) === '2026-03-08'
+      && PH.addDays('2026-03-08', 1) === '2026-03-09', PH.addDays(springForward, 1));
+    const fallBack = '2026-10-31';             // US DST ends 1 November 2026
+    ok('addDays crosses the autumn change', PH.addDays(fallBack, 1) === '2026-11-01'
+      && PH.addDays('2026-11-01', 1) === '2026-11-02', PH.addDays(fallBack, 1));
+    ok('addDays crosses a year end', PH.addDays('2026-12-31', 1) === '2027-01-01' && PH.addDays('2027-01-01', -1) === '2026-12-31');
+    ok('addDays crosses a leap day', PH.addDays('2028-02-28', 1) === '2028-02-29' && PH.addDays('2028-03-01', -1) === '2028-02-29');
+    ok('addDays handles a month end', PH.addDays('2026-04-30', 1) === '2026-05-01' && PH.addDays('2026-05-01', -1) === '2026-04-30');
+    ok('addDays(0) is a no-op', PH.addDays('2026-09-11', 0) === '2026-09-11');
+
+    // daysBetween is what every streak counts with
+    ok('daysBetween over the spring change', PH.daysBetween('2026-03-07', '2026-03-09') === 2);
+    ok('daysBetween over the autumn change', PH.daysBetween('2026-10-31', '2026-11-02') === 2);
+    ok('daysBetween over a year end', PH.daysBetween('2026-12-30', '2027-01-02') === 3);
+    ok('daysBetween over a leap day', PH.daysBetween('2028-02-27', '2028-03-01') === 3);
+    ok('daysBetween is signed', PH.daysBetween('2026-09-11', '2026-09-04') === -7);
+    ok('daysBetween of the same day is 0', PH.daysBetween('2026-09-11', '2026-09-11') === 0);
+
+    // a 366-day walk must land exactly one year later, with no drift at any step
+    let d = '2026-01-01', steps = 0;
+    for (let i = 0; i < 365; i++) { const next = PH.addDays(d, 1); if (PH.daysBetween(d, next) !== 1) steps++; d = next; }
+    ok('a year of single steps never drifts', d === '2027-01-01' && steps === 0, d + ' with ' + steps + ' bad steps');
+
+    // mondayOf underpins the weekly plan
+    ok('mondayOf a Monday is itself', PH.mondayOf('2026-09-07') === '2026-09-07');
+    ok('mondayOf a Sunday looks back', PH.mondayOf('2026-09-13') === '2026-09-07');
+    ok('mondayOf crosses a year end', PH.mondayOf('2027-01-01') === '2026-12-28');
+    ok('mondayOf over the spring change', PH.mondayOf('2026-03-08') === '2026-03-02');
+
+    // todayISO and formatting
+    ok('todayISO is a plain date', /^\d{4}-\d{2}-\d{2}$/.test(PH.todayISO()));
+    ok('todayISO(date) uses local time, not UTC', PH.todayISO(new Date(2026, 0, 1, 0, 30)) === '2026-01-01');
+    ok('todayISO(date) late at night stays on the day', PH.todayISO(new Date(2026, 0, 1, 23, 45)) === '2026-01-01');
+    ok('fmtDate reads back the same day', /Sep/.test(PH.fmtDate('2026-09-11', { month: 'short', day: 'numeric' }))
+      && /11/.test(PH.fmtDate('2026-09-11', { month: 'short', day: 'numeric' })));
+    ok('fmtDate does not shift across a year end', /Jan/.test(PH.fmtDate('2027-01-01', { month: 'short', day: 'numeric' })));
+
+    // a streak walked backwards from a set of days, the way every app counts one
+    const days = {}; ['2026-11-02','2026-11-01','2026-10-31','2026-10-30'].forEach(x => days[x] = 1);
+    let n = 0, cur = '2026-11-02';
+    while (days[cur]) { n++; cur = PH.addDays(cur, -1); }
+    ok('a streak counts through the autumn change', n === 4, 'counted ' + n);
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+});
+</script></body>
