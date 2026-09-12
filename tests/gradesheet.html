@@ -8,7 +8,8 @@ f.addEventListener('load', async () => {
   try {
     ok('grade mode is what you land on', !$('#gradeCard').hidden && $('[data-mode="grade"]').classList.contains('on'));
     ok('no AI key box in grade mode', $('#setupCard').hidden);
-    ok('three grades offered', $$('[data-grade]').length === 3 && /Grade 6/.test($('#gradeCards').textContent));
+    ok('four levels offered', $$('[data-grade]').length === 4 && /Grade 6/.test($('#gradeCards').textContent)
+        && /Integrated Math 1/.test($('#gradeCards').textContent));
     ok('grade 7 is picked by default', $('[data-grade="7"]').classList.contains('on'));
     ok('topics listed for the grade', $$('[data-gtopic]').length === 8);
     // make one
@@ -43,6 +44,31 @@ f.addEventListener('load', async () => {
     const html = w.PH_AI.sheetHTML();
     ok('prints with an answer key', /Answer key/.test(html) && /page-break-before/.test(html));
     ok('answers are on the sheet only once', (html.match(/class="prob"/g) || []).length === $$('.prob').length);
+    // Integrated Math 1 shares the maths app's generators
+    $('[data-grade="im1"]').click(); await tick();
+    ok('Integrated Math 1 lists its CPM topics', /Systems of equations/.test($('#gradeTopics').textContent) && $$('[data-gtopic]').length >= 10);
+    $('#gMake').click(); await tick();
+    ok('makes an IM1 sheet', $$('.prob').length > 0 && /Integrated Math 1/.test($('#saved').textContent));
+    // practise a worksheet on screen
+    $('[data-grade="7"]').click(); await tick();
+    $('[data-gcount="10"]').click(); await tick();
+    $('#gMake').click(); await tick();
+    ok('practice button offered for a worksheet', !$('#practiceBtn').hidden && $('#quizBar').hidden);
+    $('#practiceBtn').click(); await tick();
+    ok('answer boxes appear', $$('[data-typed]').length === 10 && !$('#quizBar').hidden);
+    const right = w.PH_AI.state().sets[0].problems[0].answer;
+    const box = $('[data-typed="0"]'); box.value = right;
+    $('[data-checki="0"]').click(); await tick();
+    ok('a right answer is marked right', $$('.prob')[0].classList.contains('right'));
+    const box2 = $('[data-typed="1"]'); box2.value = 'definitely wrong';
+    $('[data-checki="1"]').click(); await tick();
+    ok('a wrong answer is marked wrong and shows the answer', $$('.prob')[1].classList.contains('wrong')
+        && $$('.prob')[1].textContent.includes('Answer:'));
+    ok('score line counts them', /1 right of 2 answered/.test($('#scoreLbl').textContent));
+    $('#finishBtn').click(); await tick();
+    ok('score saved with the set', JSON.parse(w.localStorage.getItem('ph.ai.v1')).sets[0].score.right === 1);
+    $('#practiceBtn').click(); await tick();
+    ok('turning practice off clears the marks', $$('[data-typed]').length === 0 && $$('.prob.right').length === 0);
     // back to the PDF side
     $('[data-mode="pdf"]').click(); await tick();
     ok('switching to PDF mode restores that UI', $('#gradeCard').hidden && !$('#setupCard').hidden);

@@ -6,7 +6,7 @@ const waitFor=async(cond,n)=>{for(let i=0;i<(n||40);i++){ if(cond()) return true
 let phase=0, snap={};
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
-  const KEYS=['ph.piano.v1','ph.schedule.v1','ph.calendar.v1','ph.hindi.v1','ph.math.v1','ph.quiz.v1','ph.badges.v1','ph.ai.key','ph.ai.key.openai','ph.meta.backupAt'];
+  const KEYS=['ph.piano.v1','ph.schedule.v1','ph.calendar.v1','ph.hindi.v1','ph.math.v1','ph.quiz.v1','ph.badges.v1','ph.ai.v1','ph.ai.key','ph.ai.key.openai','ph.meta.backupAt'];
   if (phase === 0) {
     phase = 1;
     KEYS.forEach(k => { snap[k] = w.localStorage.getItem(k); });
@@ -36,6 +36,9 @@ f.addEventListener('load', async () => {
     w.localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, attempts:[{id:'x',date:T,lesson:'1.3.1',right:8,total:10,kind:'full',ts:Date.now()}], settings:{}, summary:{} }));
     w.localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, history:[{id:'m',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:9,total:10}}], settings:{}, summary:{} }));
     w.localStorage.setItem('ph.badges.v1', JSON.stringify({ version:1, done:{ 'kayaking:1a':{date:T,by:''}, 'kayaking:1b':{date:Y,by:''}, 'canoeing:2':{date:w.PH.addDays(T,-30),by:''} }, notes:{}, counselors:{}, targetDates:{}, custom:[], hidden:[], catalog:{}, summary:{} }));
+    w.localStorage.setItem('ph.ai.v1', JSON.stringify({ version:1, settings:{}, sets:[
+      {id:'s1',date:T,kind:'worksheet',title:'Grade 7 practice',source:'Grade 7',summary:'',by:'Grade 7 generator',
+       score:{right:8,total:10},problems:[{question:'q',answer:'a',work:'',topic:'',choices:[]}]}], summary:{} }));
     w.localStorage.setItem('ph.ai.key', 'sk-ant-secret');
     w.localStorage.setItem('ph.ai.key.openai', 'sk-openai-secret');
     w.location.reload(); return;
@@ -43,7 +46,7 @@ f.addEventListener('load', async () => {
   const restore = () => { Object.keys(snap).forEach(k => { if (snap[k] == null) w.localStorage.removeItem(k); else w.localStorage.setItem(k, snap[k]); }); };
   if (phase === 2) {
     ok('page survives a corrupt app key', !$('#todayCard').hidden && $$('.tile').length === 6);
-    ok('the other tiles still work', /1 of 2/.test($('#tiles').textContent) && /17 \/ 20/.test($('#tiles').textContent));
+    ok('the other tiles still work', /1 of 2/.test($('#tiles').textContent) && /25 \/ 30/.test($('#tiles').textContent));
     restore();
     console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
     return;
@@ -64,7 +67,7 @@ f.addEventListener('load', async () => {
     ok('tasks tile counts overdue + today, not tomorrow', /2 due/.test(txt) && /1 overdue/.test(txt));
     ok('tasks tile flagged late', $('[data-tile="tasks"]').classList.contains('late'));
     ok('hindi tile counts due cards', /2 due/.test($('[data-tile="hindi"]').textContent) && /2 reviewed today/.test($('[data-tile="hindi"]').textContent));
-    ok('maths tile adds quiz + worksheet scores', /17 \/ 20/.test(txt) && /practised today/.test(txt));
+    ok('maths tile adds quiz + worksheet + practice scores', /25 \/ 30/.test(txt) && /practised today/.test(txt));
     ok('badges tile counts total and this week', /3 signed off/.test(txt) && /2 this week/.test(txt));
     ok('piano streak chip shows 3 days', /3-day piano/.test($('#streaks').textContent));
     ok('hindi streak chip shows 2 days', /2-day Hindi/.test($('#streaks').textContent));

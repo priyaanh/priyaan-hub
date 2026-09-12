@@ -225,17 +225,19 @@
       colour: '#e0701f', cls: due ? 'due' : 'done' });
   });
 
-  // maths: any worksheet or quiz practice today
+  // maths: any worksheet or quiz practice today, from all three places it can happen
   safe(() => {
-    const m = load('ph.math.v1'), q = load('ph.quiz.v1');
+    const m = load('ph.math.v1'), q = load('ph.quiz.v1'), a2 = load('ph.ai.v1');
     const hist = (m && Array.isArray(m.history)) ? m.history : [];
     const att = (q && Array.isArray(q.attempts)) ? q.attempts : [];
-    if (!hist.length && !att.length) return;
+    const sets = (a2 && Array.isArray(a2.sets)) ? a2.sets : [];
+    if (!hist.length && !att.length && !sets.length) return;
     const scored = att.filter(a => a && a.date === T).map(a => ({ right: a.right, total: a.total }))
-      .concat(hist.filter(h => h && h.date === T && h.score).map(h => ({ right: h.score.right, total: h.score.total })));
+      .concat(hist.filter(h => h && h.date === T && h.score).map(h => ({ right: h.score.right, total: h.score.total })))
+      .concat(sets.filter(x => x && x.date === T && x.score).map(x => ({ right: x.score.right, total: x.score.total })));
     const right = scored.reduce((n, a) => n + (a.right || 0), 0), total = scored.reduce((n, a) => n + (a.total || 0), 0);
-    tile({ id: 'maths', href: total ? 'quizzes.html' : 'math.html', emoji: '🧮', label: 'Maths',
-      value: total ? right + ' / ' + total : 'Not yet', sub: total ? 'practised today' : 'worksheet or quiz',
+    tile({ id: 'maths', href: total ? 'quizzes.html' : 'ai.html', emoji: '🧮', label: 'Maths',
+      value: total ? right + ' / ' + total : 'Not yet', sub: total ? 'practised today' : 'make a worksheet',
       colour: '#2f6fed', cls: total ? 'done' : 'due' });
   });
 

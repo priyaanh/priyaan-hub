@@ -35,22 +35,16 @@ serve() {
 for name in "${want[@]}"; do
   suite="tests/${name%-dark}.html"
   [ -f "$suite" ] || { echo "▶ $name — no such suite"; fail=1; continue; }
-  case "$name" in
-    a11y|mobile|contrast|contrast-dark|hostile|gradesheet) realtime=1 ;;
-    *) realtime=0 ;;
-  esac
-  if [ "$realtime" = 1 ]; then
-    # Suites that walk several pages need REAL time: --virtual-time-budget races the clock forward, so a
-    # wall-clock wait for the next page to load expires instantly and the checks run against the wrong page.
-    darkflag=""; [ "$name" = "contrast-dark" ] && darkflag="--dark"
-    CHROME="$CHROME" node tests/cdp.js "file://$ROOT/$suite" 180000 "RESULTS" $darkflag >"$TMP/$name.err" 2>&1
-  elif [ "$name" = "offline" ]; then
-    # real time, real origin: service workers need both
-    serve
-    CHROME="$CHROME" node tests/cdp.js "http://127.0.0.1:$PORT/$suite" 40000 "RESULTS" >"$TMP/$name.err" 2>&1
+  # Every suite runs in REAL time through the DevTools driver. Under --virtual-time-budget the clock races
+  # ahead: waits for the next page expire instantly, colours are read mid-transition, and suites end early
+  # with a quietly reduced count.
+  darkflag=""; [ "$name" = "contrast-dark" ] && darkflag="--dark"
+  if [ "$name" = "offline" ]; then
+    serve                                        # service workers also need a real origin
+    CHROME="$CHROME" node tests/cdp.js "http://127.0.0.1:$PORT/$suite" 60000 "RESULTS" >"$TMP/$name.err" 2>&1
     kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null
   else
-    "$CHROME" "${FLAGS[@]}" --virtual-time-budget=45000 --dump-dom "file://$ROOT/$suite" >/dev/null 2>"$TMP/$name.err"
+    CHROME="$CHROME" node tests/cdp.js "file://$ROOT/$suite" 180000 "RESULTS" $darkflag >"$TMP/$name.err" 2>&1
   fi
   # each suite ends with "RESULTS <n> failed of <m>" — trust that over counting console lines, which
   # Chrome can drop when several runs are in flight.

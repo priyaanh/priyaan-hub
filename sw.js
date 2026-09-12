@@ -1,7 +1,7 @@
 /* Priyaan Hub service worker: makes the hosted site work offline.
    Strategy: network first (so updates show as soon as you are online), falling back to the cached copy when offline.
    Everything same-origin that has been visited is cached; the app shell below is cached up front on install. */
-const VERSION = 'ph-v4';
+const VERSION = 'ph-v5';
 const SHELL = [
   './', 'index.html', 'shared.css', 'shared.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
   'piano.html', 'badges.html', 'badges_catalog.js', 'badges/pdf/manifest.js', 'schedule.html',

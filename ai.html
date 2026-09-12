@@ -188,6 +188,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       <div class="row no-print" style="gap:.4rem">
         <span class="pill" id="outMeta"></span>
         <button class="btn btn-sm" id="againBtn" hidden title="Same PDF, different questions">🔄 Another set</button>
+        <button class="btn btn-sm" id="practiceBtn" aria-pressed="false" hidden>✏️ Practice on screen</button>
         <button class="btn btn-sm" id="answersBtn" aria-pressed="false">👁 Answers</button>
         <button class="btn btn-sm" id="printBtn">🖨️ Print</button>
         <button class="btn btn-sm" id="dlBtn">⬇ Download</button>
@@ -205,7 +206,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   </section>
 </main>
 <iframe id="printFrame" title="Printable worksheet" aria-hidden="true"></iframe>
-<script src="shared.js"></script><script src="grades.js"></script><script>
+<script src="shared.js"></script><script src="grades.js"></script><script src="im1.js"></script><script>
 (function () {
   'use strict';
   const KEY = 'ph.ai.v1';                                  // API keys live under their own keys so Export never includes them
@@ -251,7 +252,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (isFinite(st.count)) s.settings.count = Math.min(20, Math.max(3, Math.round(st.count)));
     if (PROVIDERS[st.provider]) s.settings.provider = st.provider;
     if (st.mode === 'grade' || st.mode === 'pdf') s.settings.mode = st.mode;
-    if (window.GRADES && GRADES.LEVELS.some(function (g) { return g.id === st.grade; })) s.settings.grade = st.grade;
+    if (['6', '7', '8', 'im1'].indexOf(st.grade) >= 0) s.settings.grade = st.grade;
     if (isFinite(st.gradeCount)) s.settings.gradeCount = Math.min(60, Math.max(1, Math.round(st.gradeCount)));
     if ([1, 2, 3].indexOf(st.gradeDiff) >= 0) s.settings.gradeDiff = st.gradeDiff;
     if (Array.isArray(st.gradeTopics)) s.settings.gradeTopics = st.gradeTopics.filter(function (t) { return typeof t === 'string'; });
@@ -522,14 +523,23 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   }
 
   /* ---------------- by grade: generated here, no AI ---------------- */
+  /* The three school grades come from grades.js; Integrated Math 1 reuses the generators in im1.js. */
+  function allLevels() {
+    var L = ((window.GRADES && GRADES.LEVELS) || []).slice();
+    if (window.IM1 && Array.isArray(IM1.TOPICS)) {
+      L.push({ id: 'im1', name: 'Integrated Math 1', sub: 'CPM: equations, slope, systems, exponents, sequences',
+        topics: IM1.TOPICS.map(function (t) { return { id: t.id, name: t.name, description: t.description }; }) });
+    }
+    return L;
+  }
   function gradeLevel() {
-    var L = (window.GRADES && GRADES.LEVELS) || [];
+    var L = allLevels();
     return L.filter(function (g) { return g.id === state.settings.grade; })[0] || L[0] || null;
   }
   function renderGrade() {
     if (!window.GRADES) { $('#gradeCard').innerHTML = '<div class="empty">grades.js did not load.</div>'; return; }
     var lvl = gradeLevel();
-    $('#gradeCards').innerHTML = GRADES.LEVELS.map(function (g) {
+    $('#gradeCards').innerHTML = allLevels().map(function (g) {
       return '<button type="button" class="grade' + (g.id === state.settings.grade ? ' on' : '') + '" data-grade="' + esc(g.id) + '"' +
         ' aria-pressed="' + (g.id === state.settings.grade) + '"><span class="g">' + esc(g.name) + '</span><span class="s">' + esc(g.sub) + '</span></button>';
     }).join('');
@@ -547,8 +557,11 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   function makeGradeSheet() {
     var lvl = gradeLevel(); if (!lvl) return;
     var chosen = state.settings.gradeTopics.filter(function (t) { return lvl.topics.some(function (x) { return x.id === t; }); });
-    var ws = GRADES.generate({ grade: lvl.id, topics: chosen, count: state.settings.gradeCount,
-      difficulty: state.settings.gradeDiff, seed: Number($('#gSeed').value) || undefined });
+    var opts = { topics: chosen.length ? chosen : null, count: state.settings.gradeCount,
+      difficulty: state.settings.gradeDiff, seed: Number($('#gSeed').value) || undefined };
+    var ws = lvl.id === 'im1'
+      ? IM1.generate({ topics: opts.topics, count: opts.count, difficulty: opts.difficulty, seed: opts.seed })
+      : GRADES.generate({ grade: lvl.id, topics: chosen, count: opts.count, difficulty: opts.difficulty, seed: opts.seed });
     $('#gSeed').value = ws.seed;
     var names = {}; lvl.topics.forEach(function (t) { names[t.id] = t.name; });
     var used = [];
@@ -562,9 +575,10 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   }
 
   /* ---------------- showing a set ---------------- */
-  let cur = null, marks = {}, showAns = false;
+  let cur = null, marks = {}, showAns = false, practising = false;
   function show(set) {
-    cur = set; marks = {}; showAns = false;
+    cur = set; marks = {}; showAns = false; practising = false;
+    $('#practiceBtn').setAttribute('aria-pressed', 'false');
     $('#againBtn').hidden = !!prov().manual;
     $('#answersBtn').setAttribute('aria-pressed', 'false');
     $('#outCard').hidden = false;
@@ -574,22 +588,25 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   function renderOut() {
     if (!cur) return;
     const quiz = cur.kind === 'quiz';
+    const answering = quiz || practising;                       // a worksheet can be answered here too
     $('#outMeta').textContent = (quiz ? 'Quiz' : 'Worksheet') + ' · ' + cur.problems.length + ' questions';
     $('#outSummary').textContent = cur.summary ? cur.summary + ' (from ' + cur.source + ')' : 'From ' + cur.source;
-    $('#quizBar').hidden = !quiz;
-    $('#plist').className = 'plist' + (quiz ? '' : ' two');
+    $('#quizBar').hidden = !answering;
+    $('#practiceBtn').hidden = quiz;
+    $('#practiceBtn').setAttribute('aria-pressed', String(practising));
+    $('#plist').className = 'plist' + (quiz || practising ? '' : ' two');
     $('#plist').innerHTML = cur.problems.map((p, i) => {
       const m = marks[i];
       let inner = '<div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + esc(p.question) +
         (p.topic ? '<div class="tag">' + esc(p.topic) + '</div>' : '') + '</div></div>';
-      if (quiz && p.choices.length) {
+      if (answering && p.choices.length) {
         inner += '<div class="choices">' + p.choices.map((c, j) => {
           let cls = '';
           if (m) { if (c === p.answer) cls = ' ok'; else if (m.pick === j) cls = ' no'; }
           return '<button class="choice' + cls + '" data-pick="' + i + ':' + j + '"' + (m ? ' disabled' : '') + '>' +
             '<span class="lt">' + 'ABCD'[j] + '</span><span>' + esc(c) + '</span></button>';
         }).join('') + '</div>';
-      } else if (quiz) {
+      } else if (answering) {
         inner += '<div class="ans-row"><input class="input" data-typed="' + i + '" placeholder="Your answer" value="' + esc(m ? m.typed : '') + '">' +
           '<button class="btn btn-sm" data-checki="' + i + '">Check</button></div>';
       }
@@ -763,9 +780,14 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     const ci = e.target.closest('[data-checki]');
     if (ci) { const i = Number(ci.dataset.checki), inp = document.querySelector('[data-typed="' + i + '"]');
       const typed = (inp.value || '').trim(); if (!typed) { PH.toast('Type an answer first'); return; }
-      const norm = s => s.toLowerCase().replace(/\s+/g, '').replace(/[−–]/g, '-').replace(/^[a-z]=/, '');
-      marks[i] = { typed, ok: norm(typed) === norm(cur.problems[i].answer) }; renderOut(); return; }
+      const p = cur.problems[i];
+      // the by-grade sheets know how to mark themselves; anything else falls back to a plain comparison
+      const ok = window.GRADES && typeof GRADES.checkAnswer === 'function'
+        ? GRADES.checkAnswer({ answer: p.answer, accept: [] }, typed)
+        : (function (a, b) { const n = s => String(s).toLowerCase().replace(/\s+/g, '').replace(/[−–]/g, '-').replace(/^[a-z]=/, ''); return n(a) === n(b); })(typed, p.answer);
+      marks[i] = { typed, ok: ok }; renderOut(); return; }
     if (e.target.closest('#answersBtn')) { showAns = !showAns; $('#answersBtn').setAttribute('aria-pressed', String(showAns)); renderOut(); return; }
+    if (e.target.closest('#practiceBtn')) { practising = !practising; if (!practising) marks = {}; renderOut(); return; }
     if (e.target.closest('#printBtn')) { const f = $('#printFrame'); f.srcdoc = sheetHTML();
       f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (err) { PH.toast('Could not open the print dialog'); } }; return; }
     if (e.target.closest('#dlBtn')) { PH.download(cur.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_') + '.html', sheetHTML(), 'text/html'); return; }
@@ -794,6 +816,11 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     save(); renderSaved(); PH.toast('Imported — ' + state.sets.length + ' sets');
   }
 
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const inp = e.target.closest('[data-typed]');
+    if (inp) { e.preventDefault(); const btn = document.querySelector('[data-checki="' + inp.dataset.typed + '"]'); if (btn) btn.click(); }
+  });
   document.addEventListener('change', e => {
     if (e.target.id === 'modelIn') { state.settings.models[state.settings.provider] = e.target.value; save(); renderControls(); }
   });
