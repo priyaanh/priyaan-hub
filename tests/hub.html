@@ -69,6 +69,13 @@ f.addEventListener('load', async () => {
     ok('hindi tile counts due cards', /2 due/.test($('[data-tile="hindi"]').textContent) && /2 reviewed today/.test($('[data-tile="hindi"]').textContent));
     ok('maths tile adds quiz + worksheet + practice scores', /25 \/ 30/.test(txt) && /practised today/.test(txt));
     ok('badges tile counts total and this week', /3 signed off/.test(txt) && /2 this week/.test(txt));
+    // the seven-day strip
+    ok('week strip appears', !$('#week').hidden && $$('#week tbody tr').length === 4);
+    const rowText = $$('#week tbody tr').map(r => r.querySelector('.lbl').textContent.trim());
+    ok('a row per activity that happened', rowText.join('|').includes('Piano') && rowText.join('|').includes('Maths'));
+    ok('seven days shown', $$('#week thead th').length === 9);
+    ok('piano marked on 3 of the last 7 days', $$('#week tbody tr')[0].querySelector('.count').textContent === '3/7');
+    ok('today is highlighted', $$('#week .now').length >= 2);
     ok('piano streak chip shows 3 days', /3-day piano/.test($('#streaks').textContent));
     ok('hindi streak chip shows 2 days', /2-day Hindi/.test($('#streaks').textContent));
     const gpt = $('#askGpt');

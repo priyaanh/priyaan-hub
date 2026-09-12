@@ -15,7 +15,7 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 
 ## How it works
 
-The hub page opens on a **Today** panel computed from the other apps' saved data: piano minutes against the daily goal, how much of today's plan is ticked off, today's calendar events with the next one named, Google Tasks that are due or overdue, Hindi words waiting for review, today's worksheet and quiz scores, merit badge requirements signed off this week, and any practice streaks. Keys **1**–**9** open the apps, and **?** names them. It only shows tiles that have something to say, and one line names the next unchecked thing on today's plan.
+The hub page opens on a **Today** panel computed from the other apps' saved data: piano minutes against the daily goal, how much of today's plan is ticked off, today's calendar events with the next one named, Google Tasks that are due or overdue, Hindi words waiting for review, today's worksheet and quiz scores, merit badge requirements signed off this week, and any practice streaks. Keys **1**–**9** open the apps, and **?** names them. It only shows tiles that have something to say, and one line names the next unchecked thing on today's plan. Underneath, a seven-day strip shows which days had piano, plan, maths and Hindi activity, with a count out of seven.
 
 
 - Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build.
