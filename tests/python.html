@@ -17,6 +17,13 @@ f.addEventListener('load', async () => {
     $('#startBtn').click(); await tick();
     ok('round starts', !$('#quizCard').hidden && /Question 1 of 5/.test($('#which').textContent));
     ok('code is shown and highlighted', $('#qCode').textContent.length > 3 && /class="(kw|str|num|fn)"/.test($('#qCode').innerHTML));
+    ok('the code reads as real Python, not escaped entities', !/&(#\d+|amp|quot|lt|gt);/.test($('#qCode').textContent));
+    ok('what is shown matches the question exactly', $('#qCode').textContent === w.PH_PY.getRound().set.questions[0].code);
+    // highlighting must never change the code itself
+    const samples = ["x = 'hi'\nprint(x[0])", 'print(10 // 3)', "d = {'a': 1}\nprint(d['a'])", 'print("7" + 7)'];
+    ok('highlighting preserves every snippet', samples.every(src => {
+      const div = d.createElement('div'); div.innerHTML = w.PH_PY.colourPython(src); return div.textContent === src;
+    }));
     ok('only the chosen topic is asked', $('#qTopic').textContent === w.PY.TOPICS.filter(t => t.id === ids[0])[0].name);
     // answer everything correctly
     for (let i = 0; i < 5; i++) {

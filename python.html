@@ -171,13 +171,22 @@ pre.code .kw { color: #c084fc; } pre.code .str { color: #86efac; } pre.code .num
     renderQuestion();
     $('#quizCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  function colourPython(code) {                                  // tiny highlighter: strings, numbers, keywords, calls
-    const KW = ['def', 'return', 'if', 'elif', 'else', 'for', 'while', 'in', 'and', 'or', 'not', 'True', 'False', 'None', 'import'];
-    let out = esc(code);
-    out = out.replace(/(&#39;[^&]*?&#39;|&quot;[^&]*?&quot;)/g, '<span class="str">$1</span>');
-    out = out.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
-    KW.forEach(k => { out = out.replace(new RegExp('\\b' + k + '\\b(?![^<]*<\\/span>)', 'g'), '<span class="kw">' + k + '</span>'); });
-    out = out.replace(/\b(print|len|range|sorted|type|int|str|append|pop|get|split|upper)\b(?=\()/g, '<span class="fn">$1</span>');
+  /* Tokenise first, escape each token as it is written: escaping the whole string first and then running
+     regexes over it corrupts the entities (the 39 inside &#39; looks like a number). */
+  function colourPython(code) {
+    const KW = /^(def|return|if|elif|else|for|while|in|and|or|not|True|False|None|import|print)$/;
+    const FN = /^(print|len|range|sorted|type|int|str|append|pop|get|split|upper|keys|values|items)$/;
+    const re = /('[^'\n]*'|"[^"\n]*"|#[^\n]*|\d+(?:\.\d+)?|[A-Za-z_]\w*|\s+|[^\sA-Za-z_0-9'"#]+)/g;
+    let out = '', m;
+    while ((m = re.exec(code)) !== null) {
+      const t = m[0];
+      if (/^['"]/.test(t)) out += '<span class="str">' + esc(t) + '</span>';
+      else if (t[0] === '#') out += '<span class="cm">' + esc(t) + '</span>';
+      else if (/^\d/.test(t)) out += '<span class="num">' + esc(t) + '</span>';
+      else if (FN.test(t) && code[re.lastIndex] === '(') out += '<span class="fn">' + esc(t) + '</span>';
+      else if (KW.test(t)) out += '<span class="kw">' + esc(t) + '</span>';
+      else out += esc(t);
+    }
     return out;
   }
   function renderQuestion() {
