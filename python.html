@@ -39,6 +39,12 @@ pre.code .kw { color: #c084fc; } pre.code .str { color: #86efac; } pre.code .num
 .hrow:first-child { border-top: 0; }
 .hrow .meta { flex: 1; min-width: 10rem; font-size: .9rem; }
 .hrow .meta .s { font-size: .8rem; color: var(--muted); }
+details.sheet summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+details.sheet[open] summary { margin-bottom: .7rem; }
+.sheet-grid { display: grid; gap: .8rem; grid-template-columns: 1fr; }
+@media (min-width: 720px) { .sheet-grid { grid-template-columns: 1fr 1fr; } }
+.sheet-grid h3 { font-size: .85rem; margin: 0 0 .25rem; }
+.sheet-grid pre { margin: 0; font-size: .82rem; padding: .6rem .7rem; }
 </style></head>
 <body data-app="python">
 <header class="topbar"><div class="inner">
@@ -73,6 +79,10 @@ pre.code .kw { color: #c084fc; } pre.code .str { color: #86efac; } pre.code .num
     </div>
     <div class="row" style="margin-top:1rem"><button class="btn btn-primary" id="startBtn">▶ Start</button>
       <span class="muted small" id="setupNote"></span></div>
+
+    <details class="sheet" style="margin-top:1rem"><summary>Quick reference</summary>
+      <div class="sheet-grid" id="cheat"></div>
+    </details>
   </section>
 
   <section class="card" id="quizCard" hidden aria-labelledby="h-quiz">
@@ -353,6 +363,23 @@ pre.code .kw { color: #c084fc; } pre.code .str { color: #86efac; } pre.code .num
     state.settings = inc.settings;
     save(); renderAll(); PH.toast('Imported — ' + state.rounds.length + ' rounds');
   }
+
+  /* A short reminder of each topic's syntax, highlighted the same way the questions are. */
+  const CHEAT = [
+    ['Variables & types', "x = 7          # int\ny = 7.0        # float\ns = '7'        # str\nprint(7 // 2)  # 3  (whole part)\nprint(7 % 2)   # 1  (remainder)\nprint(2 ** 5)  # 32 (power)"],
+    ['Strings', "w = 'python'\nprint(w[0])      # p\nprint(w[1:4])    # yth\nprint(len(w))    # 6\nprint(w.upper()) # PYTHON\nprint('a,b'.split(','))  # ['a', 'b']"],
+    ['Lists', "nums = [4, 1, 7]\nprint(nums[0])   # 4\nprint(nums[-1])  # 7\nnums.append(9)   # add to the end\nnums.pop()       # remove the last\nprint(sorted(nums))  # [1, 4, 7]"],
+    ['Loops', "for i in range(3):\n    print(i)     # 0 1 2\n\nn = 1\nwhile n < 8:\n    n *= 2       # 2, 4, 8"],
+    ['If / elif / else', "if x < 10:\n    print('small')\nelif x < 100:\n    print('medium')\nelse:\n    print('large')"],
+    ['Functions', "def add(a, b=2):\n    return a + b\n\nprint(add(3))     # 5 (b uses its default)\nprint(add(3, 10)) # 13"],
+    ['Dictionaries', "stock = {'pear': 4}\nprint(stock['pear'])      # 4\nprint(stock.get('fig', 0))  # 0 if missing\nstock['fig'] = 2          # add or replace\nprint(len(stock))         # 2"],
+    ['f-strings & formatting', "name = 'maya'\nprint(f'hi {name}')   # hi maya\nprint(f'{3 * 4}')     # 12\nprint(f'{7 / 2:.2f}') # 3.50"],
+    ['List comprehensions', "nums = [1, 2, 3]\nprint([x * 2 for x in nums])   # [2, 4, 6]\nprint([x for x in range(6) if x % 2 == 0])  # [0, 2, 4]"],
+    ['Tuples & sets', "t = (1, 2, 3)   # cannot be changed\nprint(t[1])     # 2\ns = {1, 2, 2}   # duplicates dropped\nprint(len(s))   # 2\nprint(2 in t)   # True"],
+    ['Errors', "nums[9]      # IndexError\nd['missing'] # KeyError\n'7' + 7      # TypeError\n10 / 0       # ZeroDivisionError\nint('hi')    # ValueError\nundefined    # NameError"]
+  ];
+  $('#cheat').innerHTML = CHEAT.map(([title, code]) =>
+    '<div><h3>' + esc(title) + '</h3><pre class="code">' + colourPython(code) + '</pre></div>').join('');
 
   renderAll();
   if (stored) save();

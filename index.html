@@ -260,6 +260,17 @@
       colour: '#2f6fed', cls: total ? 'done' : 'due' });
   });
 
+  // python: rounds done today
+  safe(() => {
+    const d = load('ph.python.v1'); if (!d || !Array.isArray(d.rounds) || !d.rounds.length) return;
+    const today = d.rounds.filter(r => r && r.date === T);
+    const right = today.reduce((n, r) => n + r.right, 0), total = today.reduce((n, r) => n + r.total, 0);
+    tile({ id: 'python', href: 'python.html', emoji: '🐍', label: 'Python',
+      value: total ? right + ' / ' + total : 'Not yet',
+      sub: total ? (today.length === 1 ? 'one round today' : today.length + ' rounds today') : 'a quick round',
+      colour: '#3572a5', cls: total ? 'done' : 'due' });
+  });
+
   // merit badges: requirements signed off in the last week
   safe(() => {
     const d = load('ph.badges.v1'); if (!d || !d.done) return;
@@ -301,7 +312,10 @@
     if (ai && Array.isArray(ai.sets)) ai.sets.forEach(x => { if (x && x.score) mark('maths', x.date); });
     const h = load('ph.hindi.v1');
     if (h && h.days) Object.keys(h.days).forEach(d => mark('hindi', d));
-    const ROWS = [['piano', '🎹 Piano', '#7c5cff'], ['plan', '📅 Plan', '#0f9d9a'], ['maths', '🧮 Maths', '#2f6fed'], ['hindi', '📖 Hindi', '#e0701f']]
+    const py = load('ph.python.v1');
+    if (py && Array.isArray(py.rounds)) py.rounds.forEach(r => mark('python', r && r.date));
+    const ROWS = [['piano', '🎹 Piano', '#7c5cff'], ['plan', '📅 Plan', '#0f9d9a'], ['maths', '🧮 Maths', '#2f6fed'],
+                  ['hindi', '📖 Hindi', '#e0701f'], ['python', '🐍 Python', '#3572a5']]
       .filter(r => on[r[0]] && Object.keys(on[r[0]]).length);
     if (!ROWS.length) return;
     const head = '<tr><th class="lbl"></th>' + days.map(d => '<th' + (d === T ? ' class="now"' : '') + '>' +

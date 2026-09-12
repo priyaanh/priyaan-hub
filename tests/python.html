@@ -6,8 +6,8 @@ f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
   let snap=null; try { snap=w.localStorage.getItem('ph.python.v1'); w.localStorage.removeItem('ph.python.v1'); } catch(e){}
   try {
-    ok('eight topics offered', $$('[data-topic]').length === 8);
-    ok('all topics on by default', $$('[data-topic].on').length === 8);
+    ok('eleven topics offered', $$('[data-topic]').length === 11);
+    ok('all topics on by default', $$('[data-topic].on').length === 11);
     ok('no round running yet', $('#quizCard').hidden && !$('#setupCard').hidden);
     // narrow to one topic and start
     const ids = $$('[data-topic]').map(b => b.dataset.topic);
@@ -55,6 +55,14 @@ f.addEventListener('load', async () => {
     $('#quitBtn').click(); await tick();
     ok('stopping returns to the topics', !$('#setupCard').hidden && $('#quizCard').hidden);
     ok('settings remembered', JSON.parse(w.localStorage.getItem('ph.python.v1')).settings.count === 5);
+    // quick reference
+    ok('a quick reference is offered', !!$('details.sheet') && $$('#cheat pre').length === 11);
+    ok('the reference is real Python, highlighted', /class="(kw|str|num|fn|cm)"/.test($('#cheat').innerHTML)
+      && !/&(#\d+|amp|quot);/.test($('#cheat').textContent));
+    ok('the reference covers every topic', w.PY.TOPICS.every(t => {
+      const names = $$('#cheat h3').map(h => h.textContent.toLowerCase());
+      return names.indexOf(t.name.toLowerCase()) >= 0;   // headings and pills use the same words
+    }));
     // the generator itself
     const set = w.PY.generate({ count: 8, seed: 123 });
     ok('same seed, same questions', JSON.stringify(set) === JSON.stringify(w.PY.generate({ count: 8, seed: 123 })));

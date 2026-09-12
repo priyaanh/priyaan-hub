@@ -169,6 +169,69 @@
           prompt: 'What does this print?', answer: String(add), explain: 'Assigning to an existing key replaces its value.' });
       } },
 
+    { id: 'fstrings', name: 'f-strings & formatting', description: 'Building strings from values, rounding and decimal places.',
+      gen: function (r, d) {
+        var k = ri(r, 1, 4);
+        if (k === 1) { var name = pick(r, NAMES), age = ri(r, 10, 15);
+          return Q({ code: "name = '" + name + "'\nage = " + age + "\nprint(f'{name} is {age}')", prompt: 'What does this print?',
+            answer: name + ' is ' + age, explain: 'Each {…} is replaced by the value of that variable.' }); }
+        if (k === 2) { var x = ri(r, 2, 12), m = ri(r, 2, 9);
+          return Q({ code: 'x = ' + x + "\nprint(f'{x * " + m + "}')", prompt: 'What does this print?', answer: String(x * m),
+            explain: 'An f-string can hold a calculation: ' + x + ' × ' + m + '.' }); }
+        if (k === 3) { var a = ri(r, 3, 40), b = ri(r, 2, 8);
+          var val = a / b;
+          return Q({ code: "print(f'{" + a + ' / ' + b + ":.2f}')", prompt: 'What does this print?', answer: val.toFixed(2),
+            explain: ':.2f shows the number to two decimal places.' }); }
+        var n = ri(r, 2, 30), word = pick(r, FRUIT);
+        return Q({ code: 'n = ' + n + "\nprint('" + word + ": ' + str(n))", prompt: 'What does this print?', answer: word + ': ' + n,
+          explain: 'str(n) turns the number into text so it can be joined with +.' });
+      } },
+
+    { id: 'comprehensions', name: 'List comprehensions', description: 'Building a list in one line, with and without a condition.',
+      gen: function (r, d) {
+        var k = ri(r, 1, 3);
+        if (k === 1) { var n = ri(r, 3, 5), m = ri(r, 2, 4), src = [], i;
+          for (i = 1; i <= n; i++) src.push(i);
+          return Q({ code: 'nums = ' + pyList(src) + '\nprint([x * ' + m + ' for x in nums])', prompt: 'What does this print?',
+            answer: pyList(src.map(function (x) { return x * m; })),
+            explain: 'Each item is multiplied by ' + m + ', keeping the order.' }); }
+        if (k === 2) { var stop = ri(r, 6, 14);
+          var evens = 0, j;
+          for (j = 0; j < stop; j++) if (j % 2 === 0) evens++;
+          return Q({ code: 'print(len([x for x in range(' + stop + ') if x % 2 == 0]))', prompt: 'What does this print?',
+            answer: String(evens), explain: 'range(' + stop + ') has ' + evens + ' even numbers, counting 0.' }); }
+        var top = ri(r, 4, 9);
+        var total = top * (top - 1) / 2;
+        return Q({ code: 'print(sum([x for x in range(' + top + ')]))', prompt: 'What does this print?', answer: String(total),
+          explain: '0 + 1 + … + ' + (top - 1) + ' = ' + total + '.' });
+      } },
+
+    { id: 'sets', name: 'Tuples & sets', description: 'Sets drop duplicates, tuples cannot be changed.',
+      gen: function (r, d) {
+        var k = ri(r, 1, 4);
+        if (k === 1) { var base = [], i;
+          for (i = 0; i < 3; i++) base.push(ri(r, 1, 9));
+          var withDupes = base.concat([base[0], base[1]]);
+          var uniq = base.filter(function (x, i2, a) { return a.indexOf(x) === i2; }).length;
+          return Q({ code: 's = {' + shuffle(r, withDupes).join(', ') + '}\nprint(len(s))', prompt: 'What does this print?',
+            answer: String(uniq), explain: 'A set keeps only one of each value, so ' + withDupes.length + ' values become ' + uniq + '.' }); }
+        if (k === 2) { var t = [], j;
+          for (j = 0; j < 4; j++) t.push(ri(r, 1, 30));
+          var idx = ri(r, 0, 3);
+          return Q({ code: 't = (' + t.join(', ') + ')\nprint(t[' + idx + '])', prompt: 'What does this print?', answer: String(t[idx]),
+            explain: 'A tuple is indexed like a list, starting at 0.' }); }
+        if (k === 3) { var t2 = [ri(r, 1, 9), ri(r, 1, 9), ri(r, 1, 9)];
+          return Q({ code: 't = (' + t2.join(', ') + ')\nt[0] = 99', prompt: 'Which error does this raise?', answer: 'TypeError',
+            choices: shuffle(r, ['TypeError', 'IndexError', 'KeyError', 'ValueError']),
+            explain: 'A tuple cannot be changed once it is made.' }); }
+        var list = [], n2 = ri(r, 3, 5), q;
+        for (q = 0; q < n2; q++) list.push(ri(r, 1, 20));
+        var look = r() < 0.5 ? list[ri(r, 0, n2 - 1)] : 99;
+        return Q({ code: 'nums = ' + pyList(list) + '\nprint(' + look + ' in nums)', prompt: 'What does this print?',
+          answer: list.indexOf(look) >= 0 ? 'True' : 'False', choices: ['True', 'False'],
+          explain: '"in" asks whether the value appears in the list.' });
+      } },
+
     { id: 'errors', name: 'Errors', description: 'Which error a snippet raises, and why.',
       gen: function (r, d) {
         var cases = [
