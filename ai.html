@@ -107,6 +107,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     </div>
     <div class="gen-actions">
       <button class="btn btn-primary" id="gMake">✨ Make the worksheet</button>
+      <button class="btn" id="gPacket" title="Five different sheets, one for each school day">🗓️ Week's packet</button>
       <span class="note" id="gNote"></span>
     </div>
   </section>
@@ -196,7 +197,8 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     </div>
     <p class="note" id="outSummary"></p>
     <div class="row between no-print" id="quizBar" hidden><span class="score" id="scoreLbl"></span>
-      <button class="btn btn-sm btn-primary" id="finishBtn">Save score</button></div>
+      <span class="row" style="gap:.4rem"><button class="btn btn-sm" id="missedBtn" hidden>🔁 Practise the missed ones</button>
+        <button class="btn btn-sm btn-primary" id="finishBtn">Save score</button></span></div>
     <ol class="plist" id="plist"></ol>
   </section>
 
@@ -574,6 +576,71 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     show(set); renderSaved();
   }
 
+  /* A week's worth: five sheets from spaced seeds, printed as one document with a single answer key. */
+  function makePacket() {
+    var lvl = gradeLevel(); if (!lvl) return;
+    var chosen = state.settings.gradeTopics.filter(function (t) { return lvl.topics.some(function (x) { return x.id === t; }); });
+    var base = Number($('#gSeed').value) || ((Math.random() * 999999 | 0) + 1);
+    var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    var sheets = days.map(function (day, i) {
+      var seed = (base + i * 7919) >>> 0;
+      var ws = lvl.id === 'im1'
+        ? IM1.generate({ topics: chosen.length ? chosen : null, count: state.settings.gradeCount, difficulty: state.settings.gradeDiff, seed: seed })
+        : GRADES.generate({ grade: lvl.id, topics: chosen, count: state.settings.gradeCount, difficulty: state.settings.gradeDiff, seed: seed });
+      return { day: day, ws: ws };
+    });
+    var frame = $('#printFrame');
+    frame.srcdoc = packetHTML(lvl, sheets, base);
+    frame.onload = function () { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { PH.toast('Could not open the print dialog'); } };
+    $('#gNote').innerHTML = '<span class="copied">✅ Five sheets · ' + (state.settings.gradeCount * 5) + ' problems · seeds from ' + base + '</span>';
+    return sheets;
+  }
+  function packetHTML(lvl, sheets, base) {
+    var boxH = state.settings.gradeCount <= 12 ? 1.5 : state.settings.gradeCount <= 20 ? 1.1 : 0.85;
+    var css = [
+      '@page{size:letter;margin:.5in .55in}*{box-sizing:border-box}',
+      'body{margin:0;color:#14161c;font:11pt/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+      '.page{max-width:8.5in;margin:0 auto;padding:.45in .5in;page-break-after:always;break-after:page}',
+      '.page:last-child{page-break-after:auto;break-after:auto}',
+      '@media screen{body{background:#e9ebf0}.page{background:#fff;box-shadow:0 2px 18px rgba(16,24,40,.18);margin:22px auto;min-height:11in;border-radius:3px}}',
+      'header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2.5px solid #14161c;padding-bottom:7px}',
+      'h1{font-size:17pt;margin:0;letter-spacing:-.01em}',
+      '.kicker{font-size:8.5pt;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#6b7280;margin-bottom:3px}',
+      '.meta{font-size:8.5pt;color:#6b7280;text-align:right;line-height:1.5;white-space:nowrap}',
+      '.idline{display:flex;gap:22px;margin:11px 0 16px;font-size:10.5pt;color:#374151}',
+      '.idline span{display:flex;gap:6px;align-items:baseline;flex:1}.idline i{flex:1;border-bottom:1px solid #9aa0ab;min-width:1.2in;font-style:normal}',
+      'ol.problems{list-style:none;margin:0;padding:0;columns:2;column-gap:26px}',
+      'li.prob{break-inside:avoid;display:flex;gap:9px;margin:0 0 13px}',
+      '.num{flex:none;width:19px;height:19px;border-radius:50%;background:#14161c;color:#fff;font-size:9.5pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}',
+      '.body{flex:1;min-width:0}.work{height:' + boxH + 'in;border:1px dashed #c3c8d2;border-radius:5px;margin-top:6px}',
+      '.key h2{font-size:12.5pt;margin:0 0 8px;border-bottom:1.5px solid #14161c;padding-bottom:4px}',
+      '.key h3{font-size:10pt;margin:10px 0 4px;color:#4b5563}',
+      '.key ol{list-style:none;margin:0;padding:0;columns:3;column-gap:20px;font-size:9pt}',
+      '.key li{break-inside:avoid;display:flex;gap:6px;margin:0 0 5px}',
+      '.key .n{flex:none;width:15px;height:15px;border-radius:50%;border:1px solid #9aa0ab;color:#4b5563;font-size:7.5pt;font-weight:700;display:flex;align-items:center;justify-content:center}',
+      'footer{margin-top:14px;border-top:1px solid #d5d9e0;padding-top:5px;font-size:8pt;color:#8b919c;display:flex;justify-content:space-between}',
+      'sup{font-size:.72em;line-height:0}'
+    ].join('');
+    var pages = sheets.map(function (sh, i) {
+      return '<div class="page"><header><div><div class="kicker">' + esc(lvl.name) + ' · day ' + (i + 1) + ' of 5</div><h1>' + esc(sh.day) + '</h1></div>' +
+        '<div class="meta">' + sh.ws.problems.length + ' problems<br>seed ' + sh.ws.seed + '</div></header>' +
+        '<div class="idline"><span>Name <i></i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
+        '<ol class="problems">' + sh.ws.problems.map(function (p, j) {
+          return '<li class="prob"><span class="num">' + (j + 1) + '</span><div class="body"><div>' + p.question + '</div><div class="work"></div></div></li>';
+        }).join('') + '</ol>' +
+        '<footer><span>' + esc(lvl.name) + " practice · Priyaan's Hub</span><span>" + esc(sh.day) + '</span></footer></div>';
+    }).join('');
+    var key = '<div class="page key"><h2>Answer key — ' + esc(lvl.name) + " week's packet</h2>" +
+      sheets.map(function (sh) {
+        return '<h3>' + esc(sh.day) + ' · seed ' + sh.ws.seed + '</h3><ol>' + sh.ws.problems.map(function (p, j) {
+          return '<li><span class="n">' + (j + 1) + '</span><span>' + p.answer + '</span></li>';
+        }).join('') + '</ol>';
+      }).join('') +
+      "<footer><span>Answer key · Priyaan's Hub</span><span>seeds from " + base + '</span></footer></div>';
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>' + esc(lvl.name) + " week's packet</title><style>" + css +
+      '</style></head><body>' + pages + key + '</body></html>';
+  }
+
   /* ---------------- showing a set ---------------- */
   let cur = null, marks = {}, showAns = false, practising = false;
   function show(set) {
@@ -615,6 +682,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     }).join('');
     const done = Object.keys(marks).length, right = Object.keys(marks).filter(k => marks[k].ok).length;
     $('#scoreLbl').textContent = right + ' right of ' + done + ' answered' + (done < cur.problems.length ? ' (' + cur.problems.length + ' total)' : '');
+    $('#missedBtn').hidden = (done - right) < 1;
   }
   function sheetHTML() {
     const quiz = cur.kind === 'quiz';
@@ -765,6 +833,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (gd) { state.settings.gradeDiff = Number(gd.dataset.gdiff); save(); renderGrade(); return; }
     if (e.target.closest('#gNewSeed')) { $('#gSeed').value = (Math.random() * 999999 | 0) + 1; return; }
     if (e.target.closest('#gMake')) { makeGradeSheet(); return; }
+    if (e.target.closest('#gPacket')) { makePacket(); return; }
     const pt = e.target.closest('[data-prov]');
     if (pt) { state.settings.provider = pt.dataset.prov; apiKey = readKey(state.settings.provider); save(); renderControls(); return; }
     if (e.target.closest('#saveKey')) {
@@ -791,6 +860,17 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (e.target.closest('#printBtn')) { const f = $('#printFrame'); f.srcdoc = sheetHTML();
       f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (err) { PH.toast('Could not open the print dialog'); } }; return; }
     if (e.target.closest('#dlBtn')) { PH.download(cur.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_') + '.html', sheetHTML(), 'text/html'); return; }
+    if (e.target.closest('#missedBtn')) {
+      const wrong = Object.keys(marks).filter(k => !marks[k].ok).map(k => cur.problems[Number(k)]);
+      if (!wrong.length) return;
+      const set = { id: PH.uid(), date: PH.todayISO(), kind: cur.kind, title: cur.title + ' · the ones you missed',
+        source: cur.source, summary: 'Just the ' + wrong.length + ' you got wrong', score: null, by: cur.by,
+        problems: wrong.map(p => ({ question: p.question, answer: p.answer, work: p.work, topic: p.topic, choices: p.choices || [] })) };
+      state.sets.unshift(set); state.sets = state.sets.slice(0, 60); save();
+      show(set); practising = true; renderOut(); renderSaved();
+      PH.toast('Try these ' + wrong.length + ' again');
+      return;
+    }
     if (e.target.closest('#finishBtn')) {
       const done = Object.keys(marks).length, right = Object.keys(marks).filter(k => marks[k].ok).length;
       if (!done) { PH.toast('Answer a question first'); return; }
@@ -830,7 +910,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 
   /* Hook for this repo's automated tests: they stub window.fetch, since a real API call needs a paid key. */
   window.PH_AI = { generate: generate, state: function () { return state; }, setKey: function (k) { apiKey = k; },
-    makeGradeSheet: makeGradeSheet, gradeLevel: gradeLevel,
+    makeGradeSheet: makeGradeSheet, gradeLevel: gradeLevel, makePacket: makePacket, packetHTML: packetHTML,
     parseReply: parseReply, manualPrompt: manualPrompt, sheetHTML: function () { return sheetHTML(); },
     setProvider: function (p) { state.settings.provider = p; apiKey = readKey(p); renderControls(); } };
 })();

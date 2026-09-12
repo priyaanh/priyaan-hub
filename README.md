@@ -38,7 +38,7 @@ Output is a self-contained HTML file in `worksheets/` laid out like a real works
 
 Two ways, on one page.
 
-**By grade (the default).** `grades.js` holds 24 problem generators — eight each for Grade 6, 7 and 8 — covering integers and fractions, decimals, ratios and percents, expressions and equations, area and volume, statistics, proportional reasoning, probability, circles and angles, exponents and scientific notation, slope, systems, Pythagoras, transformations and functions. Pick a grade, narrow the topics if you want, choose how many and how hard, and the worksheet appears at once with its answer key. Nothing leaves the device, and the seed makes any sheet reproducible. `node test_grades.js` generates 600 problems per topic per level and checks the answers computationally: 109,213 checks.
+**By grade (the default).** `grades.js` holds 24 problem generators — eight each for Grade 6, 7 and 8 — covering integers and fractions, decimals, ratios and percents, expressions and equations, area and volume, statistics, proportional reasoning, probability, circles and angles, exponents and scientific notation, slope, systems, Pythagoras, transformations and functions. Pick a grade, narrow the topics if you want, choose how many and how hard, and the worksheet appears at once with its answer key. **Week's packet** prints five different sheets, one per school day, with a single answer key at the back. Any worksheet can also be answered on screen, and whatever you get wrong can be turned into a shorter set to try again. Nothing leaves the device, and the seed makes any sheet reproducible. `node test_grades.js` generates 600 problems per topic per level and checks the answers computationally: 109,213 checks.
 
 ## Turning a PDF into practice
 

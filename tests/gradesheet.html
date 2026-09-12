@@ -69,6 +69,35 @@ f.addEventListener('load', async () => {
     ok('score saved with the set', JSON.parse(w.localStorage.getItem('ph.ai.v1')).sets[0].score.right === 1);
     $('#practiceBtn').click(); await tick();
     ok('turning practice off clears the marks', $$('[data-typed]').length === 0 && $$('.prob.right').length === 0);
+    // a week's packet
+    const lvl = w.PH_AI.gradeLevel();
+    const sheets = [0,1,2,3,4].map(i => ({ day: ['Monday','Tuesday','Wednesday','Thursday','Friday'][i],
+      ws: w.GRADES.generate({ grade: '7', count: 10, difficulty: 2, seed: 1000 + i * 7919 }) }));
+    const packet = w.PH_AI.packetHTML(lvl, sheets, 1000);
+    ok('packet is a complete document', /^<!DOCTYPE html>/.test(packet) && /<\/html>$/.test(packet));
+    ok('one page per school day', ['Monday','Tuesday','Wednesday','Thursday','Friday'].every(d => packet.includes(d)));
+    ok('six pages: five sheets and the key', (packet.match(/class="page/g) || []).length === 6);
+    ok('each page breaks', /page-break-after:always/.test(packet));
+    ok('one answer key covering every day', (packet.match(/class="page key"/g) || []).length === 1 && /Answer key/.test(packet));
+    ok('every day has a different seed', new Set(sheets.map(s => s.ws.seed)).size === 5);
+    ok('packet is self-contained', !/<script|https?:\/\//.test(packet));
+    const beforePacket = $('#printFrame').srcdoc;
+    $('#gPacket').click(); await tick();
+    ok('the packet button builds it', $('#printFrame').srcdoc !== beforePacket && /week/i.test($('#printFrame').srcdoc));
+    ok('and says what it made', /Five sheets/.test($('#gNote').textContent));
+    // practising again, just the missed ones
+    $('#gMake').click(); await tick();
+    $('#practiceBtn').click(); await tick();
+    ok('no retry button before anything is wrong', $('#missedBtn').hidden);
+    const sets = w.PH_AI.state().sets;
+    const a0 = sets[0].problems[0].answer;
+    $('[data-typed="0"]').value = a0; $('[data-checki="0"]').click(); await tick();
+    $('[data-typed="1"]').value = 'nope'; $('[data-checki="1"]').click(); await tick();
+    $('[data-typed="2"]').value = 'also nope'; $('[data-checki="2"]').click(); await tick();
+    ok('retry button appears once something is wrong', !$('#missedBtn').hidden);
+    $('#missedBtn').click(); await tick();
+    ok('a new set holds only the missed ones', $$('.prob').length === 2 && /missed/.test($('#outSummary').textContent + $('#plist').textContent + $('#saved').textContent));
+    ok('it opens ready to practise', $$('[data-typed]').length === 2);
     // back to the PDF side
     $('[data-mode="pdf"]').click(); await tick();
     ok('switching to PDF mode restores that UI', $('#gradeCard').hidden && !$('#setupCard').hidden);
