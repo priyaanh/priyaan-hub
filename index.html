@@ -139,7 +139,7 @@
   <footer>
     <span>Everything is saved in this browser only. Back up now and then — API keys are never included.<br><span id="backupAge" class="age"></span></span>
     <span class="spacer"></span>
-    <button class="btn btn-sm" id="askGpt" title="Opens ChatGPT in a window beside this page">💬 ChatGPT</button>
+    <a class="btn btn-sm" id="askGpt" href="https://chatgpt.com/" target="_blank" rel="noopener" title="Opens ChatGPT in a new browser tab">💬 ChatGPT</a>
     <button class="btn btn-sm" id="backup">⬇ Back up all data</button>
     <button class="btn btn-sm" id="restore">⬆ Restore</button>
   </footer>
@@ -310,7 +310,6 @@
   /* Hook for tests/hub.html, which drives these directly. Exposes no data the page does not already show. */
   window.PH_HUB = { renderBackupAge: renderBackupAge, tiles: function () { return tiles; } };
 
-  document.getElementById('askGpt').addEventListener('click', () => PH.openChatGPT());
 
   // Backup / restore every ph.* key.
   const BACKUP_AT = 'ph.meta.backupAt';

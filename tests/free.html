@@ -26,14 +26,16 @@ f.addEventListener('load', async () => {
     $('[data-kind="worksheet"]').click();
     ok('worksheet prompt asks for empty choices', /"choices": \[\]/.test(w.PH_AI.manualPrompt()));
     // one-click handoff: copies and opens ChatGPT with the prompt in the URL
-    let opened = null; w.open = (url, target, feat) => { opened = { url, target, feat }; return { focus() {} }; };
+    let opened = null;
+    const realClick = w.HTMLAnchorElement.prototype.click;
+    w.HTMLAnchorElement.prototype.click = function () { opened = { href: this.href, target: this.target, rel: this.rel }; };
     $('#goChatGPT').click(); await waitFor(() => !!opened, 120);
-    ok('handoff opens chatgpt.com', !!opened && /^https:\/\/chatgpt\.com\/\?q=/.test(opened.url));
-    ok('opens docked beside the page, not a throwaway tab', !!opened && opened.target === 'phChatGPT'
-        && /popup=yes/.test(opened.feat) && /width=\d+/.test(opened.feat) && /left=\d+/.test(opened.feat));
-    opened = null; $('#goChatGPT').click(); await waitFor(() => !!opened, 120);
-    ok('a second press reuses that same window', !!opened && opened.target === 'phChatGPT');
-    ok('prompt travels in the url', decodeURIComponent(opened.url.split('?q=')[1]).includes('NEW practice'));
+    ok('handoff opens chatgpt.com', !!opened && /^https:\/\/chatgpt\.com\/\?q=/.test(opened.href));
+    ok('opens a normal tab, not a blockable pop-up', !!opened && opened.target === '_blank' && /noopener/.test(opened.rel));
+    ok('the page never calls window.open', (function () { let used = false; const o = w.open; w.open = () => { used = true; };
+      $('#goChatGPT').click(); w.open = o; return !used; })());
+    w.HTMLAnchorElement.prototype.click = realClick;
+    ok('prompt travels in the url', decodeURIComponent(opened.href.split('?q=')[1]).includes('NEW practice'));
     ok('handoff reports copy or offers a fallback', /Copied/.test($('#copyState').textContent) || !!$('#showPrompt'));
     if ($('#showPrompt')) { $('#showPrompt').click(); await tick();
       ok('fallback puts the prompt where it can be copied', /NEW practice/.test($('#pasteIn').value)); $('#pasteIn').value=''; }
