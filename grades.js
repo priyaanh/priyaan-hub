@@ -100,6 +100,7 @@
           return P(pick(r, NAMES) + ' pays ' + money(cost) + ' for ' + plural(n, 'notebook', 'notebooks') + '. What is the cost of one notebook?',
             money(cost / n), [String(cost / n)], money(cost) + ' ÷ ' + n + ' = ' + money(cost / n) + '.'); }
         if (k === 2) { var a = ri(r, 2, 8), b = ri(r, 2, 9), m = ri(r, 2, 6);
+          while (b === a) b = ri(r, 2, 9);                    // 3 : 3 teaches nothing
           return P('Fill in the missing number so the ratios are equal: ' + a + ' : ' + b + ' = ' + (a * m) + ' : ___', String(b * m), [],
             a + ' was multiplied by ' + m + ', so multiply ' + b + ' by ' + m + ' too.'); }
         var miles = ri(r, 2, 12), hours = ri(r, 1, 4), want = ri(r, 2, 8);
@@ -187,6 +188,7 @@
           return P('y is proportional to x, and y = ' + (kk * x) + ' when x = ' + x + '. What is the constant of proportionality k?',
             String(kk), ['k = ' + kk], 'k = y ÷ x = ' + (kk * x) + ' ÷ ' + x + '.'); }
         if (k === 2) { var a = ri(r, 2, 9), b = ri(r, 2, 9), m = ri(r, 2, 8);
+          while (b === a) b = ri(r, 2, 9);                    // 5/5 = x/15 is not a proportion question
           return P('Solve the proportion:  ' + a + '/' + b + ' = x/' + (b * m), 'x = ' + (a * m), [String(a * m)],
             b + ' × ' + m + ' = ' + (b * m) + ', so x = ' + a + ' × ' + m + '.'); }
         var scale = pick(r, [2, 3, 4, 5]), real = ri(r, 3, 20);

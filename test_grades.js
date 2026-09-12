@@ -307,6 +307,14 @@ for (const level of G.LEVELS) {
   assert(Math.max(...Object.values(per)) - Math.min(...Object.values(per)) <= 1, level.id + ': even spread ' + JSON.stringify(per));
   assert(full.problems.every((p, i) => p.id === 'q' + (i + 1)), level.id + ': ids in order');
 }
+/* degenerate questions that once slipped through */
+for (const [grade, topic, re, why] of [['6', 'ratios', /(\b\d+) : \1\b/, 'a ratio of equal terms'],
+                                       ['7', 'proportions', /(\b\d+)\/\1 =/, 'a proportion of equal terms']]) {
+  for (let seed = 1; seed <= 30; seed++) {
+    const ws = G.generate({ grade, topics: [topic], count: 40, difficulty: 2, seed });
+    ws.problems.forEach(p => assert(!re.test(plain(p.question)), topic + ': ' + why + ' in "' + plain(p.question) + '"'));
+  }
+}
 assert(G.generate({ grade: '7', count: 0 }).problems.length === 1, 'count clamps to 1');
 assert(G.generate({ grade: '7', count: 500 }).problems.length === 60, 'count clamps to 60');
 assert(G.generate({ grade: 'nope', count: 5 }).grade === '7', 'unknown grade falls back to 7');
