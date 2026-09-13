@@ -381,6 +381,16 @@ details.sheet[open] summary { margin-bottom: .7rem; }
   $('#cheat').innerHTML = CHEAT.map(([title, code]) =>
     '<div><h3>' + esc(title) + '</h3><pre class="code">' + colourPython(code) + '</pre></div>').join('');
 
+  /* A link like python.html#loops (used by the hub's search) narrows to that topic. */
+  function applyHash() {
+    const want = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!want || ALL.indexOf(want) < 0) return false;
+    state.settings.topics = [want];
+    return true;
+  }
+  if (applyHash()) save();
+  window.addEventListener('hashchange', () => { if (applyHash()) { save(); renderAll(); } });
+
   renderAll();
   if (stored) save();
   window.PH_PY = { startRound, answer, next, finish, getRound: () => round, state: () => state, colourPython };

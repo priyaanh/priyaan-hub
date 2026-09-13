@@ -905,6 +905,18 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (e.target.id === 'modelIn') { state.settings.models[state.settings.provider] = e.target.value; save(); renderControls(); }
   });
 
+  /* A link like ai.html#7 or ai.html#im1 (used by the hub's search) picks that grade. */
+  function applyHash() {
+    const want = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (['6', '7', '8', 'im1'].indexOf(want) < 0) return false;
+    state.settings.mode = 'grade';
+    state.settings.grade = want;
+    state.settings.gradeTopics = [];
+    return true;
+  }
+  if (applyHash()) save();
+  window.addEventListener('hashchange', () => { if (applyHash()) { save(); renderControls(); } });
+
   renderAll();
   if (state.sets.length) save();
 

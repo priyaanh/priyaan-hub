@@ -1,0 +1,60 @@
+<!doctype html><title>hub search</title><body style="margin:0"><script>
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1000px;border:0'; f.src='../index.html'; document.body.appendChild(f);
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||200);i++){ if(cond()) return true; await tick(); } return cond();};
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const type = async (text) => { const box = $('#search'); box.value = text; box.dispatchEvent(new w.Event('input', { bubbles: true }));
+    await waitFor(() => !$('#results').hidden && !/Looking/.test($('#results').textContent), 400); };
+  try {
+    ok('a search box is on the hub', !!$('#search') && $('#results').hidden);
+    ok('the index is not loaded until it is needed', !w.PH_SEARCH);
+    $('#search').focus();
+    await waitFor(() => !!w.PH_SEARCH, 400);
+    ok('focusing loads the index', !!w.PH_SEARCH && w.PH_SEARCH.length > 500, (w.PH_SEARCH || []).length + ' entries');
+    // a merit badge
+    await type('kayak');
+    ok('finds a merit badge', /Kayaking/.test($('#results').textContent));
+    ok('and links into the badge page', $('#results a').getAttribute('href') === 'badges.html#kayaking');
+    // a Hindi word, typed in English
+    await type('motherland');
+    ok('finds a Hindi word by its meaning', /मातृभूमि/.test($('#results').textContent));
+    ok('and links to its chapter', /hindi\.html#c6-01/.test($('#results a').getAttribute('href')));
+    // a Hindi word typed in Devanagari
+    await type('सिंधु');
+    ok('finds a word typed in Devanagari', $$('#results a').length > 0 && /सिंधु/.test($('#results').textContent));
+    // a CPM lesson
+    await type('transversal');
+    ok('finds a CPM lesson', /1\.3\.2|Transversals/.test($('#results').textContent));
+    ok('and links to that lesson', /quizzes\.html#1\.3\./.test($('#results a').getAttribute('href')));
+    // a python topic
+    await type('comprehension');
+    ok('finds a Python topic', /comprehensions/i.test($('#results').textContent) && /python\.html#/.test($('#results a').getAttribute('href')));
+    // a maths topic
+    await type('pythagorean');
+    ok('finds a maths topic', /Pythagorean/i.test($('#results').textContent));
+    // an app
+    await type('metronome');
+    ok('finds an app by what it does', /Piano/.test($('#results').textContent));
+    // ranking and limits
+    await type('e');
+    ok('never floods the screen', $$('#results a').length <= 10);
+    await type('zzzznothing');
+    ok('says when nothing matches', /Nothing matches/.test($('#results').textContent) && $$('#results a').length === 0);
+    // keyboard
+    await type('kayak');
+    const first = $('#results a').getAttribute('href');
+    $('#search').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await tick();
+    ok('arrow keys move the selection', $$('#results a.sel').length === 1 && $$('#results a')[0].classList.contains('sel') === ($$('#results a').length === 1));
+    $('#search').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await tick();
+    ok('escape clears and closes', $('#search').value === '' && $('#results').hidden);
+    ok('results are marked up for screen readers', $('#search').getAttribute('aria-label')
+      && $('#search').getAttribute('role') === 'combobox' && $('#search').getAttribute('aria-controls') === 'results'
+      && $('#results').getAttribute('role') === 'listbox');
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+});
+</script></body>

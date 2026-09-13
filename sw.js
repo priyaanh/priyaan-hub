@@ -1,11 +1,11 @@
 /* Priyaan Hub service worker: makes the hosted site work offline.
    Strategy: network first (so updates show as soon as you are online), falling back to the cached copy when offline.
    Everything same-origin that has been visited is cached; the app shell below is cached up front on install. */
-const VERSION = 'ph-v6';
+const VERSION = 'ph-v8';
 const SHELL = [
   './', 'index.html', 'shared.css', 'shared.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
   'piano.html', 'badges.html', 'badges_catalog.js', 'badges/pdf/manifest.js', 'schedule.html',
-  'math.html', 'im1.js', 'hindi.html', 'quizzes.html', 'cpm_int2_ch1.js', 'calendar.html', 'ai.html', 'grades.js', 'python.html', 'pyquiz.js'
+  'math.html', 'im1.js', 'hindi.html', 'hindi_data.js', 'quizzes.html', 'cpm_int2_ch1.js', 'calendar.html', 'ai.html', 'grades.js', 'python.html', 'pyquiz.js', 'search_index.js'
 ];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(VERSION).then(cache =>

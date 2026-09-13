@@ -599,6 +599,22 @@ main > * + * { margin-top: 1rem; }
   showView('lessons');
   renderAll();
   // Exposed for automated checks only.
+  /* A link like quizzes.html#1.3.2 (used by the hub's search) scrolls to that lesson. */
+  function applyHash() {
+    const want = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!want || !byId[want]) return;
+    const row = document.querySelector('[data-start="' + want.replace(/"/g, '') + '"]');
+    if (!row) return;
+    const card = row.closest('.lrow') || row;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.style.transition = 'background .3s';
+    card.style.background = 'var(--accent-soft)';
+    setTimeout(() => { card.style.background = ''; }, 1600);
+    row.focus();
+  }
+  setTimeout(applyHash, 60);
+  window.addEventListener('hashchange', applyHash);
+
   window.PHQuizDebug = { migrate, checkNum, checkText, canonPoly, buildQuiz, quizSheetHTML, printQuiz, getQuiz: () => quiz, getState: () => state };
 })();
 </script></body></html>
