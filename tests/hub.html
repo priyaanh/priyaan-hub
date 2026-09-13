@@ -12,14 +12,14 @@ f.addEventListener('load', async () => {
     KEYS.forEach(k => { snap[k] = w.localStorage.getItem(k); });
     ok('today panel hidden with no data', $('#todayCard').hidden);
     const T = w.PH.todayISO(), Y = w.PH.addDays(T,-1), D2 = w.PH.addDays(T,-2), TOM = w.PH.addDays(T,1);
-    const dow = new Date(T + 'T00:00:00').getDay();
+    const dow = (new Date(T + 'T00:00:00').getDay() + 6) % 7;   // schedule.html numbers days 0 = Monday
     w.localStorage.setItem('ph.piano.v1', JSON.stringify({ version:1, pieces:[], settings:{dailyGoal:30},
       sessions:[{date:T,minutes:12},{date:Y,minutes:35},{date:D2,minutes:30}] }));
     w.localStorage.setItem('ph.schedule.v1', JSON.stringify({ version:1,
       tasks:[{id:'a',name:'Piano practice',cat:'piano',days:[dow],time:'17:00',minutes:30,active:true,order:0},
              {id:'b',name:'Hindi reading',cat:'hindi',days:[dow],time:'19:30',minutes:20,active:true,order:1},
              {id:'c',name:'Scouts',cat:'scouts',days:[(dow+1)%7],time:'19:00',minutes:90,active:true,order:2}],
-      checks:{ [T]: { a:true } }, extras:{}, dayNotes:{} }));
+      checks:{ [T]: { a:true } }, extras:{ [w.PH.addDays(T,-4)]: [{id:'x',name:'Read a chapter',cat:'other',done:true}] }, dayNotes:{} }));
     w.localStorage.setItem('ph.calendar.v1', JSON.stringify({ version:2, settings:{calendars:[],mode:'WEEK',tz:'America/Los_Angeles',clientId:'',taskList:'L1'},
       tasksCache:{ listId:'L1', listTitle:'My Tasks', at:Date.now(), items:[
         {id:'1',title:'Late worksheet',due:Y+'T00:00:00.000Z',status:'needsAction'},
@@ -35,7 +35,7 @@ f.addEventListener('load', async () => {
       progress:{ 'c6-01:सिंधु':{box:1,due:T,last:T}, 'c6-01:नत':{box:0,due:Y,last:Y}, 'c6-02:गोल':{box:3,due:TOM,last:T} }, quizzes:[], custom:[], settings:{} }));
     w.localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, attempts:[{id:'x',date:T,lesson:'1.3.1',right:8,total:10,kind:'full',ts:Date.now()}], settings:{}, summary:{} }));
     w.localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, history:[{id:'m',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:9,total:10}}], settings:{}, summary:{} }));
-    w.localStorage.setItem('ph.badges.v1', JSON.stringify({ version:1, done:{ 'kayaking:1a':{date:T,by:''}, 'kayaking:1b':{date:Y,by:''}, 'canoeing:2':{date:w.PH.addDays(T,-30),by:''} }, notes:{}, counselors:{}, targetDates:{}, custom:[], hidden:[], catalog:{}, summary:{} }));
+    w.localStorage.setItem('ph.badges.v1', JSON.stringify({ version:1, done:{ 'kayaking:1a':{date:T,by:''}, 'kayaking:1b':{date:Y,by:''}, 'kayaking:2':{date:w.PH.addDays(T,-3),by:''}, 'canoeing:2':{date:w.PH.addDays(T,-30),by:''} }, notes:{}, counselors:{}, targetDates:{}, custom:[], hidden:[], catalog:{}, summary:{} }));
     w.localStorage.setItem('ph.ai.v1', JSON.stringify({ version:1, settings:{}, sets:[
       {id:'s1',date:T,kind:'worksheet',title:'Grade 7 practice',source:'Grade 7',summary:'',by:'Grade 7 generator',
        score:{right:8,total:10},problems:[{question:'q',answer:'a',work:'',topic:'',choices:[]}]}], summary:{} }));
@@ -65,19 +65,22 @@ f.addEventListener('load', async () => {
     ok('number badges on the first ten cards', $$('.apps .app .key').length === Math.min(10, $$('.apps .app').length)
         && $$('.apps .app .key')[0].textContent === '1' && $$('.apps .app .key').slice(-1)[0].textContent === '0');
     const streak = $('[data-tile="streak"]');
-    ok('a streak tile counts days across every app', !!streak && /3 days/.test(streak.textContent), streak ? streak.textContent : 'missing');
+    /* piano T/-1/-2, a badge signed off on -3 and a finished extra on -4: five consecutive days,
+       and it only reaches five if merit badges and plan extras are counted like everything else. */
+    ok('a streak tile counts days across every app', !!streak && /5 days/.test(streak.textContent), streak ? streak.textContent : 'missing');
     ok('the streak tile opens the progress page', !!streak && streak.getAttribute('href') === 'progress.html');
     ok('the progress card summarises without being opened', !/Nothing logged yet/.test($('#progSummary').textContent)
-        && /3 day streak/.test($('#progSummary').textContent), $('#progSummary').textContent);
+        && /5 day streak/.test($('#progSummary').textContent), $('#progSummary').textContent);
     ok('piano tile shows minutes vs goal', /12 \/ 30 min/.test(txt) && /Keep going/.test(txt));
     ok('piano bar at 40%', $('[data-tile="piano"] .bar i').style.width === '40%');
     ok('plan tile counts today only', /1 of 2/.test(txt));
+    ok('the plan tile uses the schedule\'s own weekday numbering', !/Scouts/.test($('#nextUp').textContent), $('#nextUp').textContent);
     ok('next up names the unchecked item with its time', /Hindi reading/.test($('#nextUp').textContent) && /19:30/.test($('#nextUp').textContent) && !$('#nextUp').hidden);
     ok('tasks tile counts overdue + today, not tomorrow', /2 due/.test(txt) && /1 overdue/.test(txt));
     ok('tasks tile flagged late', $('[data-tile="tasks"]').classList.contains('late'));
     ok('hindi tile counts due cards', /2 due/.test($('[data-tile="hindi"]').textContent) && /2 reviewed today/.test($('[data-tile="hindi"]').textContent));
     ok('maths tile adds quiz + worksheet + practice scores', /25 \/ 30/.test(txt) && /practised today/.test(txt));
-    ok('badges tile counts total and this week', /3 signed off/.test(txt) && /2 this week/.test(txt));
+    ok('badges tile counts total and this week', /4 signed off/.test(txt) && /3 this week/.test(txt));
     // the seven-day strip
     ok('week strip appears', !$('#week').hidden && $$('#week tbody tr').length === 5);
     const rowText = $$('#week tbody tr').map(r => r.querySelector('.lbl').textContent.trim());

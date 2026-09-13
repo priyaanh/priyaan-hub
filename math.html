@@ -127,7 +127,16 @@ main > * + * { margin-top: 1rem; }
     return { version: 1, history: [], settings: { topics: ['linear', 'slope', 'systems'], count: 20, difficulty: 2, name: 'Priyaan' }, summary: { headline: '', sub: '' } };
   }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
-  const validISO = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime());
+  /* 2026-02-30 parses as March 2 rather than failing, so check the date round-trips, not just its shape. */
+  const validISO = s => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s; };
+  /* A score with a zero total divides into Infinity, and one better than its total reads over 100%. */
+  function scoreOf(v) {
+    if (!isObj(v)) return null;
+    const total = Math.round(Number(v.total)), right = Math.round(Number(v.right));
+    if (!(total > 0) || !(right >= 0)) return null;
+    return { right: Math.min(right, total), total: total };
+  }
   function normalize(raw) {
     const s = blank();
     if (!isObj(raw)) return s;
@@ -146,7 +155,7 @@ main > * + * { margin-top: 1rem; }
         difficulty: [1, 2, 3].indexOf(h.difficulty) >= 0 ? h.difficulty : 2,
         seed: isFinite(h.seed) ? Math.round(h.seed) : 1,
         name: typeof h.name === 'string' ? h.name : '',
-        score: isObj(h.score) && isFinite(h.score.right) && isFinite(h.score.total) ? { right: h.score.right, total: h.score.total } : null
+        score: scoreOf(h.score)
       })).filter(h => h.topics.length).slice(0, 100);
     }
     return s;

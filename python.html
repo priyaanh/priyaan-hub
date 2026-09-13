@@ -126,7 +126,9 @@ details.sheet[open] summary { margin-bottom: .7rem; }
     return { version: 1, rounds: [], settings: { topics: [], count: 10, difficulty: 2 }, summary: { headline: '', sub: '' } };
   }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
-  const validISO = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime());
+  /* 2026-02-30 parses as March 2 rather than failing, so check the date round-trips, not just its shape. */
+  const validISO = s => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s; };
   const ALL = PY.TOPICS.map(t => t.id);
   function normalize(raw) {
     const s = blank();
@@ -135,15 +137,20 @@ details.sheet[open] summary { margin-bottom: .7rem; }
     if (Array.isArray(st.topics)) s.settings.topics = st.topics.filter(t => ALL.indexOf(t) >= 0);
     if (isFinite(st.count)) s.settings.count = Math.min(40, Math.max(1, Math.round(st.count)));
     if ([1, 2, 3].indexOf(st.difficulty) >= 0) s.settings.difficulty = st.difficulty;
-    if (Array.isArray(raw.rounds)) s.rounds = raw.rounds.filter(isObj).map(r => ({
-      id: typeof r.id === 'string' && r.id ? r.id : PH.uid(),
-      date: validISO(r.date) ? r.date : PH.todayISO(),
-      right: isFinite(r.right) ? Math.max(0, Math.round(r.right)) : 0,
-      total: isFinite(r.total) ? Math.max(1, Math.round(r.total)) : 1,
-      seed: isFinite(r.seed) ? Math.round(r.seed) : 0,
-      topics: Array.isArray(r.topics) ? r.topics.filter(t => ALL.indexOf(t) >= 0) : [],
-      difficulty: [1, 2, 3].indexOf(r.difficulty) >= 0 ? r.difficulty : 2
-    })).slice(0, 100);
+    if (Array.isArray(raw.rounds)) s.rounds = raw.rounds.filter(isObj).map(r => {
+      /* right and total were clamped independently, so {right:10, total:1} survived and scored 1000% */
+      const total = isFinite(r.total) ? Math.max(1, Math.round(r.total)) : 1;
+      const right = isFinite(r.right) ? Math.max(0, Math.round(r.right)) : 0;
+      return {
+        id: typeof r.id === 'string' && r.id ? r.id : PH.uid(),
+        date: validISO(r.date) ? r.date : PH.todayISO(),
+        right: Math.min(right, total),
+        total: total,
+        seed: isFinite(r.seed) ? Math.round(r.seed) : 0,
+        topics: Array.isArray(r.topics) ? r.topics.filter(t => ALL.indexOf(t) >= 0) : [],
+        difficulty: [1, 2, 3].indexOf(r.difficulty) >= 0 ? r.difficulty : 2
+      };
+    }).slice(0, 100);
     return s;
   }
   const stored = PH.load(KEY, null);

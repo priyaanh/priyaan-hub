@@ -21,19 +21,26 @@ async function load(src) {
 const XSS = '<img src=x onerror="window.__pwned=1">';
 const XSS2 = '"><script>window.__pwned=2<\/script>';
 const MARK = 'ZZpayloadZZ';
+/* A colour reaching an inline style attribute: anything with a quote in it closes the attribute early
+   and whatever follows becomes a new attribute, event handlers included. */
+const XSSATTR = 'red" onmouseover="window.__pwned=3" data-x="';
 const bad = (extra) => XSS + MARK + (extra || '');
 const T = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 const SEED = {
   'ph.piano.v1': { version:1, settings:{ dailyGoal: 30 },
     pieces:[{id:'p1',name:bad(' piece'),group:XSS2,status:'learning',archived:false,createdAt:1}],
-    sessions:[{id:'s1',date:T,pieceId:'p1',minutes:20,note:bad(' note'),rating:4}] },
+    sessions:[{id:'s1',date:T,pieceId:'p1',minutes:20,note:bad(' note'),rating:4},
+              {id:'s2',date:'2026-02-30',pieceId:'p1',minutes:15,note:'rolls over to March 2',rating:0},
+              {id:'s3',date:'2026-13-05',pieceId:'p1',minutes:25,note:'no such month',rating:0}] },
   'ph.badges.v1': { version:1, done:{ 'kayaking:1a':{date:T,by:bad(' counsellor')} },
     notes:{ 'kayaking:1a': bad(' note') }, counselors:{ kayaking: bad(' name') }, targetDates:{}, hidden:[],
     custom:[{id:'cx',name:bad(' badge'),emoji:'🎖️',edition:XSS2,reqs:[{id:'1',text:bad(' requirement'),children:[]}]}],
     catalog:{ camping:{ status:'earned', date:T } }, summary:{ headline: bad(' summary'), sub: XSS2 } },
   'ph.math.v1': { version:1, settings:{ topics:['linear'], count:10, difficulty:2, name: bad(' student') },
-    history:[{id:'h1',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:bad(' name'),score:{right:9,total:10}}],
+    history:[{id:'h1',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:bad(' name'),score:{right:9,total:10}},
+             {id:'h2',date:T,topics:['linear'],count:10,difficulty:2,seed:2,name:'zero total',score:{right:5,total:0}},
+             {id:'h3',date:'2026-02-30',topics:['linear'],count:10,difficulty:2,seed:3,name:'impossible date',score:{right:1,total:2}}],
     summary:{ headline: bad(''), sub: XSS2 } },
   'ph.quiz.v1': { version:1, attempts:[{id:'a1',date:T,ts:Date.now(),lesson:'1.1.1',right:8,total:10,kind:'full',seconds:60,missed:[]}],
     settings:{ lastLesson: XSS2 }, summary:{ headline: bad(''), sub: XSS2 } },
@@ -41,7 +48,7 @@ const SEED = {
     custom:[{ ch:'mine', hi: bad(' शब्द'), tr: XSS2, en: bad(' meaning'), hint: XSS2 }],
     settings:{ cls:6, ch:'mine', dir:'hi-en', speak:false }, summary:{ headline: bad(''), sub: XSS2 } },
   'ph.schedule.v1': { version:1,
-    tasks:[{id:'t1',name:bad(' task'),cat:'piano',days:[0,1,2,3,4,5,6],time:XSS2,minutes:30,active:true,order:0}],
+    tasks:[{id:'t1',name:bad(' task'),cat:'piano',days:[0,1,2,3,4,5,6],time:XSS2,minutes:bad(' minutes'),active:true,order:0}],
     checks:{}, extras:{ [T]: [{ id:'e1', name: bad(' extra'), cat:'other', done:false }] },
     dayNotes:{ [T]: bad(' day note') }, summary:{ headline: bad(''), sub: XSS2 } },
   'ph.calendar.v1': { version:2,
@@ -49,7 +56,11 @@ const SEED = {
       mode:'WEEK', tz:'America/Los_Angeles', clientId:'', taskList:'L1' },
     tasksCache:{ listId:'L1', listTitle:bad(' list'), at:Date.now(),
       items:[{id:'1',title:bad(' task'),notes:XSS2,due:T+'T00:00:00.000Z',status:'needsAction'}] },
-    eventsCache:{ at:Date.now(), items:[{title:bad(' event'),start:T+'T09:00:00',end:'',allDay:false,date:T,calName:XSS2,color:'#d64292'}] },
+    eventsCache:{ at:Date.now(), items:[{title:bad(' event'),start:T+'T09:00:00',end:'',allDay:false,date:T,calName:XSS2,color:XSSATTR}] },
+    summary:{ headline: bad(''), sub: XSS2 } },
+  'ph.python.v1': { version:1, settings:{ topics:['loops'], count:5, difficulty:2 },
+    rounds:[{id:'r1',date:T,right:10,total:1,seed:1,topics:['loops'],difficulty:2},
+            {id:'r2',date:'2026-02-30',right:2,total:5,seed:2,topics:['loops'],difficulty:2}],
     summary:{ headline: bad(''), sub: XSS2 } },
   'ph.ai.v1': { version:1, settings:{ kind:'worksheet', count:10, provider:'free', models:{} },
     sets:[{id:'s1',date:T,kind:'quiz',title:bad(' title'),source:bad(' source.pdf'),summary:XSS2,by:XSS2,score:null,
@@ -79,6 +90,19 @@ const JUNK = { version:'x', settings:42, sets:'nope', history:{}, tasks:7, piece
     ok(page + ': still renders with hostile data', renders);
     if (['piano','badges','hindi','schedule','calendar','ai','index','math','quizzes'].includes(page))
       ok(page + ': payload shown as text, not markup', !shows || d.body.innerHTML.includes('&lt;img'), 'raw <img survived');
+
+    /* A quote in a value that lands in a style attribute can close it and add an event handler. */
+    const escaped = Array.from(d.querySelectorAll('[onmouseover], [onmouseenter], [onclick], [onload]'));
+    ok(page + ': no event handler smuggled through an attribute', escaped.length === 0,
+      escaped.slice(0, 3).map(el => el.tagName.toLowerCase() + '[' + el.getAttributeNames().join(',') + ']').join(' '));
+
+    /* Numbers that cannot be divided, and dates that do not exist, must never reach the screen.
+       innerText, not textContent: textContent includes the page's own <script> source. */
+    const body = d.body.innerText || '';
+    ok(page + ': no Infinity or NaN on screen', !/Infinity|NaN/.test(body), (body.match(/\S*(Infinity|NaN)\S*/) || [''])[0]);
+    ok(page + ': no "Invalid Date" on screen', !/Invalid Date/.test(body));
+    const over = (body.match(/\b(\d{3,})%/g) || []).filter(x => parseInt(x, 10) > 100);
+    ok(page + ': no score above 100%', over.length === 0, over.slice(0, 3).join(' '));
   }
   // ---- part 2: junk of the wrong types ----
   await load('../index.html'); seed(JUNK);

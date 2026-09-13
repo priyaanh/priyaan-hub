@@ -32,7 +32,8 @@ localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, settings:{}, summ
   {id:'m2',date:D(5),topics:['slope'],count:20,difficulty:2,seed:2,name:'P',score:null}] }));
 localStorage.setItem('ph.python.v1', JSON.stringify({ version:1, settings:{}, summary:{}, rounds:[
   {id:'r1',date:T,right:4,total:5,seed:7,topics:['loops'],difficulty:2}] }));
-localStorage.setItem('ph.hindi.v1', JSON.stringify({ version:1, quizzes:[], custom:[], settings:{}, summary:{},
+localStorage.setItem('ph.hindi.v1', JSON.stringify({ version:1, quizzes:[], settings:{}, summary:{},
+  custom:[{ch:'mine',hi:'क',tr:'ka',en:'my word one',hint:''},{ch:'mine',hi:'ख',tr:'kha',en:'my word two',hint:''}],
   days:{ [T]:12, [D(1)]:8, 'bad-day':5 },
   progress:{ 'c6-01:a':{box:0,due:T,seen:1,right:0,wrong:1,last:T},
              'c6-01:b':{box:2,due:D(1),seen:4,right:3,wrong:1,last:D(1)},
@@ -127,10 +128,34 @@ f.addEventListener('load', async () => {
     ok('the weekly goal line is drawn', $$('#pianoHost svg .goal').length === 1);
     ok('the piano caption uses the real goal', /goal 30 min\/day/.test(text('#pianoSub')), text('#pianoSub'));
 
+    /* Two years of weekly practice. The window must be anchored to this week, not counted forward
+       from the first week with data, or the rightmost bar is read as "this week" when it is not. */
+    const long = JSON.parse(localStorage.getItem('ph.piano.v1'));
+    for (let wk = 0; wk < 104; wk++) long.sessions.push({ id: 'L' + wk, date: D(wk * 7), pieceId: 'p1', minutes: 30, rating: 0, note: '' });
+    localStorage.setItem('ph.piano.v1', JSON.stringify(long));
+    const fresh = w.PH_PROGRESS.gather();
+    w.PH_PROGRESS.data.events = fresh.events;
+    w.PH_PROGRESS.setRange('all');
+    await tick();
+    const wkBars = $$('#pianoHost svg .bar');
+    ok('a long history still ends on the current week', wkBars.length === 26
+      && /Week of/.test(wkBars[wkBars.length - 1].querySelector('title').textContent),
+      wkBars.length + ' bars');
+    const lastTitle = wkBars[wkBars.length - 1].querySelector('title').textContent;
+    ok('and that last week is the one we are in',
+      lastTitle.indexOf(w.PH.fmtDate(w.PH.mondayOf(T))) > 0, lastTitle);
+    localStorage.setItem('ph.piano.v1', JSON.stringify(Object.assign(long, { sessions: long.sessions.slice(0, 6) })));
+    w.PH_PROGRESS.data.events = w.PH_PROGRESS.gather().events;
+    w.PH_PROGRESS.setRange('90');
+    await tick();
+
     /* ---- hindi ---- */
     await waitFor(() => /of \d+ cards started/.test(text('#hindiSub')), 400);
     ok('Hindi mastery is split by box', $$('#hindiHost .mastery div').length === 6);
-    ok('and counts the cards not seen yet', /3 of 408 cards started/.test(text('#hindiSub')), text('#hindiSub'));
+    ok('the child\'s own words count towards the total', w.PH_PROGRESS.data.meta.custom === 2);
+    /* 408 built-in cards plus the child's own two: counting progress against 408 alone could read
+       "412 of 408" and silently drop the "not seen yet" band off the bar. */
+    ok('and counts the cards not seen yet', /3 of 410 cards started/.test(text('#hindiSub')), text('#hindiSub'));
     ok('one card is solid', /1 solid/.test(text('#hindiSub')));
     ok('and one is due today', /2 cards due today/.test(text('#hindiSub')), text('#hindiSub'));
 

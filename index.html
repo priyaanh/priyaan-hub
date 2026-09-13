@@ -205,6 +205,9 @@
   const T = PH.todayISO();
   const tiles = [];
   const tile = o => tiles.push(o);
+  // A tile's colour can come from cached Google Calendar data, so it is never trusted into an attribute.
+  const colour = c => /^#[0-9a-f]{3,8}$/i.test(String(c || '')) ? String(c) : '#4f6bed';
+  const pct = n => Math.max(0, Math.min(100, Math.round(Number(n)) || 0));
   const safe = fn => { try { return fn(); } catch (e) { return null; } };
 
   // piano: minutes today against the daily goal
@@ -220,7 +223,7 @@
   // weekly plan: today's items, what is left, and what is next
   safe(() => {
     const d = load('ph.schedule.v1'); if (!d || !Array.isArray(d.tasks)) return;
-    const di = new Date(T + 'T00:00:00').getDay();
+    const di = (new Date(T + 'T00:00:00').getDay() + 6) % 7;   // schedule.html numbers days 0 = Monday
     const items = d.tasks.filter(t => t && t.active && Array.isArray(t.days) && t.days.indexOf(di) >= 0);
     const extras = (d.extras && d.extras[T]) || [];
     const checks = (d.checks && d.checks[T]) || {};
@@ -233,7 +236,7 @@
     if (left.length) {
       const n = left[0], el = document.getElementById('nextUp');
       el.innerHTML = 'Next up: <b>' + PH.esc(n.name) + '</b>' + (n.time ? ' at ' + PH.esc(String(n.time)) : '') +
-        (n.minutes ? ' · ' + n.minutes + ' min' : '') + ' <a href="schedule.html">open the plan →</a>';
+        (n.minutes ? ' · ' + PH.esc(String(n.minutes)) + ' min' : '') + ' <a href="schedule.html">open the plan →</a>';
       el.hidden = false;
     }
   });
@@ -371,8 +374,12 @@
     const pyv = load('ph.python.v1'); if (pyv) arr(pyv.rounds).forEach(x => x && mark(x.date));
     const hd = load('ph.hindi.v1'); if (hd && hd.days) Object.keys(hd.days).forEach(d => { if (hd.days[d] > 0) mark(d); });
     const av = load('ph.ai.v1'); if (av) arr(av.sets).forEach(x => x && mark(x.date));
+    const bg = load('ph.badges.v1');
+    if (bg && bg.done) Object.keys(bg.done).forEach(k => { const r = bg.done[k]; if (r) mark(r.date); });
+    if (bg && bg.catalog) Object.keys(bg.catalog).forEach(k => { const c = bg.catalog[k]; if (c && c.status === 'earned') mark(c.date); });
     const sc = load('ph.schedule.v1');
     if (sc && sc.checks) Object.keys(sc.checks).forEach(d => { if (sc.checks[d] && Object.keys(sc.checks[d]).length) mark(d); });
+    if (sc && sc.extras) Object.keys(sc.extras).forEach(d => { if (arr(sc.extras[d]).some(x => x && x.done)) mark(d); });
     const total = Object.keys(days).length;
     if (!total) return;
     let cur = T, n = 0;
@@ -395,11 +402,11 @@
   if (tiles.length) {
     document.getElementById('todayCard').hidden = false;
     document.getElementById('tiles').innerHTML = tiles.map(t =>
-      '<a class="tile ' + (t.cls || '') + '" data-tile="' + t.id + '" href="' + t.href + '" style="--tc:' + t.colour + '">' +
+      '<a class="tile ' + (t.cls || '') + '" data-tile="' + t.id + '" href="' + t.href + '" style="--tc:' + colour(t.colour) + '">' +
         '<span class="tl">' + t.emoji + ' ' + PH.esc(t.label) + '</span>' +
         '<span class="tv">' + PH.esc(String(t.value)) + '</span>' +
         '<span class="ts">' + PH.esc(t.sub || '') + '</span>' +
-        (t.pct != null ? '<span class="bar"><i style="width:' + t.pct + '%"></i></span>' : '') +
+        (t.pct != null ? '<span class="bar"><i style="width:' + pct(t.pct) + '%"></i></span>' : '') +
       '</a>').join('');
   }
 

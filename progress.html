@@ -147,7 +147,11 @@ main > * + * { margin-top: 1rem; }
   var KEY = 'ph.progress.v1';
   var TODAY = PH.todayISO();
   var isObj = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
-  var okISO = function (s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime()); };
+  /* 2026-02-30 parses as March 2 rather than failing, so require the date to round-trip. */
+  var okISO = function (s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    var d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s;
+  };
   var num = function (v) { var n = Number(v); return isFinite(n) ? n : 0; };
   var esc = PH.esc;
   var $ = function (s) { return document.querySelector(s); };
@@ -169,7 +173,7 @@ main > * + * { margin-top: 1rem; }
   /* One event per dated thing that happened: { date, app, label, minutes?, right?, total?, cards? }. */
   function gather() {
     var ev = [], m = { goal: 30, pieces: 0, boxes: [0, 0, 0, 0, 0], seen: 0, due: 0,
-      earned: [], inProgress: 0, want: 0, reqs: 0, hindiTotal: 0 };
+      earned: [], inProgress: 0, want: 0, reqs: 0, custom: 0 };
 
     var p = PH.load('ph.piano.v1', null);
     if (isObj(p)) {
@@ -221,6 +225,7 @@ main > * + * { margin-top: 1rem; }
         if (!okISO(d) || !(n > 0)) return;
         ev.push({ date: d, app: 'hindi', cards: n, label: plural(n, 'Hindi card') + ' reviewed' });
       });
+      m.custom = (Array.isArray(hi.custom) ? hi.custom : []).length;
       if (isObj(hi.progress)) Object.keys(hi.progress).forEach(function (k) {
         var pr = hi.progress[k];
         if (!isObj(pr)) return;
@@ -560,10 +565,11 @@ main > * + * { margin-top: 1rem; }
       buckets[k].mins += e.minutes; buckets[k].days[e.date] = 1;
     });
     order.sort();
-    /* fill in the silent weeks so a gap reads as a gap, not as a shorter chart */
-    var full = [], cur = order[0];
-    while (cur <= weekKey(TODAY) && full.length < 60) { full.push(cur); cur = PH.addDays(cur, 7); }
-    if (full.length > 26) full = full.slice(full.length - 26);
+    /* Fill in the silent weeks so a gap reads as a gap, not as a shorter chart. The window is anchored
+       to this week, never to the first week with data: the last bar must always be the week you are in. */
+    var WEEKS = 26, lastWk = weekKey(TODAY), earliest = PH.addDays(lastWk, -7 * (WEEKS - 1));
+    var full = [], cur = order[0] < earliest ? earliest : order[0];
+    while (cur <= lastWk) { full.push(cur); cur = PH.addDays(cur, 7); }
     var rows = full.map(function (k) {
       var b = buckets[k] || { mins: 0, days: {} };
       var nd = Object.keys(b.days).length;
@@ -581,7 +587,7 @@ main > * + * { margin-top: 1rem; }
   var BOXNAMES = ['Just started', 'Getting there', 'Fairly solid', 'Solid', 'Known cold'];
   function renderHindi() {
     var m = data.meta, host = $('#hindiHost');
-    var total = (window.HINDI && Array.isArray(HINDI.CARDS)) ? HINDI.CARDS.length : 0;
+    var total = (window.HINDI && Array.isArray(HINDI.CARDS)) ? HINDI.CARDS.length + m.custom : 0;
     if (!m.seen) {
       host.innerHTML = empty('No Hindi cards reviewed yet' + (total ? ' out of ' + total : '') + '.', 'hindi.html', 'Start the flashcards');
       $('#hindiSub').textContent = '';

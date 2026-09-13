@@ -377,6 +377,10 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
       .concat(makePieces(G4_EXERCISES, 'Grade 4 exercises'))
       .concat(makePieces(TECHNIQUE, 'Technique & other'));
   }
+  function validISODate(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s;
+  }
   function normalisePiece(p) {
     if (!p || typeof p !== 'object' || !p.name) return null;
     return {
@@ -390,7 +394,9 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
   }
   function normaliseSession(s) {
     if (!s || typeof s !== 'object' || !s.pieceId) return null;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s.date))) return null;
+    /* Format alone is not enough: 2026-02-30 parses as March 2, so an imported session would be
+       headed "Invalid Date" or filed under a day it does not belong to. */
+    if (!validISODate(s.date)) return null;
     const minutes = Math.round(Number(s.minutes));
     if (!(minutes > 0)) return null;
     const rating = Math.round(Number(s.rating)) || 0;
