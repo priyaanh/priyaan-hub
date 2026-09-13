@@ -27,7 +27,8 @@ const add = (icon, title, sub, url, keywords) => entries.push({ i: icon, t: titl
  ['📅', 'Weekly Plan', 'The week, with checkboxes and tasks due', 'schedule.html', 'timetable routine chores homework'],
  ['🐍', 'Python Practice', 'What does this print? Eleven topics', 'python.html', 'code coding programming'],
  ['✏️', 'Make Practice', 'A worksheet by grade, or from a PDF', 'ai.html', 'grade 6 7 8 worksheet pdf chatgpt claude packet'],
- ['🗓️', 'Calendar & Tasks', 'Google Calendar and Google Tasks', 'calendar.html', 'google events todo reminders']
+ ['🗓️', 'Calendar & Tasks', 'Google Calendar and Google Tasks', 'calendar.html', 'google events todo reminders'],
+ ['📈', 'Progress', 'Streaks, accuracy, practice time, every app at once', 'progress.html', 'streak history chart stats calendar heatmap records minutes accuracy']
 ].forEach(a => add(a[0], a[1], a[2], a[3], a[4]));
 
 /* merit badges */

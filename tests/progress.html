@@ -1,0 +1,172 @@
+<!doctype html><title>progress page</title><body style="margin:0"><script>
+/* Seeds one known history, then checks that every chart on progress.html reports it correctly.
+   Runs on file://, where the suite and the page under test share one localStorage. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||300);i++){ if(cond()) return true; await tick(); } return cond();};
+
+const KEYS=['ph.piano.v1','ph.quiz.v1','ph.math.v1','ph.python.v1','ph.hindi.v1','ph.badges.v1','ph.ai.v1','ph.schedule.v1','ph.progress.v1'];
+const snap={}; KEYS.forEach(k=>{ snap[k]=localStorage.getItem(k); });
+
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10);};
+const T=iso(new Date());
+const back=n=>{const d=new Date(T+'T00:00:00'); d.setDate(d.getDate()-n); return iso(d);};
+const D=n=>back(n);
+
+/* Junk is mixed in on purpose: a bad date, negative minutes, a score better than the total.
+   Every one of them must be dropped rather than corrupt a chart. */
+localStorage.setItem('ph.piano.v1', JSON.stringify({ version:1,
+  pieces:[{id:'p1',name:'Minuet in G'},{id:'p2',name:'Arabesque'}], settings:{dailyGoal:30,lastPieceId:'p1'},
+  sessions:[{id:'s1',date:T,pieceId:'p1',minutes:20,rating:4,note:''},
+            {id:'s2',date:D(1),pieceId:'p1',minutes:40,rating:5,note:''},
+            {id:'s3',date:D(3),pieceId:'p2',minutes:15,rating:3,note:''},
+            {id:'s4',date:D(45),pieceId:'p1',minutes:25,rating:0,note:''},
+            {id:'s5',date:'not-a-date',pieceId:'p1',minutes:99,rating:0,note:''},
+            {id:'s6',date:T,pieceId:'p1',minutes:-5,rating:0,note:''}] }));
+localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, settings:{}, summary:{}, attempts:[
+  {id:'q1',date:T,ts:Date.now(),lesson:'1.1.1',right:8,total:10,kind:'full',seconds:200,seed:1,missed:[]},
+  {id:'q2',date:D(2),ts:Date.now(),lesson:'1.2.1',right:5,total:10,kind:'full',seconds:300,seed:2,missed:[]},
+  {id:'q3',date:T,ts:Date.now(),lesson:'1.1.1',right:20,total:10,kind:'full',seconds:1,seed:3,missed:[]}] }));
+localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, settings:{}, summary:{}, history:[
+  {id:'m1',date:D(1),topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:10,total:10}},
+  {id:'m2',date:D(5),topics:['slope'],count:20,difficulty:2,seed:2,name:'P',score:null}] }));
+localStorage.setItem('ph.python.v1', JSON.stringify({ version:1, settings:{}, summary:{}, rounds:[
+  {id:'r1',date:T,right:4,total:5,seed:7,topics:['loops'],difficulty:2}] }));
+localStorage.setItem('ph.hindi.v1', JSON.stringify({ version:1, quizzes:[], custom:[], settings:{}, summary:{},
+  days:{ [T]:12, [D(1)]:8, 'bad-day':5 },
+  progress:{ 'c6-01:a':{box:0,due:T,seen:1,right:0,wrong:1,last:T},
+             'c6-01:b':{box:2,due:D(1),seen:4,right:3,wrong:1,last:D(1)},
+             'c6-02:c':{box:4,due:back(-6),seen:9,right:9,wrong:0,last:T} } }));
+localStorage.setItem('ph.badges.v1', JSON.stringify({ version:1, notes:{}, counselors:{}, targetDates:{}, custom:[], hidden:[], summary:{},
+  done:{ 'kayaking:1a':{date:D(12),by:'Mr O'} },
+  catalog:{ kayaking:{status:'earned',date:D(10),started:''}, canoeing:{status:'progress',date:'',started:D(20)},
+            photography:{status:'want',date:'',started:''} } }));
+localStorage.setItem('ph.ai.v1', JSON.stringify({ version:1, settings:{}, summary:{}, sets:[
+  {id:'a1',date:D(1),kind:'worksheet',title:'Grade 7 practice',source:'',summary:'',by:'',score:{right:6,total:8},
+   problems:[{question:'2+2',answer:'4',work:'',topic:'',choices:[]}]}] }));
+localStorage.setItem('ph.schedule.v1', JSON.stringify({ version:1, extras:{}, dayNotes:{}, summary:{},
+  tasks:[{id:'a',name:'Piano practice',cat:'piano',days:[0,1,2,3,4,5,6],time:'17:00',minutes:30,active:true,order:0},
+         {id:'b',name:'Hindi reading',cat:'hindi',days:[0,1,2,3,4,5,6],time:'19:30',minutes:20,active:true,order:1}],
+  checks:{ [T]:{a:true,b:true} } }));
+localStorage.removeItem('ph.progress.v1');
+
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1600px;border:0'; document.body.appendChild(f);
+let phase=0;
+f.src='../progress.html';
+f.addEventListener('load', async () => {
+  if (phase === 1) return finish();          // the reload below must not re-run the whole suite
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const text = s => ($(s) ? $(s).textContent : '');
+  try {
+    await waitFor(() => w.PH_PROGRESS && $('#stats').children.length, 300);
+    ok('the page exposes its numbers', !!w.PH_PROGRESS);
+
+    /* ---- what it read out of the other apps ---- */
+    const ev = w.PH_PROGRESS.data.events;
+    ok('a bad date is dropped', !ev.some(e => e.date === 'not-a-date' || e.date === 'bad-day'));
+    ok('a session with no minutes is dropped', !ev.some(e => e.app === 'piano' && !(e.minutes > 0)));
+    ok('a score higher than the total is dropped', !ev.some(e => e.scored && e.right > e.total));
+    ok('piano sessions are read', ev.filter(e => e.app === 'piano').length === 4, ev.filter(e => e.app === 'piano').length + ' found');
+    ok('a piano entry names the piece', ev.some(e => e.app === 'piano' && /Minuet in G/.test(e.label)));
+    ok('quiz attempts are read', ev.filter(e => e.app === 'quiz').length === 2);
+    ok('a made-but-unscored worksheet still counts as activity', ev.some(e => e.app === 'math' && !e.scored));
+    ok('badges give both an earn and a sign-off', ev.filter(e => e.app === 'badges').length === 2);
+    ok('ticked plan items count', ev.some(e => e.app === 'schedule' && e.ticks === 2));
+
+    /* ---- the headline numbers, over 90 days ---- */
+    w.PH_PROGRESS.setRange('90');
+    await tick();
+    const nums = $$('#stats .num').map(n => n.textContent);
+    ok('the streak counts every app', nums[0] === '4', nums[0]);
+    ok('active days are counted', nums[1] === '8', nums[1]);
+    ok('piano minutes add up', nums[2] === '100m', nums[2]);
+    ok('accuracy is right across all four apps', nums[3] === '77%', nums[3] + ' (33 of 43)');
+    ok('Hindi cards add up', nums[4] === '20', nums[4]);
+
+    /* ---- the range picker actually narrows things ---- */
+    w.PH_PROGRESS.setRange('30');
+    await tick();
+    const n30 = $$('#stats .num').map(n => n.textContent);
+    ok('30 days leaves out the older session', n30[2] === '75m', n30[2]);
+    ok('30 days leaves out its day too', n30[1] === '7', n30[1]);
+    ok('the streak is all-time, not clipped by the range', n30[0] === '4', n30[0]);
+    const savedRange = (JSON.parse(localStorage.getItem('ph.progress.v1') || '{}').settings || {}).range;
+    ok('the chosen range is remembered', savedRange === '30', String(savedRange));
+    w.PH_PROGRESS.setRange('90');
+    await tick();
+
+    /* ---- activity calendar ---- */
+    const cells = $$('#calGrid .cell:not(.pad)');
+    ok('the calendar draws a cell per day', cells.length >= 90 && cells.length <= 100, cells.length + ' cells');
+    ok('today is marked', $$('#calGrid .cell.today').length === 1);
+    ok('busy days are shaded', $$('#calGrid .cell.l1, #calGrid .cell.l2, #calGrid .cell.l3, #calGrid .cell.l4').length === 8);
+    ok('every cell says what happened', cells.every(c => (c.getAttribute('aria-label') || '').length > 8));
+    const today = $('#calGrid .cell.today');
+    today.click(); await tick();
+    ok('clicking a day lists what was done', /Minuet in G/.test(text('#dayCard')) && /Quiz 1\.1\.1/.test(text('#dayCard')));
+    ok('and names the day', /\d/.test(text('#dayCard h3')));
+    const quiet = cells.filter(c => /nothing logged/.test(c.getAttribute('aria-label') || ''))[0];
+    quiet.click(); await tick();
+    ok('a quiet day says so', /Nothing logged/.test(text('#dayCard')));
+
+    /* ---- per-app bars ---- */
+    const bars = $$('#appBars .appbar');
+    ok('one bar per app used', bars.length === 8, bars.map(b => b.querySelector('.nm').textContent).join(', '));
+    const qty = {}; bars.forEach(b => { qty[b.querySelector('.nm').textContent] = Number(b.querySelector('.qty').textContent); });
+    ok('piano is counted right', qty['Piano'] === 4, String(qty['Piano']));
+    ok('badges are counted right', qty['Merit badges'] === 2, String(qty['Merit badges']));
+    ok('the widest bar is the busiest app', $$('#appBars .fill').some(el => el.style.width === '100%'));
+
+    /* ---- accuracy ---- */
+    ok('the accuracy chart is drawn', $$('#accHost svg .line').length === 1 && $$('#accHost svg .dot').length >= 2);
+    ok('the accuracy caption totals the answers', /33 of 43 right/.test(text('#accSub')), text('#accSub'));
+    ok('the chart carries a text alternative', ($('#accHost svg').getAttribute('aria-label') || '').indexOf('%') > 0);
+
+    /* ---- piano ---- */
+    ok('the piano chart has a bar per week', $$('#pianoHost svg .bar').length >= 6);
+    ok('the weekly goal line is drawn', $$('#pianoHost svg .goal').length === 1);
+    ok('the piano caption uses the real goal', /goal 30 min\/day/.test(text('#pianoSub')), text('#pianoSub'));
+
+    /* ---- hindi ---- */
+    await waitFor(() => /of \d+ cards started/.test(text('#hindiSub')), 400);
+    ok('Hindi mastery is split by box', $$('#hindiHost .mastery div').length === 6);
+    ok('and counts the cards not seen yet', /3 of 408 cards started/.test(text('#hindiSub')), text('#hindiSub'));
+    ok('one card is solid', /1 solid/.test(text('#hindiSub')));
+    ok('and one is due today', /2 cards due today/.test(text('#hindiSub')), text('#hindiSub'));
+
+    /* ---- badges ---- */
+    const bn = $$('#badgeHost .stat .num').map(n => n.textContent);
+    ok('badges are tallied by status', bn.join(',') === '1,1,1,1', bn.join(','));
+    ok('the earned badge is named and dated', /Kayaking/.test(text('#badgeHost')) && $$('#badgeHost .when').length === 1);
+    ok('and links into the badge page', !!$('#badgeHost a[href="badges.html#kayaking"]'));
+
+    /* ---- records ---- */
+    const recs = $$('#mileHost .m').map(m => m.querySelector('.t').textContent + '=' + m.querySelector('.v').textContent);
+    ok('the longest streak is a record', recs.some(r => /^Longest streak=4 days/.test(r)), recs.join(' | '));
+    ok('questions answered are a record', recs.some(r => r === 'Questions answered=43'));
+    ok('the best round is a record', recs.some(r => /^Best round=100%/.test(r)));
+    ok('piano time is a record', recs.some(r => r === 'Piano, all time=100 min'), recs.join(' | '));
+    ok('the longest practice day is a record', recs.some(r => /^Longest practice day=40 min/.test(r)));
+    ok('records ignore the range', recs.some(r => /^Started tracking=/.test(r)));
+
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+
+  /* ---- and now with nothing at all ---- */
+  phase = 1;
+  KEYS.forEach(k => localStorage.removeItem(k));
+  f.src = '../progress.html?empty=1';
+});
+
+async function finish() {
+  const w=f.contentWindow, d=f.contentDocument;
+  try {
+    await waitFor(() => w.PH_PROGRESS && d.querySelector('#stats') && d.querySelector('#stats').children.length, 300);
+    ok('an empty history does not throw', !!w.PH_PROGRESS && w.PH_PROGRESS.data.events.length === 0);
+    ok('and says what to do instead', d.querySelectorAll('.empty').length >= 4, d.querySelectorAll('.empty').length + ' prompts');
+    ok('with a zero streak, not a blank', d.querySelector('#stats .num').textContent === '0');
+    ok('the calendar still draws the empty weeks', d.querySelectorAll('#calGrid .cell:not(.pad)').length > 0);
+  } catch (e) { ok('the empty case ran without throwing', false, e.message); }
+  KEYS.forEach(k => { if (snap[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, snap[k]); });
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+}
+</script></body>

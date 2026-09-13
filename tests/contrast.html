@@ -2,7 +2,7 @@
 /* Text has to be readable in whichever scheme the browser is in. Walks the visible text on every page,
    works out the contrast against the first opaque background behind it, and applies WCAG AA:
    4.5:1 for normal text, 3:1 for large text. Run twice by tests/run.sh — once light, once dark. */
-const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python'];
+const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python','progress'];
 const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1000px;border:0'; document.body.appendChild(f);
 const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});

@@ -1,7 +1,7 @@
 <!doctype html><title>mobile layout</title><body style="margin:0"><script>
 /* Every page must fit a phone: no horizontal scrolling of the page itself. Wide things (tab strips,
    tables) are allowed to scroll inside their own container, which is why the rule is on the document. */
-const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python'];
+const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python','progress'];
 const WIDTHS = [390, 320];
 const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 const f=document.createElement('iframe'); f.style.cssText='height:900px;border:0'; document.body.appendChild(f);

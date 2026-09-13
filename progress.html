@@ -1,0 +1,715 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress · Priyaan's Hub</title>
+<meta name="description" content="Every app's history in one place: an activity calendar, accuracy over time, piano minutes, Hindi mastery and merit badges.">
+<link rel="stylesheet" href="shared.css"><style>
+main > * + * { margin-top: 1rem; }
+.headrow { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.headrow .spacer { flex: 1; }
+
+/* ---- activity calendar ---- */
+.scroller { overflow-x: auto; padding-bottom: .3rem; }
+.cal { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 13px); gap: 3px; width: max-content; }
+.cal .cell { width: 13px; height: 13px; border-radius: 3px; background: var(--surface-2); border: 0; padding: 0; cursor: pointer; }
+.cal .cell.pad { visibility: hidden; cursor: default; }
+.cell.l0 { background: var(--surface-2); }
+.cell.l1 { background: color-mix(in srgb, var(--accent) 28%, var(--surface-2)); }
+.cell.l2 { background: color-mix(in srgb, var(--accent) 52%, var(--surface-2)); }
+.cell.l3 { background: color-mix(in srgb, var(--accent) 76%, var(--surface-2)); }
+.cell.l4 { background: var(--accent-fill); }
+.cal .cell.today { box-shadow: 0 0 0 2px var(--accent-text); }
+.cal .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.calwrap { display: flex; gap: .4rem; }
+.daylabels { display: grid; grid-template-rows: repeat(7, 13px); gap: 3px; font-size: .62rem; color: var(--muted); align-items: center; flex: none; }
+.months { display: flex; font-size: .7rem; color: var(--muted); margin-left: calc(1.4rem + .4rem); height: 1rem; width: max-content; }
+.months span { flex: none; }
+.legend { display: flex; gap: .35rem; align-items: center; font-size: .75rem; color: var(--muted); margin-top: .6rem; }
+.legend .cell { width: 11px; height: 11px; border-radius: 3px; display: inline-block; border: 1px solid var(--border); }
+.daycard { margin-top: .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .6rem .75rem; background: var(--surface-2); font-size: .88rem; }
+.daycard h3 { margin: 0 0 .3rem; font-size: .95rem; }
+.daycard ul { margin: 0; padding-left: 1.1rem; }
+.daycard li { margin: .12rem 0; }
+
+/* ---- per-app share ---- */
+.appbars { display: grid; gap: .55rem; }
+.appbar { display: grid; grid-template-columns: 1.6rem minmax(7rem, 11rem) 1fr auto; gap: .55rem; align-items: center; font-size: .9rem; }
+.appbar .em { font-size: 1.05rem; text-align: center; }
+.appbar .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.appbar .track { display: block; background: var(--surface-2); border-radius: 999px; height: 10px; overflow: hidden; min-width: 2rem; }
+.appbar .fill { display: block; height: 100%; border-radius: 999px; min-width: 3px; }
+.appbar .qty { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .82rem; white-space: nowrap; }
+@media (max-width: 520px) {
+  .appbar { grid-template-columns: 1.4rem 1fr auto; row-gap: .3rem; }
+  .appbar .em { grid-area: 1 / 1; } .appbar .nm { grid-area: 1 / 2; } .appbar .qty { grid-area: 1 / 3; }
+  .appbar .track { grid-area: 2 / 1 / 3 / -1; }
+}
+
+/* ---- svg charts ---- */
+.chart { display: block; width: 100%; height: auto; min-width: 600px; }
+@media (max-width: 620px) { .card-head { flex-direction: column; align-items: stretch; gap: .15rem; margin-bottom: .6rem; } }
+.chart .grid { stroke: var(--border); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-size: 12px; font-family: var(--font); }
+.chart .bar { fill: var(--accent-fill); }
+.chart .bar.faint { fill: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); }
+.chart .line { fill: none; stroke: var(--accent-fill); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area { fill: var(--accent-soft); }
+.chart .dot { fill: var(--accent-fill); }
+.chart .goal { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart .goaltext { fill: var(--warn-text); font-size: 10px; font-family: var(--font); }
+.chart .val { fill: var(--text); font-size: 10px; font-family: var(--font); font-weight: 600; }
+
+/* ---- mastery ---- */
+.mastery { display: flex; height: 26px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+.mastery div { min-width: 0; }
+.mkey { display: grid; gap: .3rem .9rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); margin-top: .7rem; font-size: .84rem; }
+.mkey .k { display: flex; gap: .4rem; align-items: center; background: var(--surface-2); border-radius: 6px; padding: .22rem .5rem; }
+.mkey .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.mkey .n { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+
+/* ---- lists ---- */
+.tl { list-style: none; margin: 0; padding: 0; }
+.tl li { display: flex; gap: .6rem; align-items: baseline; padding: .45rem 0; border-top: 1px solid var(--border); }
+.tl li:first-child { border-top: 0; }
+.tl .when { color: var(--muted); font-size: .8rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tl .what { flex: 1; min-width: 0; }
+.mile { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.mile .m { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .55rem .7rem; background: var(--surface); }
+.mile .m .t { font-size: .78rem; color: var(--muted); }
+.mile .m .v { font-weight: 700; margin-top: .1rem; }
+.mile .m .s { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
+@media print { .topbar, .no-print { display: none !important; } .card { break-inside: avoid; box-shadow: none; } }
+</style></head>
+<body data-app="progress">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <h1 class="title"><span class="emoji">📈</span><span class="name">Progress</span></h1>
+  <div class="spacer"></div>
+  <button class="btn btn-sm" id="printBtn">🖨 Print</button>
+</div></header>
+<main class="container">
+
+  <div class="stats" id="stats"></div>
+
+  <div class="headrow no-print">
+    <div class="tabs" id="ranges" role="group" aria-label="How far back to look">
+      <button class="tab" type="button" data-range="30">30 days</button>
+      <button class="tab" type="button" data-range="90">3 months</button>
+      <button class="tab" type="button" data-range="365">12 months</button>
+      <button class="tab" type="button" data-range="all">All time</button>
+    </div>
+    <span class="spacer"></span>
+    <span class="small" id="rangeNote"></span>
+  </div>
+
+  <section class="card" aria-labelledby="h-cal">
+    <div class="card-head"><h2 id="h-cal">Every day you did something</h2><span class="small" id="calSub"></span></div>
+    <div id="calHost"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-apps">
+    <div class="card-head"><h2 id="h-apps">What you worked on</h2><span class="small" id="appsSub"></span></div>
+    <div class="appbars" id="appBars"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-acc">
+    <div class="card-head"><h2 id="h-acc">How the answers went</h2><span class="small" id="accSub"></span></div>
+    <div id="accHost"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-piano">
+    <div class="card-head"><h2 id="h-piano">Piano minutes each week</h2><span class="small" id="pianoSub"></span></div>
+    <div id="pianoHost"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-hindi">
+    <div class="card-head"><h2 id="h-hindi">Hindi words you know</h2><span class="small" id="hindiSub"></span></div>
+    <div id="hindiHost"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-badges">
+    <div class="card-head"><h2 id="h-badges">Merit badges</h2><span class="small"><a href="badges.html">Open badges →</a></span></div>
+    <div id="badgeHost"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-mile">
+    <div class="card-head"><h2 id="h-mile">Records so far</h2><span class="small">All time, whatever range is picked above</span></div>
+    <div class="mile" id="mileHost"></div>
+  </section>
+
+</main>
+<script src="shared.js"></script>
+<script src="badges_catalog.js"></script>
+<script>
+/* Progress reads every other app's saved state and never writes to it. The only thing this page stores
+   is which date range you last looked at. Anything it cannot make sense of is skipped, not repaired —
+   a corrupt piano session should not stop the Hindi chart from drawing. */
+(function () {
+  'use strict';
+  var KEY = 'ph.progress.v1';
+  var TODAY = PH.todayISO();
+  var isObj = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
+  var okISO = function (s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime()); };
+  var num = function (v) { var n = Number(v); return isFinite(n) ? n : 0; };
+  var esc = PH.esc;
+  var $ = function (s) { return document.querySelector(s); };
+  var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
+
+  var APPS = {
+    piano:    { name: 'Piano',            emoji: '🎹', color: '#7c5cff', href: 'piano.html' },
+    quiz:     { name: 'Lesson quizzes',   emoji: '📝', color: '#c2410c', href: 'quizzes.html' },
+    math:     { name: 'Math worksheets',  emoji: '🧮', color: '#2f6fed', href: 'math.html' },
+    python:   { name: 'Python',           emoji: '🐍', color: '#3572a5', href: 'python.html' },
+    hindi:    { name: 'Hindi flashcards', emoji: '📖', color: '#e0701f', href: 'hindi.html' },
+    ai:       { name: 'Make Practice',    emoji: '✏️', color: '#0d9488', href: 'ai.html' },
+    badges:   { name: 'Merit badges',     emoji: '🏕️', color: '#2f8f4e', href: 'badges.html' },
+    schedule: { name: 'Weekly plan',      emoji: '📅', color: '#0f9d9a', href: 'schedule.html' }
+  };
+  var ORDER = ['piano', 'quiz', 'math', 'python', 'hindi', 'ai', 'badges', 'schedule'];
+
+  /* ===================== Read every app ===================== */
+  /* One event per dated thing that happened: { date, app, label, minutes?, right?, total?, cards? }. */
+  function gather() {
+    var ev = [], m = { goal: 30, pieces: 0, boxes: [0, 0, 0, 0, 0], seen: 0, due: 0,
+      earned: [], inProgress: 0, want: 0, reqs: 0, hindiTotal: 0 };
+
+    var p = PH.load('ph.piano.v1', null);
+    if (isObj(p)) {
+      var names = {};
+      (Array.isArray(p.pieces) ? p.pieces : []).forEach(function (x) { if (isObj(x) && x.id) names[String(x.id)] = String(x.name || ''); });
+      m.pieces = (Array.isArray(p.pieces) ? p.pieces : []).filter(function (x) { return isObj(x) && !x.archived; }).length;
+      if (isObj(p.settings) && num(p.settings.dailyGoal) > 0) m.goal = Math.round(num(p.settings.dailyGoal));
+      (Array.isArray(p.sessions) ? p.sessions : []).forEach(function (s) {
+        if (!isObj(s) || !okISO(s.date)) return;
+        var mins = Math.round(num(s.minutes));
+        if (!(mins > 0)) return;
+        ev.push({ date: s.date, app: 'piano', minutes: mins, label: (names[String(s.pieceId)] || 'Piano') + ' — ' + mins + ' min' });
+      });
+    }
+
+    var q = PH.load('ph.quiz.v1', null);
+    if (isObj(q)) (Array.isArray(q.attempts) ? q.attempts : []).forEach(function (a) {
+      if (!isObj(a) || !okISO(a.date)) return;
+      var total = Math.round(num(a.total)), right = Math.round(num(a.right));
+      if (!(total > 0) || right < 0 || right > total) return;
+      var lesson = String(a.lesson || 'Quiz');
+      ev.push({ date: a.date, app: 'quiz', right: right, total: total, scored: true,
+        label: 'Quiz ' + lesson + (a.kind === 'missed' ? ' (retry)' : '') + ' — ' + right + '/' + total });
+    });
+
+    var mt = PH.load('ph.math.v1', null);
+    if (isObj(mt)) (Array.isArray(mt.history) ? mt.history : []).forEach(function (h) {
+      if (!isObj(h) || !okISO(h.date)) return;
+      var sc = isObj(h.score) && num(h.score.total) > 0 ? h.score : null;
+      ev.push({ date: h.date, app: 'math', scored: !!sc,
+        right: sc ? Math.round(num(sc.right)) : 0, total: sc ? Math.round(num(sc.total)) : 0,
+        label: sc ? 'Worksheet — ' + Math.round(num(sc.right)) + '/' + Math.round(num(sc.total))
+                  : 'Made a worksheet (' + plural(Math.round(num(h.count)) || 0, 'problem') + ')' });
+    });
+
+    var py = PH.load('ph.python.v1', null);
+    if (isObj(py)) (Array.isArray(py.rounds) ? py.rounds : []).forEach(function (r) {
+      if (!isObj(r) || !okISO(r.date)) return;
+      var total = Math.round(num(r.total)), right = Math.round(num(r.right));
+      if (!(total > 0) || right < 0 || right > total) return;
+      ev.push({ date: r.date, app: 'python', right: right, total: total, scored: true,
+        label: 'Python round — ' + right + '/' + total });
+    });
+
+    var hi = PH.load('ph.hindi.v1', null);
+    if (isObj(hi)) {
+      if (isObj(hi.days)) Object.keys(hi.days).forEach(function (d) {
+        var n = Math.round(num(hi.days[d]));
+        if (!okISO(d) || !(n > 0)) return;
+        ev.push({ date: d, app: 'hindi', cards: n, label: plural(n, 'Hindi card') + ' reviewed' });
+      });
+      if (isObj(hi.progress)) Object.keys(hi.progress).forEach(function (k) {
+        var pr = hi.progress[k];
+        if (!isObj(pr)) return;
+        var box = Math.max(0, Math.min(4, Math.round(num(pr.box))));
+        m.boxes[box]++; m.seen++;
+        if (okISO(pr.due) && pr.due <= TODAY) m.due++;
+      });
+    }
+
+    var b = PH.load('ph.badges.v1', null);
+    if (isObj(b)) {
+      var cat = {};
+      (window.MB && Array.isArray(MB.CATALOG) ? MB.CATALOG : []).forEach(function (x) { cat[x.id] = x; });
+      if (isObj(b.catalog)) Object.keys(b.catalog).forEach(function (id) {
+        var c = b.catalog[id];
+        if (!isObj(c)) return;
+        if (c.status === 'earned') {
+          var info = cat[id] || { name: id, emoji: '🏅' };
+          m.earned.push({ id: id, name: info.name, emoji: info.emoji || '🏅', date: okISO(c.date) ? c.date : '' });
+          if (okISO(c.date)) ev.push({ date: c.date, app: 'badges', label: 'Earned ' + info.name });
+        } else if (c.status === 'progress') m.inProgress++;
+        else if (c.status === 'want') m.want++;
+      });
+      if (isObj(b.done)) Object.keys(b.done).forEach(function (k) {
+        var rec = b.done[k];
+        m.reqs++;
+        if (!isObj(rec) || !okISO(rec.date)) return;
+        var bid = k.split(':')[0], info = cat[bid];
+        ev.push({ date: rec.date, app: 'badges', label: 'Signed off ' + (info ? info.name : bid) + ' req ' + k.split(':').slice(1).join(':') });
+      });
+      m.earned.sort(function (x, y) { return (y.date || '').localeCompare(x.date || ''); });
+    }
+
+    var ai = PH.load('ph.ai.v1', null);
+    if (isObj(ai)) (Array.isArray(ai.sets) ? ai.sets : []).forEach(function (s) {
+      if (!isObj(s) || !okISO(s.date)) return;
+      var sc = isObj(s.score) && num(s.score.total) > 0 ? s.score : null;
+      ev.push({ date: s.date, app: 'ai', scored: !!sc,
+        right: sc ? Math.round(num(sc.right)) : 0, total: sc ? Math.round(num(sc.total)) : 0,
+        label: String(s.title || 'Practice set') + (sc ? ' — ' + Math.round(num(sc.right)) + '/' + Math.round(num(sc.total)) : '') });
+    });
+
+    var sch = PH.load('ph.schedule.v1', null);
+    if (isObj(sch)) {
+      var tnames = {};
+      (Array.isArray(sch.tasks) ? sch.tasks : []).forEach(function (t) { if (isObj(t) && t.id) tnames[t.id] = String(t.name || ''); });
+      if (isObj(sch.checks)) Object.keys(sch.checks).forEach(function (d) {
+        if (!okISO(d) || !isObj(sch.checks[d])) return;
+        var ids = Object.keys(sch.checks[d]).filter(function (id) { return sch.checks[d][id]; });
+        if (!ids.length) return;
+        var shown = ids.map(function (id) { return tnames[id] || id; }).slice(0, 3).join(', ');
+        ev.push({ date: d, app: 'schedule', ticks: ids.length,
+          label: plural(ids.length, 'plan item') + ' ticked' + (shown ? ' — ' + shown : '') });
+      });
+      if (isObj(sch.extras)) Object.keys(sch.extras).forEach(function (d) {
+        if (!okISO(d) || !Array.isArray(sch.extras[d])) return;
+        var done = sch.extras[d].filter(function (x) { return isObj(x) && x.done; });
+        if (!done.length) return;
+        ev.push({ date: d, app: 'schedule', ticks: done.length,
+          label: plural(done.length, 'extra') + ' finished — ' + done.map(function (x) { return String(x.name || ''); }).slice(0, 3).join(', ') });
+      });
+    }
+
+    ev.sort(function (a, c) { return a.date < c.date ? -1 : a.date > c.date ? 1 : 0; });
+    return { events: ev, meta: m };
+  }
+
+  /* ===================== Small helpers over the event list ===================== */
+  function byDay(events) {
+    var map = {};
+    events.forEach(function (e) { (map[e.date] = map[e.date] || []).push(e); });
+    return map;
+  }
+  function streakEndingToday(days) {
+    var d = TODAY, n = 0;
+    if (!days[d]) d = PH.addDays(d, -1);          // yesterday still counts while today is young
+    while (days[d]) { n++; d = PH.addDays(d, -1); }
+    return n;
+  }
+  function longestStreak(days) {
+    var list = Object.keys(days).sort(), best = 0, run = 0, prev = '', from = '', bestFrom = '', bestTo = '';
+    list.forEach(function (d) {
+      if (prev && PH.daysBetween(prev, d) === 1) run++;
+      else { run = 1; from = d; }
+      if (run > best) { best = run; bestFrom = from; bestTo = d; }
+      prev = d;
+    });
+    return { days: best, from: bestFrom, to: bestTo };
+  }
+  function weekKey(iso) { return PH.mondayOf(iso); }
+  function sum(arr, f) { var t = 0; arr.forEach(function (x) { t += f(x); }); return t; }
+
+  /* ===================== Charts ===================== */
+  /* Hand-written SVG: no chart library, so this keeps working offline and over file://. */
+  var anchorAt = function (i, n) { return i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'; };
+  function svgOpen(w, h, label) {
+    return '<div class="scroller"><svg class="chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="' + esc(label) + '">';
+  }
+  var svgClose = '</svg></div>';
+
+  function barChart(rows, opts) {
+    opts = opts || {};
+    var W = 720, H = 210, L = 38, R = 10, T = 14, B = 34;
+    var iw = W - L - R, ih = H - T - B;
+    var max = opts.min || 1;
+    rows.forEach(function (r) { if (r.value > max) max = r.value; });
+    if (opts.goal && opts.goal > max) max = opts.goal;
+    max = Math.ceil(max / 5) * 5 || 5;
+    var n = rows.length, step = iw / Math.max(1, n), bw = Math.min(46, step * 0.62);
+    var s = svgOpen(W, H, opts.label || 'bar chart');
+    [0, 0.5, 1].forEach(function (f) {
+      var y = T + ih - ih * f;
+      s += '<line class="grid" x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + (W - R) + '" y2="' + y.toFixed(1) + '"/>';
+      s += '<text class="axis" x="' + (L - 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + Math.round(max * f) + '</text>';
+    });
+    if (opts.goal > 0) {
+      var gy = T + ih - ih * (opts.goal / max);
+      s += '<line class="goal" x1="' + L + '" y1="' + gy.toFixed(1) + '" x2="' + (W - R) + '" y2="' + gy.toFixed(1) + '"/>';
+      var gt = 'goal ' + opts.goal, gw = gt.length * 5.4 + 8;
+      s += '<rect x="' + (W - R - gw).toFixed(1) + '" y="' + (gy - 14).toFixed(1) + '" width="' + gw.toFixed(1) + '" height="13" rx="3" fill="var(--surface)"/>';
+      s += '<text class="goaltext" x="' + (W - R - 4) + '" y="' + (gy - 4).toFixed(1) + '" text-anchor="end">' + gt + '</text>';
+    }
+    rows.forEach(function (r, i) {
+      var x = L + step * i + (step - bw) / 2;
+      var bh = Math.max(r.value > 0 ? 2 : 0, ih * (r.value / max));
+      var y = T + ih - bh;
+      s += '<rect class="bar' + (r.faint ? ' faint' : '') + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="3"><title>' + esc(r.title || (r.label + ': ' + r.value)) + '</title></rect>';
+      if (r.value > 0 && n <= 16) s += '<text class="val" x="' + (x + bw / 2).toFixed(1) + '" y="' + (y - 4).toFixed(1) + '" text-anchor="middle">' + esc(String(r.top != null ? r.top : r.value)) + '</text>';
+      if (!r.hideLabel) {
+        var a = anchorAt(i, n), lx = a === 'start' ? Math.min(x, L) : a === 'end' ? Math.max(x + bw, W - R) : x + bw / 2;
+        s += '<text class="axis" x="' + lx.toFixed(1) + '" y="' + (H - 12) + '" text-anchor="' + a + '">' + esc(r.label) + '</text>';
+      }
+    });
+    return s + svgClose;
+  }
+
+  function lineChart(rows, opts) {
+    opts = opts || {};
+    var W = 720, H = 210, L = 38, R = 12, T = 16, B = 34;
+    var iw = W - L - R, ih = H - T - B;
+    var n = rows.length, step = n > 1 ? iw / (n - 1) : 0;
+    var xAt = function (i) { return n > 1 ? L + step * i : L + iw / 2; };
+    var yAt = function (v) { return T + ih - ih * (Math.max(0, Math.min(100, v)) / 100); };
+    var s = svgOpen(W, H, opts.label || 'line chart');
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      var y = yAt(v);
+      s += '<line class="grid" x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + (W - R) + '" y2="' + y.toFixed(1) + '"/>';
+      s += '<text class="axis" x="' + (L - 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + v + '%</text>';
+    });
+    var pts = rows.map(function (r, i) { return xAt(i).toFixed(1) + ',' + yAt(r.value).toFixed(1); });
+    if (rows.length > 1) {
+      s += '<polygon class="area" points="' + xAt(0).toFixed(1) + ',' + (T + ih) + ' ' + pts.join(' ') + ' ' + xAt(n - 1).toFixed(1) + ',' + (T + ih) + '"/>';
+      s += '<polyline class="line" points="' + pts.join(' ') + '"/>';
+    }
+    rows.forEach(function (r, i) {
+      s += '<circle class="dot" cx="' + xAt(i).toFixed(1) + '" cy="' + yAt(r.value).toFixed(1) + '" r="' + (n > 26 ? 2.5 : 4) + '"><title>' + esc(r.title || (r.label + ': ' + r.value + '%')) + '</title></circle>';
+      var every = n <= 8 ? 1 : n <= 16 ? 2 : Math.ceil(n / 8);
+      if (i % every === 0 || i === n - 1) s += '<text class="axis" x="' + xAt(i).toFixed(1) + '" y="' + (H - 12) + '" text-anchor="' + anchorAt(i, n) + '">' + esc(r.label) + '</text>';
+    });
+    return s + svgClose;
+  }
+
+  function empty(msg, link, linkText) {
+    return '<p class="empty">' + esc(msg) + (link ? ' <a href="' + esc(link) + '">' + esc(linkText || 'Open it') + ' →</a>' : '') + '</p>';
+  }
+
+  /* ===================== Render ===================== */
+  var data = gather();
+  var allDays = byDay(data.events);
+  var state = { range: '90' };
+  (function () {
+    var saved = PH.load(KEY, null);
+    if (isObj(saved) && isObj(saved.settings) && ['30', '90', '365', 'all'].indexOf(String(saved.settings.range)) >= 0)
+      state.range = String(saved.settings.range);
+  })();
+  function persist() { PH.save(KEY, { version: 1, settings: { range: state.range }, summary: { headline: '', sub: '' } }); }
+
+  function rangeStart() {
+    if (state.range === 'all') {
+      var first = data.events.length ? data.events[0].date : TODAY;
+      return first;
+    }
+    return PH.addDays(TODAY, -(Number(state.range) - 1));
+  }
+
+  function inRange() {
+    var from = rangeStart();
+    return data.events.filter(function (e) { return e.date >= from && e.date <= TODAY; });
+  }
+
+  function renderStats(events, days) {
+    var mins = sum(events, function (e) { return e.minutes || 0; });
+    var answered = sum(events, function (e) { return e.scored ? e.total : 0; });
+    var right = sum(events, function (e) { return e.scored ? e.right : 0; });
+    var cards = sum(events, function (e) { return e.cards || 0; });
+    var active = Object.keys(days).length;
+    var st = streakEndingToday(allDays);
+    var cells = [
+      { num: st, lbl: 'day streak' },
+      { num: active, lbl: 'days with something done' },
+      { num: mins >= 600 ? (mins / 60).toFixed(1) + 'h' : mins + 'm', lbl: 'piano practised' },
+      { num: answered ? Math.round(right / answered * 100) + '%' : '—', lbl: answered ? 'of ' + answered + ' answers right' : 'nothing answered yet' },
+      { num: cards, lbl: 'Hindi cards reviewed' }
+    ];
+    $('#stats').innerHTML = cells.map(function (c) {
+      return '<div class="stat"><div class="num">' + esc(String(c.num)) + '</div><div class="lbl">' + esc(c.lbl) + '</div></div>';
+    }).join('');
+  }
+
+  /* A GitHub-style calendar: one column per week, Monday at the top. */
+  function renderCal(days) {
+    var host = $('#calHost');
+    var from = PH.mondayOf(rangeStart()), to = TODAY;
+    var weeks = Math.floor(PH.daysBetween(from, to) / 7) + 1;
+    if (weeks > 54) { from = PH.mondayOf(PH.addDays(TODAY, -371)); weeks = 54; }
+    var counts = [];
+    Object.keys(days).forEach(function (d) { if (d >= from && d <= to) counts.push(days[d].length); });
+    counts.sort(function (a, b) { return a - b; });
+    var q = function (f) { return counts.length ? counts[Math.min(counts.length - 1, Math.floor(counts.length * f))] : 1; };
+    var t1 = 1, t2 = Math.max(2, q(0.5)), t3 = Math.max(t2 + 1, q(0.8));
+    var level = function (n) { return n >= t3 ? 4 : n >= t2 ? 3 : n >= t1 + 1 ? 2 : n > 0 ? 1 : 0; };
+
+    var monthRow = '', cells = '', lastMonth = -1;
+    for (var w = 0; w < weeks; w++) {
+      var monday = PH.addDays(from, w * 7);
+      var mo = new Date(monday + 'T00:00:00').getMonth();
+      var showMonth = mo !== lastMonth;
+      monthRow += '<span style="width:16px">' + (showMonth ? esc(new Date(monday + 'T00:00:00').toLocaleDateString(undefined, { month: 'short' })) : '') + '</span>';
+      if (showMonth) lastMonth = mo;
+      for (var dow = 0; dow < 7; dow++) {
+        var d = PH.addDays(monday, dow);
+        if (d > to || d < from) { cells += '<span class="cell pad" aria-hidden="true"></span>'; continue; }
+        var list = days[d] || [], n = list.length;
+        var apps = {}; list.forEach(function (e) { apps[e.app] = (apps[e.app] || 0) + 1; });
+        var what = Object.keys(apps).map(function (a) { return (APPS[a] || { name: a }).name; }).join(', ');
+        var title = PH.fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' — ' + (n ? plural(n, 'thing') + ': ' + what : 'nothing logged');
+        cells += '<button type="button" class="cell l' + level(n) + (d === TODAY ? ' today' : '') + '" data-d="' + d + '" title="' + esc(title) + '" aria-label="' + esc(title) + '"></button>';
+      }
+    }
+    var dayNames = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun'];
+    host.innerHTML =
+      '<div class="scroller"><div class="months">' + monthRow + '</div>' +
+      '<div class="calwrap"><div class="daylabels">' + dayNames.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' +
+      '<div class="cal" id="calGrid">' + cells + '</div></div></div>' +
+      '<div class="legend"><span>Quieter</span>' +
+        [0, 1, 2, 3, 4].map(function (l) { return '<span class="cell l' + l + '"></span>'; }).join('') +
+        '<span>Busier</span></div>' +
+      '<div id="dayCard"></div>';
+    host.querySelector('#calGrid').addEventListener('click', function (e) {
+      var b = e.target.closest('.cell[data-d]');
+      if (!b) return;
+      showDay(b.getAttribute('data-d'));
+    });
+    var busiest = '';
+    Object.keys(days).forEach(function (d) { if (d >= from && d <= to && (!busiest || days[d].length > days[busiest].length)) busiest = d; });
+    $('#calSub').textContent = busiest ? 'Busiest day: ' + PH.fmtDate(busiest) + ' (' + plural(days[busiest].length, 'thing') + ')' : '';
+    if (busiest) showDay(TODAY in days ? TODAY : busiest);
+  }
+
+  function showDay(d) {
+    var list = allDays[d] || [];
+    var host = $('#dayCard');
+    if (!host) return;
+    host.innerHTML = '<div class="daycard"><h3>' + esc(PH.fmtDate(d, { weekday: 'long', month: 'long', day: 'numeric' })) + '</h3>' +
+      (list.length
+        ? '<ul>' + list.map(function (e) {
+            var a = APPS[e.app] || { emoji: '•', name: e.app };
+            return '<li>' + a.emoji + ' ' + esc(e.label) + '</li>';
+          }).join('') + '</ul>'
+        : '<p class="small" style="margin:0;color:var(--muted)">Nothing logged this day.</p>') + '</div>';
+  }
+
+  function renderAppBars(events) {
+    var counts = {};
+    events.forEach(function (e) { counts[e.app] = (counts[e.app] || 0) + 1; });
+    var list = ORDER.filter(function (a) { return counts[a]; });
+    if (!list.length) { $('#appBars').innerHTML = empty('Nothing logged in this stretch yet.', 'index.html', 'Back to the hub'); $('#appsSub').textContent = ''; return; }
+    var max = 0; list.forEach(function (a) { if (counts[a] > max) max = counts[a]; });
+    $('#appBars').innerHTML = list.map(function (a) {
+      var app = APPS[a], pct = Math.round(counts[a] / max * 100);
+      return '<div class="appbar">' +
+        '<span class="em" aria-hidden="true">' + app.emoji + '</span>' +
+        '<a class="nm" href="' + app.href + '">' + esc(app.name) + '</a>' +
+        '<span class="track"><span class="fill" style="width:' + pct + '%;background:' + app.color + '"></span></span>' +
+        '<span class="qty">' + counts[a] + '</span></div>';
+    }).join('');
+    $('#appsSub').textContent = plural(events.length, 'thing') + ' across ' + plural(list.length, 'app');
+  }
+
+  function renderAccuracy(events) {
+    var scored = events.filter(function (e) { return e.scored && e.total > 0; });
+    if (scored.length < 2) {
+      $('#accHost').innerHTML = empty(scored.length ? 'One scored round so far — a couple more and a trend line appears.' : 'No scored quizzes, worksheets or Python rounds in this stretch.', 'quizzes.html', 'Take a quiz');
+      $('#accSub').textContent = '';
+      return;
+    }
+    var buckets = {}, order = [];
+    scored.forEach(function (e) {
+      var k = weekKey(e.date);
+      if (!buckets[k]) { buckets[k] = { right: 0, total: 0, n: 0 }; order.push(k); }
+      buckets[k].right += e.right; buckets[k].total += e.total; buckets[k].n++;
+    });
+    order.sort();
+    var weekly = order.length >= 3, rows;
+    if (weekly) {
+      rows = order.map(function (k) {
+        var b = buckets[k], pct = Math.round(b.right / b.total * 100);
+        return { label: PH.fmtDate(k, { month: 'short', day: 'numeric' }), value: pct,
+          title: 'Week of ' + PH.fmtDate(k) + ': ' + pct + '% (' + b.right + ' of ' + b.total + ' right, ' + plural(b.n, 'round') + ')' };
+      });
+    } else {
+      /* one or two weeks in, a weekly average is a single dot. Show each round instead. */
+      rows = scored.slice(-24).map(function (e) {
+        var pct = Math.round(e.right / e.total * 100);
+        return { label: PH.fmtDate(e.date, { month: 'short', day: 'numeric' }), value: pct,
+          title: PH.fmtDate(e.date) + ': ' + e.label + ' (' + pct + '%)' };
+      });
+    }
+    var right = sum(scored, function (e) { return e.right; }), total = sum(scored, function (e) { return e.total; });
+    $('#accHost').innerHTML = lineChart(rows, { label: (weekly ? 'Accuracy by week, ' : 'Accuracy of each round, ') + rows.map(function (r) { return r.label + ' ' + r.value + '%'; }).join(', ') });
+    var best = rows.slice().sort(function (a, b) { return b.value - a.value; })[0];
+    $('#accSub').textContent = right + ' of ' + total + ' right overall · best ' + (weekly ? 'week ' : 'round ') + best.value + '% (' + best.label + ')' +
+      (weekly ? '' : ' · switches to weekly averages once there are three weeks');
+  }
+
+  function renderPiano(events) {
+    var ps = events.filter(function (e) { return e.app === 'piano'; });
+    if (!ps.length) {
+      $('#pianoHost').innerHTML = empty('No practice logged in this stretch.', 'piano.html', 'Log a session');
+      $('#pianoSub').textContent = '';
+      return;
+    }
+    var buckets = {}, order = [];
+    ps.forEach(function (e) {
+      var k = weekKey(e.date);
+      if (!buckets[k]) { buckets[k] = { mins: 0, days: {} }; order.push(k); }
+      buckets[k].mins += e.minutes; buckets[k].days[e.date] = 1;
+    });
+    order.sort();
+    /* fill in the silent weeks so a gap reads as a gap, not as a shorter chart */
+    var full = [], cur = order[0];
+    while (cur <= weekKey(TODAY) && full.length < 60) { full.push(cur); cur = PH.addDays(cur, 7); }
+    if (full.length > 26) full = full.slice(full.length - 26);
+    var rows = full.map(function (k) {
+      var b = buckets[k] || { mins: 0, days: {} };
+      var nd = Object.keys(b.days).length;
+      return { label: PH.fmtDate(k, { month: 'short', day: 'numeric' }), value: b.mins,
+        top: b.mins || '', faint: !b.mins,
+        title: 'Week of ' + PH.fmtDate(k) + ': ' + b.mins + ' min over ' + plural(nd, 'day') };
+    });
+    $('#pianoHost').innerHTML = barChart(rows, { goal: data.meta.goal * 7, label: 'Piano minutes per week' });
+    var mins = sum(ps, function (e) { return e.minutes; });
+    var dayset = {}; ps.forEach(function (e) { dayset[e.date] = 1; });
+    var nd = Object.keys(dayset).length;
+    $('#pianoSub').textContent = mins + ' min over ' + plural(nd, 'day') + ' · ' + Math.round(mins / nd) + ' min on a practice day · goal ' + data.meta.goal + ' min/day';
+  }
+
+  var BOXNAMES = ['Just started', 'Getting there', 'Fairly solid', 'Solid', 'Known cold'];
+  function renderHindi() {
+    var m = data.meta, host = $('#hindiHost');
+    var total = (window.HINDI && Array.isArray(HINDI.CARDS)) ? HINDI.CARDS.length : 0;
+    if (!m.seen) {
+      host.innerHTML = empty('No Hindi cards reviewed yet' + (total ? ' out of ' + total : '') + '.', 'hindi.html', 'Start the flashcards');
+      $('#hindiSub').textContent = '';
+      return;
+    }
+    var unseen = Math.max(0, total - m.seen);
+    var parts = m.boxes.map(function (n, i) {
+      return { n: n, label: BOXNAMES[i], color: 'color-mix(in srgb, var(--accent) ' + (18 + i * 20) + '%, var(--surface-2))' };
+    });
+    if (unseen) parts.push({ n: unseen, label: 'Not seen yet', color: 'var(--surface-2)' });
+    var whole = sum(parts, function (p) { return p.n; }) || 1;
+    host.innerHTML =
+      '<div class="mastery" role="img" aria-label="' + esc(parts.map(function (p) { return p.n + ' ' + p.label; }).join(', ')) + '">' +
+        parts.map(function (p) {
+          return '<div style="width:' + (p.n / whole * 100).toFixed(2) + '%;background:' + p.color + '" title="' + esc(p.label + ': ' + p.n) + '"></div>';
+        }).join('') + '</div>' +
+      '<div class="mkey">' + parts.map(function (p) {
+        return '<span class="k"><span class="sw" style="background:' + p.color + '"></span>' + esc(p.label) + '<span class="n">' + p.n + '</span></span>';
+      }).join('') + '</div>';
+    var solid = m.boxes[3] + m.boxes[4];
+    $('#hindiSub').textContent = m.seen + (total ? ' of ' + total : '') + ' cards started · ' + solid + ' solid · ' +
+      (m.due ? plural(m.due, 'card') + ' due today' : 'nothing due today');
+  }
+
+  function renderBadges() {
+    var m = data.meta, host = $('#badgeHost');
+    if (!m.earned.length && !m.inProgress && !m.want && !m.reqs) {
+      host.innerHTML = empty('No merit badges tracked yet.', 'badges.html', 'Pick a badge');
+      return;
+    }
+    var bits = '<div class="stats" style="margin-bottom:.9rem">' +
+      [[m.earned.length, 'earned'], [m.inProgress, 'in progress'], [m.want, 'want to earn'], [m.reqs, 'requirements signed off']]
+        .map(function (c) { return '<div class="stat"><div class="num">' + c[0] + '</div><div class="lbl">' + c[1] + '</div></div>'; }).join('') +
+      '</div>';
+    if (m.earned.length) {
+      bits += '<ul class="tl">' + m.earned.slice(0, 12).map(function (b) {
+        return '<li><span class="what">' + b.emoji + ' <a href="badges.html#' + esc(b.id) + '">' + esc(b.name) + '</a></span>' +
+          '<span class="when">' + (b.date ? esc(PH.fmtDate(b.date, { month: 'short', day: 'numeric', year: 'numeric' })) : 'no date') + '</span></li>';
+      }).join('') + '</ul>';
+      if (m.earned.length > 12) bits += '<p class="small" style="color:var(--muted)">and ' + (m.earned.length - 12) + ' more</p>';
+    }
+    host.innerHTML = bits;
+  }
+
+  function renderMilestones() {
+    var ev = data.events, host = $('#mileHost'), cards = [];
+    var push = function (t, v, s) { cards.push({ t: t, v: v, s: s || '' }); };
+    if (!ev.length) { host.innerHTML = empty('Records show up once there is something to beat.'); return; }
+
+    var ls = longestStreak(allDays);
+    push('Longest streak', plural(ls.days, 'day'), ls.from ? PH.fmtDate(ls.from, { month: 'short', day: 'numeric' }) + ' to ' + PH.fmtDate(ls.to, { month: 'short', day: 'numeric' }) : '');
+    push('Started tracking', PH.fmtDate(ev[0].date, { month: 'long', day: 'numeric', year: 'numeric' }), plural(PH.daysBetween(ev[0].date, TODAY) + 1, 'day') + ' ago');
+
+    var scored = ev.filter(function (e) { return e.scored && e.total > 0; });
+    if (scored.length) {
+      var totals = sum(scored, function (e) { return e.total; }), rights = sum(scored, function (e) { return e.right; });
+      push('Questions answered', String(totals), rights + ' right, ' + Math.round(rights / totals * 100) + '% overall');
+      var best = scored.slice().sort(function (a, b) {
+        var pa = a.right / a.total, pb = b.right / b.total;
+        return pb - pa || b.total - a.total;
+      })[0];
+      push('Best round', Math.round(best.right / best.total * 100) + '%', best.label + ' · ' + PH.fmtDate(best.date, { month: 'short', day: 'numeric' }));
+      var perfect = scored.filter(function (e) { return e.right === e.total && e.total >= 4; }).length;
+      if (perfect) push('Perfect rounds', String(perfect), 'four questions or more, none missed');
+    }
+    var piano = ev.filter(function (e) { return e.app === 'piano'; });
+    if (piano.length) {
+      var mins = sum(piano, function (e) { return e.minutes; });
+      push('Piano, all time', mins >= 120 ? (mins / 60).toFixed(1) + ' hours' : mins + ' min', plural(piano.length, 'session') + ' on ' + plural(Object.keys(byDay(piano)).length, 'day'));
+      var perDay = {}; piano.forEach(function (e) { perDay[e.date] = (perDay[e.date] || 0) + e.minutes; });
+      var bd = Object.keys(perDay).sort(function (a, b) { return perDay[b] - perDay[a]; })[0];
+      push('Longest practice day', perDay[bd] + ' min', PH.fmtDate(bd, { month: 'short', day: 'numeric', year: 'numeric' }));
+    }
+    var cards2 = sum(ev, function (e) { return e.cards || 0; });
+    if (cards2) push('Hindi cards reviewed', String(cards2), data.meta.seen + ' different words started');
+    var ticks = sum(ev, function (e) { return e.ticks || 0; });
+    if (ticks) push('Plan items ticked', String(ticks), 'on the weekly plan');
+
+    host.innerHTML = cards.map(function (c) {
+      return '<div class="m"><div class="t">' + esc(c.t) + '</div><div class="v">' + esc(c.v) + '</div>' +
+        (c.s ? '<div class="s">' + esc(c.s) + '</div>' : '') + '</div>';
+    }).join('');
+  }
+
+  function renderAll() {
+    var events = inRange(), days = byDay(events);
+    Array.prototype.forEach.call(document.querySelectorAll('#ranges .tab'), function (b) {
+      var on = b.getAttribute('data-range') === state.range;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    var from = rangeStart();
+    $('#rangeNote').textContent = data.events.length
+      ? PH.fmtDate(from, { month: 'short', day: 'numeric', year: 'numeric' }) + ' → today'
+      : 'Nothing logged yet — use the apps and this fills in.';
+    renderStats(events, days);
+    renderCal(allDays);
+    renderAppBars(events);
+    renderAccuracy(events);
+    renderPiano(events);
+    renderHindi();
+    renderBadges();
+    renderMilestones();
+  }
+
+  document.getElementById('ranges').addEventListener('click', function (e) {
+    var b = e.target.closest('.tab[data-range]');
+    if (!b) return;
+    state.range = b.getAttribute('data-range');
+    persist();
+    renderAll();
+  });
+  document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+
+  renderAll();
+
+  /* The Hindi total ("27 of 408") needs the card list, which is a big file — fetch it after the page is
+     already useful, then redraw just that one section. */
+  if (!window.HINDI) {
+    var s = document.createElement('script');
+    s.src = 'hindi_data.js';
+    s.onload = function () { try { renderHindi(); } catch (e) { /* section stays as it is */ } };
+    s.onerror = function () { /* offline and not cached: the section already works without a total */ };
+    document.head.appendChild(s);
+  }
+
+  window.PH_PROGRESS = { data: data, gather: gather, render: renderAll, setRange: function (r) { state.range = r; persist(); renderAll(); },
+    longestStreak: longestStreak, streak: function () { return streakEndingToday(allDays); } };
+})();
+</script>
+</body></html>

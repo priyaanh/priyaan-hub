@@ -175,6 +175,12 @@
       <div class="summary none" data-key="ph.calendar.v1"><span class="headline">Google Calendar</span><span class="sub">Open to see this week</span></div>
       <span class="open">Open →</span>
     </a>
+    <a class="app" data-app="progress" href="progress.html">
+      <div class="top"><span class="emoji">📈</span><h2>Progress</h2></div>
+      <p class="desc">Every app's history in one picture: the days you did something, how the answers went, piano minutes by week, Hindi words you know, and badges earned.</p>
+      <div class="summary none" id="progSummary"><span class="headline">Nothing logged yet</span><span class="sub">Use the apps and this fills in</span></div>
+      <span class="open">Open →</span>
+    </a>
   </section>
 
   <footer>
@@ -353,6 +359,38 @@
     el.hidden = false;
   });
 
+  /* streak: any day that any app recorded something. Kept deliberately loose — a day the child did
+     Hindi but no piano still counts, which is the whole point of a hub-wide streak. */
+  safe(() => {
+    const days = {};
+    const mark = d => { if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) days[d] = 1; };
+    const arr = v => Array.isArray(v) ? v : [];
+    const pi = load('ph.piano.v1'); if (pi) arr(pi.sessions).forEach(x => { if (x && Number(x.minutes) > 0) mark(x.date); });
+    const qz = load('ph.quiz.v1'); if (qz) arr(qz.attempts).forEach(x => x && mark(x.date));
+    const mh = load('ph.math.v1'); if (mh) arr(mh.history).forEach(x => x && mark(x.date));
+    const pyv = load('ph.python.v1'); if (pyv) arr(pyv.rounds).forEach(x => x && mark(x.date));
+    const hd = load('ph.hindi.v1'); if (hd && hd.days) Object.keys(hd.days).forEach(d => { if (hd.days[d] > 0) mark(d); });
+    const av = load('ph.ai.v1'); if (av) arr(av.sets).forEach(x => x && mark(x.date));
+    const sc = load('ph.schedule.v1');
+    if (sc && sc.checks) Object.keys(sc.checks).forEach(d => { if (sc.checks[d] && Object.keys(sc.checks[d]).length) mark(d); });
+    const total = Object.keys(days).length;
+    if (!total) return;
+    let cur = T, n = 0;
+    if (!days[cur]) cur = PH.addDays(cur, -1);          // yesterday still counts while today is young
+    while (days[cur]) { n++; cur = PH.addDays(cur, -1); }
+    const last7 = Array.from({ length: 7 }, (_, i) => PH.addDays(T, -i)).filter(d => days[d]).length;
+    tile({ id: 'streak', href: 'progress.html', emoji: '📈', label: 'Streak',
+      value: n ? n + (n === 1 ? ' day' : ' days') : 'Broken',
+      sub: n ? (days[T] ? 'Today is in' : 'Do one thing today') : 'Start a new one', colour: '#e11d48',
+      cls: days[T] ? 'done' : n ? '' : 'due', pct: Math.round(last7 / 7 * 100) });
+    const ps = document.getElementById('progSummary');
+    if (ps) {
+      ps.classList.remove('none');
+      ps.querySelector('.headline').textContent = n ? n + (n === 1 ? ' day streak' : ' day streak') : total + (total === 1 ? ' day logged' : ' days logged');
+      ps.querySelector('.sub').textContent = total + (total === 1 ? ' day' : ' days') + ' with something done, ' + last7 + ' of the last 7';
+    }
+  });
+
   document.getElementById('todayWhen').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   if (tiles.length) {
     document.getElementById('todayCard').hidden = false;
@@ -367,8 +405,8 @@
 
   // Pull each app's summary from localStorage.
   document.querySelectorAll('.apps .app').forEach((card, i) => {
-    if (i > 8) return;                                   // only the first nine get a number key
-    const k = document.createElement('span'); k.className = 'key'; k.textContent = String(i + 1); k.setAttribute('aria-hidden', 'true');
+    if (i > 9) return;                                   // ten cards, keys 1-9 then 0
+    const k = document.createElement('span'); k.className = 'key'; k.textContent = String((i + 1) % 10); k.setAttribute('aria-hidden', 'true');
     card.appendChild(k);
   });
 
@@ -455,7 +493,8 @@
     const cards = Array.prototype.slice.call(document.querySelectorAll('.apps .app'));
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= Math.min(9, cards.length)) { e.preventDefault(); location.href = cards[n - 1].getAttribute('href'); return; }
-    if (e.key === '?') PH.toast(cards.slice(0, 9).map((c, i) => (i + 1) + ' ' + c.querySelector('h2').textContent).join(' · '), 5000);
+    if (e.key === '0' && cards.length >= 10) { e.preventDefault(); location.href = cards[9].getAttribute('href'); return; }
+    if (e.key === '?') PH.toast(cards.slice(0, 10).map((c, i) => ((i + 1) % 10) + ' ' + c.querySelector('h2').textContent).join(' · '), 5000);
   });
 
   /* Hook for tests/hub.html, which drives these directly. Exposes no data the page does not already show. */

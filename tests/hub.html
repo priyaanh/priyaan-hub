@@ -48,7 +48,7 @@ f.addEventListener('load', async () => {
   }
   const restore = () => { Object.keys(snap).forEach(k => { if (snap[k] == null) w.localStorage.removeItem(k); else w.localStorage.setItem(k, snap[k]); }); };
   if (phase === 2) {
-    ok('page survives a corrupt app key', !$('#todayCard').hidden && $$('.tile').length === 7);
+    ok('page survives a corrupt app key', !$('#todayCard').hidden && $$('.tile').length === 8, $$('.tile').length + ' tiles');
     ok('the other tiles still work', /1 of 2/.test($('#tiles').textContent) && /25 \/ 30/.test($('#tiles').textContent));
     restore();
     console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
@@ -57,13 +57,18 @@ f.addEventListener('load', async () => {
   try {
     ok('today panel appears with data', !$('#todayCard').hidden);
     const txt = $('#tiles').textContent;
-    ok('8 tiles rendered', $$('.tile').length === 8);
+    ok('9 tiles rendered', $$('.tile').length === 9, $$('.tile').length + ' found');
     ok('python tile shows today\'s round', /9 \/ 10/.test($('[data-tile="python"]').textContent) && /one round today/.test($('[data-tile="python"]').textContent));
     const calTile = $('[data-tile="calendar"]');
     ok('calendar tile counts today only', /2 events/.test(calTile.textContent));
     ok('calendar tile names the next one still to come', /Scouts troop meeting/.test(calTile.textContent));
-    ok('number badges on the first nine cards', $$('.apps .app .key').length === Math.min(9, $$('.apps .app').length)
-        && $$('.apps .app .key')[0].textContent === '1');
+    ok('number badges on the first ten cards', $$('.apps .app .key').length === Math.min(10, $$('.apps .app').length)
+        && $$('.apps .app .key')[0].textContent === '1' && $$('.apps .app .key').slice(-1)[0].textContent === '0');
+    const streak = $('[data-tile="streak"]');
+    ok('a streak tile counts days across every app', !!streak && /3 days/.test(streak.textContent), streak ? streak.textContent : 'missing');
+    ok('the streak tile opens the progress page', !!streak && streak.getAttribute('href') === 'progress.html');
+    ok('the progress card summarises without being opened', !/Nothing logged yet/.test($('#progSummary').textContent)
+        && /3 day streak/.test($('#progSummary').textContent), $('#progSummary').textContent);
     ok('piano tile shows minutes vs goal', /12 \/ 30 min/.test(txt) && /Keep going/.test(txt));
     ok('piano bar at 40%', $('[data-tile="piano"] .bar i').style.width === '40%');
     ok('plan tile counts today only', /1 of 2/.test(txt));

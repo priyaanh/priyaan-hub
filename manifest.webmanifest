@@ -51,6 +51,12 @@
       "short_name": "Hindi",
       "url": "./hindi.html",
       "description": "Review the words due today"
+    },
+    {
+      "name": "See progress",
+      "short_name": "Progress",
+      "url": "./progress.html",
+      "description": "Streaks, accuracy and practice time"
     }
   ]
 }
