@@ -1,6 +1,6 @@
 # Priyaan's Hub
 
-Five small practice apps for Priyaan, in one folder, with no build step. Open `index.html` in a browser, or visit the GitHub Pages site once it is enabled.
+Ten small practice apps for Priyaan, in one folder, with no build step. Open `index.html` in a browser, or visit the GitHub Pages site once it is enabled.
 
 | App | File | What it does |
 | --- | --- | --- |
@@ -12,11 +12,18 @@ Five small practice apps for Priyaan, in one folder, with no build step. Open `i
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day, plus any Google Tasks that are due or overdue. |
 | 🐍 Python Practice | `python.html` | Short rounds of "what does this print?" on eleven topics: types, strings, lists, loops, if/elif/else, functions, dictionaries, f-strings, list comprehensions, tuples and sets, and errors. A quick reference sits under the topic picker. Multiple choice or typed, with an explanation after each one, a review of what you missed, and history. Questions are generated on the device. |
 | ✏️ Make Practice | `ai.html` | **By grade:** pick Grade 6, 7 or 8, choose topics, and get a printable worksheet with an answer key immediately - generated on the device, no key, no internet. **From a PDF:** turn a chapter or study guide into fresh problems or a quiz with the free ChatGPT (copy a prompt, paste the reply back) or, with an API key, with Claude or ChatGPT directly. |
+| 📈 Progress | `progress.html` | Every app's history in one picture: an activity calendar going back up to a year, accuracy over time across quizzes, worksheets and Python rounds, piano minutes by week against the goal, Hindi words split across the five review boxes, merit badges by status, and records like the longest streak and the best round. Reads the other apps and writes nothing back. |
 | 🗓️ Calendar &amp; Tasks | `calendar.html` | Google Calendar embedded (week / month / agenda) for as many Google accounts as you add, one-tap "add event" buttons for each activity, and Google Tasks: tick items off, add tasks with due dates, grouped into Overdue / Today / Coming up. |
 
 ## How it works
 
-The hub page opens on a **Today** panel computed from the other apps' saved data: piano minutes against the daily goal, how much of today's plan is ticked off, today's calendar events with the next one named, Google Tasks that are due or overdue, Hindi words waiting for review, today's worksheet and quiz scores, merit badge requirements signed off this week, and any practice streaks. Keys **1**–**9** open the apps, and **?** names them. It only shows tiles that have something to say, and one line names the next unchecked thing on today's plan. Underneath, a seven-day strip shows which days had piano, plan, maths and Hindi activity, with a count out of seven.
+The hub page opens on a **Today** panel computed from the other apps' saved data: piano minutes against the daily goal, how much of today's plan is ticked off, today's calendar events with the next one named, Google Tasks that are due or overdue, Hindi words waiting for review, today's worksheet and quiz scores, merit badge requirements signed off this week, and any practice streaks. Keys **1**–**9** and **0** open the apps, and **?** names them. It only shows tiles that have something to say, and one line names the next unchecked thing on today's plan. A streak tile counts every day that any app recorded something and opens the Progress page. Underneath, a seven-day strip shows which days had piano, plan, maths and Hindi activity, with a count out of seven.
+
+**Search.** The box under the greeting searches the whole site: all 139 merit badges, every one of the 408 Hindi words in either script or by its English meaning, each CPM lesson, the Python topics, and the worksheet generators for Integrated Math 1 and Grades 6-8. Press **/** to jump to it, arrow keys to move, Enter to open; results link straight to the right card, chapter or lesson. The index is a generated file, so the hub itself stays small:
+
+```bash
+node build_search.js        # rewrites search_index.js after any content change
+```
 
 
 - Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build.
@@ -81,7 +88,7 @@ The page then shows **Workbook · offline** and opens the local file. The PDFs s
 ./tests/run.sh
 ```
 
-Loads every page in headless Chrome and fails on any console error, runs twenty-one browser suites (about 620
+Loads every page in headless Chrome and fails on any console error, runs twenty-two browser suites (about 690
 checks) that drive the real pages with the network stubbed — including accessibility, phone layout, WCAG
 contrast in both light and dark, and the offline service worker — then runs the 142,148 maths-generator
 checks in `test_im1.js`, the 111,628 in `test_grades.js` and the 41,527 in `test_pyquiz.js`. See `tests/README.md`.
@@ -90,7 +97,7 @@ checks in `test_im1.js`, the 111,628 in `test_grades.js` and the 41,527 in `test
 
 - Piano pieces: edit the default list near the top of the script in `piano.html`, or add pieces in the app.
 - Badge requirements: the `BADGES` constant in `badges.html`. Custom badges can also be added in the app (the catalog's **＋ Checklist** button pre-fills the form). The list of all badges is `badges_catalog.js`, one badge per line.
-- Hindi vocabulary: the `CARDS` and `CHAPTERS` constants in `hindi.html`, one entry per line (`hi` Devanagari, `tr` transliteration, `en` meaning, `hint` Hindi gloss). A card's progress is keyed by chapter + `hi`, so renaming a word resets it. Extra words can also be added in the app under **My words**.
+- Hindi vocabulary: the `CARDS` and `CHAPTERS` constants in `hindi_data.js`, one entry per line (`hi` Devanagari, `tr` transliteration, `en` meaning, `hint` Hindi gloss). A card's progress is keyed by chapter + `hi`, so renaming a word resets it. Extra words can also be added in the app under **My words**. Re-run `node build_search.js` afterwards so the hub can find them.
 - Weekly template: use **Edit plan** in the app, or change the default template in `schedule.html`.
 
 ## Sources

@@ -18,6 +18,9 @@ CHROME=/path/to/chrome ./tests/run.sh
 | Suite | Covers |
 | --- | --- |
 | `hub.html` | the Today panel's counting rules, streaks, tile links, survival of a corrupt saved key, and that backups leave API keys out |
+| `search.html` | the hub's search box: what each kind of content matches, the ranking, the ten-result cap, the deep links, the keyboard, and that the index is not fetched until the box is focused |
+| `progress.html` | the Progress page: what it reads out of each app, junk entries being dropped, the headline numbers, the range picker, the activity calendar and its day detail, every chart, the records, and the empty case |
+| `dates.html` | `PH.todayISO`, `addDays`, `daysBetween` and `mondayOf` across daylight saving, month ends and year ends |
 | `free.html` | the free-ChatGPT flow: the generated prompt, the one-click handoff, the three reply formats it can read, and the printable sheet |
 | `ai.html` | the Claude and OpenAI request shapes, headers, JSON-schema output, key storage per provider, quiz marking, error and refusal handling |
 | `tasks.html` | Google Tasks: grouping by due date, ticking off, adding, deleting, switching lists, the offline copy |
@@ -51,3 +54,6 @@ Notes for anyone extending these:
   proceed once the page itself has rendered.
 - Each suite snapshots the `localStorage` keys it touches and puts them back afterwards, so running the
   tests never destroys real practice data.
+- A suite that reloads its iframe to test a second state must guard its `load` handler with a phase flag.
+  Without one the handler fires again and silently re-runs every earlier check against the new state, which
+  shows up as a pile of failures that look like real bugs.
