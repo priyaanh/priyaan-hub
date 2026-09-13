@@ -34,6 +34,9 @@ f.addEventListener('load', async () => {
     // a maths topic
     await type('pythagorean');
     ok('finds a maths topic', /Pythagorean/i.test($('#results').textContent));
+    await type('slope');
+    ok('a maths topic links to the topic, not just the page', /math\.html#slope/.test($$('#results a').map(a => a.getAttribute('href')).join(' ')),
+      $$('#results a').map(a => a.getAttribute('href')).join(' '));
     // an app
     await type('metronome');
     ok('finds an app by what it does', /Piano/.test($('#results').textContent));

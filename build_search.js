@@ -61,7 +61,7 @@ const cpm = loadBrowserScript('cpm_int2_ch1.js');
 
 /* maths topics: Integrated 1 and the school grades */
 const im1 = require('./im1.js');
-(im1.TOPICS || []).forEach(t => add('🧮', t.name, 'Integrated Math 1 · ' + t.unit, 'math.html', t.name + ' ' + t.description));
+(im1.TOPICS || []).forEach(t => add('🧮', t.name, 'Integrated Math 1 · ' + t.unit, 'math.html#' + t.id, t.name + ' ' + t.description));
 const grades = require('./grades.js');
 (grades.LEVELS || []).forEach(g => {
   add('✏️', g.name, 'Worksheets · ' + g.sub, 'ai.html#' + g.id, g.name + ' ' + g.sub + ' worksheet practice');

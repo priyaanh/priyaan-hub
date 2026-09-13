@@ -363,6 +363,16 @@ main > * + * { margin-top: 1rem; }
     save(); renderAll(); PH.toast('Imported ' + state.history.length + ' worksheets');
   }
 
+  /* A link like math.html#slope (used by the hub's search) narrows to that topic. */
+  function applyHash() {
+    const want = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!want || ALL.indexOf(want) < 0) return false;
+    state.settings.topics = [want];
+    return true;
+  }
+  if (applyHash()) save();
+  window.addEventListener('hashchange', () => { if (applyHash()) { save(); renderAll(); } });
+
   $('#seedIn').value = randSeed();
   renderAll();
   if (stored) save();
