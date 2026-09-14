@@ -6,6 +6,9 @@ Two kinds, both run by `./tests/run.sh`:
   checks them: no junk in the text, deterministic for a seed, no duplicates in a sheet, and, where the
   question can be re-solved, that the answer is actually right (substituting back into equations, systems
   and inequalities, recomputing slopes, midpoints, distances, sequence terms and exponential values).
+- **`links.js`** — walks the static markup of every page and checks that each internal link, script,
+  stylesheet, image and frame points at a file that exists, that a same-page anchor matches an id on that
+  page, and that a link carrying a fragment goes to a page that actually reads one.
 - **`*.html`** — each one drives a real page inside an iframe in headless Chrome, stubbing `window.fetch`
   where a network call would happen, and logs `PASS`/`FAIL` lines to the console.
 
