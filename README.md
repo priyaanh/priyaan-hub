@@ -28,6 +28,7 @@ node build_search.js        # rewrites search_index.js after any content change
 
 
 - Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build.
+- Question text is a little HTML — `<sup>` for exponents, `<br>` between the lines of a system, `&lt;` for a symbol. `PH.safeHTML` escapes everything and then re-allows exactly that short list, so the formatting shows but nothing with an attribute can get through; `PH.plainText` gives the same text with the markup taken out, for places only plain text fits.
 - Progress is saved in the browser's localStorage under keys named `ph.<app>.v1`. Each app also writes a short `summary` that the hub page shows on its card.
 - Data lives only in the browser you use. Use **Back up all data** on the hub page now and then, and **Restore** on a new device. The footer says how long it has been, and nags in amber past a month. API keys are deliberately left out of backups, so add those again per device.
 - If the browser ever refuses to save (a full quota, or a private window), the page says so instead of losing the work quietly.
@@ -100,9 +101,14 @@ Every app that marks an answer now records *which* questions were wrong, not jus
 gathers them and asks them again.
 
 Nothing is copied: each generator on this site is deterministic, so a saved `{seed, topics, difficulty,
-count}` plus an index is the whole question, and the page rebuilds it exactly. A lesson-quiz reference like
-`1.1.1:3` is turned back into a question by `cpm_int2_ch1.js`, which also holds the marking rules, so the
-quiz page and the review page can never disagree about whether `6 + 5x + x^2` answers `x^2 + 5x + 6`.
+count}` plus an index is the whole question, and the page rebuilds it. Worksheet problems, Python snippets
+and the 139 fixed quiz questions come back exactly as they were. The 60 quiz entries that are templates
+rather than fixed questions come back as a sibling — the same skill with its own numbers, drawn from a seed
+fixed to that question so it is at least the same every time you see it.
+
+A lesson-quiz reference like `1.1.1:3` is turned back into a question by `cpm_int2_ch1.js`, which also holds
+the marking rules, so the quiz page and the review page can never disagree about whether `6 + 5x + x^2`
+answers `x^2 + 5x + 6`.
 
 A question is identified by what it *is*, not by the attempt it came from, so getting it right once clears
 it wherever it appeared, and missing it again on a later day puts it back. The only thing the page saves is

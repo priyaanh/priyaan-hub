@@ -6,7 +6,7 @@ const waitFor=async(cond,n)=>{for(let i=0;i<(n||40);i++){ if(cond()) return true
 let phase=0, snap={};
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument; W=w; const $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
-  const KEYS=['ph.piano.v1','ph.schedule.v1','ph.calendar.v1','ph.hindi.v1','ph.math.v1','ph.quiz.v1','ph.badges.v1','ph.ai.v1','ph.python.v1','ph.ai.key','ph.ai.key.openai','ph.meta.backupAt'];
+  const KEYS=['ph.piano.v1','ph.schedule.v1','ph.calendar.v1','ph.hindi.v1','ph.math.v1','ph.quiz.v1','ph.badges.v1','ph.ai.v1','ph.python.v1','ph.review.v1','ph.ai.key','ph.ai.key.openai','ph.meta.backupAt'];
   if (phase === 0) {
     phase = 1;
     KEYS.forEach(k => { snap[k] = w.localStorage.getItem(k); });
@@ -33,7 +33,10 @@ f.addEventListener('load', async () => {
       summary:{} }));
     w.localStorage.setItem('ph.hindi.v1', JSON.stringify({ version:1, days:{ [T]:1, [Y]:1 },
       progress:{ 'c6-01:सिंधु':{box:1,due:T,last:T}, 'c6-01:नत':{box:0,due:Y,last:Y}, 'c6-02:गोल':{box:3,due:TOM,last:T} }, quizzes:[], custom:[], settings:{} }));
-    w.localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, attempts:[{id:'x',date:T,lesson:'1.3.1',right:8,total:10,kind:'full',ts:Date.now(),missed:[0,3]}], settings:{}, summary:{} }));
+    w.localStorage.removeItem('ph.review.v1');
+    w.localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, settings:{}, summary:{}, attempts:[
+      {id:'x',date:T,lesson:'1.3.1',right:8,total:10,kind:'full',ts:Date.now(),missed:[0,3]},
+      {id:'bad',date:'2026-02-30',lesson:'1.3.1',right:1,total:2,kind:'full',ts:Date.now(),missed:[7,8]}] }));
     w.localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, history:[{id:'m',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:9,total:10},missed:[2]},
                {id:'m0',date:D2,topics:['linear'],count:10,difficulty:2,seed:9,name:'P',score:{right:7,total:10},missed:[1]}], settings:{}, summary:{} }));
     w.localStorage.setItem('ph.badges.v1', JSON.stringify({ version:1, done:{ 'kayaking:1a':{date:T,by:''}, 'kayaking:1b':{date:Y,by:''}, 'kayaking:2':{date:w.PH.addDays(T,-3),by:''}, 'canoeing:2':{date:w.PH.addDays(T,-30),by:''} }, notes:{}, counselors:{}, targetDates:{}, custom:[], hidden:[], catalog:{}, summary:{} }));
@@ -65,6 +68,15 @@ f.addEventListener('load', async () => {
     ok('a review tile counts what is still missed', !!rev && /4 questions/.test(rev.textContent), rev ? rev.textContent : 'missing');
     ok('and says how stale the oldest one is', !!rev && /2 days ago/.test(rev.textContent), rev ? rev.textContent : 'missing');
     ok('the review tile opens the review page', !!rev && rev.getAttribute('href') === 'review.html');
+    /* the card used to read a summary that only exists once review.html has been opened, so it could
+       say "nothing to review" beside a tile counting four */
+    const revCard = $('.apps .app[data-app="review"] .summary');
+    ok('the review card agrees with the tile without the page ever being opened',
+      !!revCard && /4 questions to go over/.test(revCard.textContent), revCard ? revCard.textContent : 'missing');
+    ok('and it is not driven by a stored summary', !!revCard && !revCard.getAttribute('data-key'));
+    /* the extra attempt is dated 2026-02-30, which JavaScript reads as March 2; review.html rejects it,
+       so the hub has to reject it too or the two pages count different things */
+    ok('a date that does not exist is not counted', !!rev && !/6 questions/.test(rev.textContent), rev ? rev.textContent : 'missing');
     ok('python tile shows today\'s round', /9 \/ 10/.test($('[data-tile="python"]').textContent) && /one round today/.test($('[data-tile="python"]').textContent));
     const calTile = $('[data-tile="calendar"]');
     ok('calendar tile counts today only', /2 events/.test(calTile.textContent));

@@ -125,6 +125,9 @@ main > * + * { margin-top: 1rem; }
   var KEY = 'ph.review.v1';
   var TODAY = PH.todayISO();
   var esc = PH.esc;
+  /* Question text is written as a little HTML (<sup> for exponents, <br> between the lines of a system,
+     &lt; for a symbol). PH.safeHTML keeps exactly those and neutralises everything else. */
+  var safeHTML = PH.safeHTML, plainText = PH.plainText;
   var $ = function (s) { return document.querySelector(s); };
   var isObj = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
   var okISO = function (s) {
@@ -147,9 +150,15 @@ main > * + * { margin-top: 1rem; }
   function normalize(raw) {
     var s = blank();
     if (!isObj(raw)) return s;
-    if (isObj(raw.cleared)) Object.keys(raw.cleared).slice(0, 2000).forEach(function (k) {
-      if (typeof k === 'string' && k.length < 200 && okISO(raw.cleared[k])) s.cleared[k] = raw.cleared[k];
-    });
+    if (isObj(raw.cleared)) {
+      /* Keep the most recent, not the first seen: slicing insertion order threw away every new clear
+         once the cap was reached, quietly re-opening questions that had been put right. */
+      var keys = Object.keys(raw.cleared).filter(function (k) {
+        return typeof k === 'string' && k.length < 200 && okISO(raw.cleared[k]);
+      });
+      keys.sort(function (a, b) { return raw.cleared[a] < raw.cleared[b] ? 1 : raw.cleared[a] > raw.cleared[b] ? -1 : 0; });
+      keys.slice(0, 2000).forEach(function (k) { s.cleared[k] = raw.cleared[k]; });
+    }
     var st = isObj(raw.settings) ? raw.settings : {};
     if (isObj(st.sources)) ORDER.forEach(function (k) { if (typeof st.sources[k] === 'boolean') s.settings.sources[k] = st.sources[k]; });
     if ([0, 5, 10, 20].indexOf(Number(st.howMany)) >= 0) s.settings.howMany = Number(st.howMany);
@@ -166,6 +175,9 @@ main > * + * { margin-top: 1rem; }
     var out = [];
     var push = function (key, src, date, label, group, gen) {
       if (!okISO(date)) return;
+      /* A clock that was ahead, or a restored backup, can leave a record dated in the future. Left alone
+         it could never be cleared, because clearing stamps today and today is never past tomorrow. */
+      if (date > TODAY) date = TODAY;
       var clearedOn = state.cleared[key];
       if (clearedOn && clearedOn >= date) return;          // answered right since it was missed
       out.push({ key: key, src: src, date: date, label: label, group: group, gen: gen });
@@ -213,7 +225,10 @@ main > * + * { margin-top: 1rem; }
       if (!isObj(x) || !arr(x.missed).length) return;
       arr(x.missed).forEach(function (i) {
         if (!isObj(arr(x.problems)[i])) return;
-        push('a|' + x.id + '|' + i, 'ai', x.date, String(x.title || 'Practice set'), String(x.title || 'Practice set'),
+        /* keyed by the question, not the set: ai.html can copy a missed problem into a fresh set,
+           and the same question must not sit on the list twice under two names */
+        push('a|' + hash(String(arr(x.problems)[i].question)), 'ai', x.date,
+          String(x.title || 'Practice set'), String(x.title || 'Practice set'),
           { kind: 'ai', setId: x.id, idx: i });
       });
     });
@@ -222,11 +237,20 @@ main > * + * { margin-top: 1rem; }
     var byKey = {};
     out.forEach(function (d) { if (!byKey[d.key] || d.date > byKey[d.key].date) byKey[d.key] = d; });
     var list = Object.keys(byKey).map(function (k) { return byKey[k]; });
+    /* Drop anything that can no longer be turned back into a question — a lesson renamed, a bank entry
+       removed, a set deleted. Counting one of those would promise a question the review cannot ask, and
+       nothing could ever clear it. Only checked once the generator for that source has arrived. */
+    list = list.filter(function (d) { return !canBuild(d.src) || !!buildCached(d); });
     list.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.key < b.key ? -1 : 1); });
     return list;
   }
 
   /* ===================== Loading a generator only when it is needed ===================== */
+  /* the ai source reads its questions straight out of storage, so it never waits on a script */
+  function canBuild(srcKey) {
+    var src = SOURCES[srcKey];
+    return !src || !src.script || !!src.optional || !!window[src.global];
+  }
   var loading = {};
   function need(srcKey) {
     var src = SOURCES[srcKey];
@@ -413,7 +437,7 @@ main > * + * { margin-top: 1rem; }
       return '<div class="grp">' + esc(g) + ' · ' + plural(groups[g].length, 'question') + '</div><ul class="open">' +
         list.map(function (d) {
           var it = buildCached(d);
-          var text = it ? (it.code ? firstLine(it.code) : it.qtext) : d.label;
+          var text = plainText(it ? (it.code ? firstLine(it.code) : it.qtext) : d.label);
           return '<li><span class="em" aria-hidden="true">' + SOURCES[d.src].emoji + '</span>' +
             '<span class="what"><b>' + esc(clip(text, 96)) + '</b></span>' +
             '<span class="when">missed ' + esc(PH.fmtDate(d.date, { month: 'short', day: 'numeric' })) + '</span></li>';
@@ -469,14 +493,14 @@ main > * + * { margin-top: 1rem; }
 
     $('#qbody').innerHTML =
       (it.svg ? '<div class="qsvg">' + it.svg + '</div>' : '') +
-      '<div class="qtext">' + esc(it.qtext) + '</div>' +
+      '<div class="qtext">' + safeHTML(it.qtext) + '</div>' +
       (it.code ? '<div class="code">' + esc(it.code) + '</div>' : '');
 
     $('#qanswer').innerHTML = it.choices
       ? '<div class="choices" role="group" aria-label="Choose an answer">' + it.choices.map(function (c, i) {
           return '<button type="button" class="choice" data-pick="' + i + '">' +
             '<span class="ltr" aria-hidden="true">' + String.fromCharCode(65 + i) + '</span>' +
-            '<span>' + esc(c) + '</span></button>';
+            '<span>' + safeHTML(c) + '</span></button>';
         }).join('') + '</div>'
       : '<div class="typed"><input class="input" id="typedIn" type="text" autocomplete="off" autocapitalize="off" ' +
         'spellcheck="false" aria-label="Your answer" placeholder="Your answer"></div>';
@@ -516,8 +540,8 @@ main > * + * { margin-top: 1rem; }
     $('#qverdict').innerHTML =
       '<div class="verdict ' + (ok ? 'ok' : 'no') + '">' +
         '<div class="head ' + (ok ? 'ok' : 'no') + '">' + (ok ? '✓ Right — that one is done' : '✗ Not yet') + '</div>' +
-        (ok ? '' : '<div class="why">The answer is <b>' + esc(it.answerText) + '</b>.</div>') +
-        (it.explain ? '<div class="why">' + esc(it.explain) + '</div>' : '') +
+        (ok ? '' : '<div class="why">The answer is <b>' + safeHTML(it.answerText) + '</b>.</div>') +
+        (it.explain ? '<div class="why">' + safeHTML(it.explain) + '</div>' : '') +
       '</div>';
     $('#checkBtn').hidden = true;
     $('#nextBtn').hidden = false;

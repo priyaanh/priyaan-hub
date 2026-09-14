@@ -15,7 +15,9 @@ function seed() {
   localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, settings:{}, summary:{}, attempts:[
     {id:'q1',date:D(9),ts:Date.now(),lesson:'1.1.1',right:8,total:10,kind:'full',seconds:200,seed:1,missed:[0,2]}] }));
   localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, settings:{}, summary:{}, history:[
-    {id:'m1',date:D(7),topics:['linear'],count:8,difficulty:2,seed:31,name:'P',score:{right:6,total:8},missed:[1,4]}] }));
+    {id:'m1',date:D(7),topics:['linear'],count:8,difficulty:2,seed:31,name:'P',score:{right:6,total:8},missed:[1,4]},
+    {id:'m2',date:D(8),topics:['systems'],count:8,difficulty:2,seed:31,name:'P',score:{right:7,total:8},missed:[0]},
+    {id:'m3',date:D(8),topics:['exponents'],count:8,difficulty:2,seed:31,name:'P',score:{right:7,total:8},missed:[0]}] }));
   localStorage.setItem('ph.python.v1', JSON.stringify({ version:1, settings:{}, summary:{}, rounds:[
     {id:'r1',date:D(5),right:3,total:6,seed:77,topics:['loops'],difficulty:2,kind:'full',missed:[0]},
     {id:'r2',date:D(4),right:0,total:2,seed:0,topics:['loops'],difficulty:2,kind:'retry',missed:[0,1]}] }));
@@ -41,17 +43,17 @@ f.addEventListener('load', async () => {
 
     /* ---- what it collected ---- */
     const open = w.PH_REVIEW.open();
-    ok('it finds every source', open.length === 6, open.length + ' open: ' + open.map(o => o.src).join(','));
+    ok('it finds every source', open.length === 8, open.length + ' open: ' + open.map(o => o.src).join(','));
     const bySrc = {}; open.forEach(o => bySrc[o.src] = (bySrc[o.src] || 0) + 1);
     ok('two from the quiz', bySrc.quiz === 2, String(bySrc.quiz));
-    ok('two from the worksheet', bySrc.math === 2, String(bySrc.math));
+    ok('four from the worksheet', bySrc.math === 4, String(bySrc.math));
     ok('one from Python', bySrc.python === 1, String(bySrc.python));
     ok('a retry round is skipped, since it cannot be rebuilt', bySrc.python === 1);
     ok('one from a practice set', bySrc.ai === 1, String(bySrc.ai));
     ok('the oldest is first', open[0].date === D(9) && open[open.length-1].date === D(3), open.map(o => o.date).join(' '));
-    ok('the counts show on the source buttons', $$('#srcs .src .ct').map(e => e.textContent).join(',') === '2,2,1,1',
+    ok('the counts show on the source buttons', $$('#srcs .src .ct').map(e => e.textContent).join(',') === '2,4,1,1',
       $$('#srcs .src .ct').map(e => e.textContent).join(','));
-    ok('the headline counts them', /6/.test($$('#stats .num')[0].textContent), $$('#stats .num')[0].textContent);
+    ok('the headline counts them', /8/.test($$('#stats .num')[0].textContent), $$('#stats .num')[0].textContent);
     ok('it names what keeps coming back', /keeps coming back/.test(txt('#stats')), txt('#stats').slice(0, 80));
     ok('the open list names the sources', /Lesson quizzes/.test(txt('#listBody')) && /Make Practice/.test(txt('#listBody')));
     /* the generators arrive a moment after first paint, and then each row names its own question
@@ -69,7 +71,7 @@ f.addEventListener('load', async () => {
     /* ---- rebuilding: now that the generators are loaded, every one must come back ---- */
     const built = [];
     open.forEach(o => { const it = w.PH_REVIEW.build(o); if (it) built.push({ o, it }); });
-    ok('every missed question can be rebuilt', built.length === 6, built.length + ' of ' + open.length);
+    ok('every missed question can be rebuilt', built.length === 8, built.length + ' of ' + open.length);
     ok('each one carries a question and an answer', built.every(b => b.it.qtext && b.it.answerText),
       built.filter(b => !(b.it.qtext && b.it.answerText)).map(b => b.o.key).join(' '));
     ok('rebuilding twice gives the same question', built.every(b => w.PH_REVIEW.build(b.o).qtext === b.it.qtext));
@@ -78,7 +80,7 @@ f.addEventListener('load', async () => {
     const aiQ = built.filter(b => b.o.src === 'ai')[0];
     ok('the practice-set question is the one that was missed', !!aiQ && /20% of 60/.test(aiQ.it.qtext), aiQ ? aiQ.it.qtext : 'missing');
 
-    ok('a review starts', !$('#askCard').hidden && /1 of 6/.test(txt('#qpos')), txt('#qpos'));
+    ok('a review starts', !$('#askCard').hidden && /1 of 8/.test(txt('#qpos')), txt('#qpos'));
     ok('it says where the question came from', !!txt('#qfrom').trim(), txt('#qfrom'));
 
     const answerNow = (right) => {
@@ -97,7 +99,7 @@ f.addEventListener('load', async () => {
     ok('a right answer is marked right', /Right/.test(txt('#qverdict')), txt('#qverdict').slice(0, 40));
     ok('and is recorded as put right', w.PH_REVIEW.state().cleared[firstKey] === T);
     $('#nextBtn').click(); await tick();
-    ok('it moves on', /2 of 6/.test(txt('#qpos')), txt('#qpos'));
+    ok('it moves on', /2 of 8/.test(txt('#qpos')), txt('#qpos'));
 
     const secondKey = answerNow(false);
     $('#checkBtn').click(); await tick();
@@ -108,9 +110,9 @@ f.addEventListener('load', async () => {
     /* ---- stop, and see the list shrink by exactly one ---- */
     $('#stopBtn').click(); await tick();
     ok('stopping goes back to the picker', $('#askCard').hidden && !$('#pickCard').hidden);
-    ok('the cleared one is gone from the list', w.PH_REVIEW.open().length === 5, String(w.PH_REVIEW.open().length));
+    ok('the cleared one is gone from the list', w.PH_REVIEW.open().length === 7, String(w.PH_REVIEW.open().length));
     ok('the missed one is still there', w.PH_REVIEW.open().some(o => o.key === secondKey));
-    ok('the hub summary says what is left', /5 questions to go over/.test((JSON.parse(localStorage.getItem('ph.review.v1')) || {}).summary.headline || ''),
+    ok('the hub summary says what is left', /7 questions to go over/.test((JSON.parse(localStorage.getItem('ph.review.v1')) || {}).summary.headline || ''),
       ((JSON.parse(localStorage.getItem('ph.review.v1')) || {}).summary || {}).headline);
 
     /* ---- leaving a source out ---- */
@@ -120,17 +122,80 @@ f.addEventListener('load', async () => {
     srcBtn('math').click(); await tick();          // the buttons are redrawn, so ask for it again
     ok('and back on', /Math worksheets/.test(txt('#listBody')));
 
+    /* ---- the generators write a little HTML, and it has to render as HTML ---- */
+    const markupQ = built.filter(b => /<(sup|br)>/i.test(b.it.qtext))[0];
+    ok('some questions really do carry markup', !!markupQ, built.map(b => b.it.qtext.slice(0, 24)).join(' | '));
+    /* a fresh review, walked until one of those comes up */
+    $('#startBtn').click();
+    await waitFor(() => !$('#askCard').hidden && !!w.PH_REVIEW.run(), 600);
+    let steps = 0;
+    while (w.PH_REVIEW.run() && !/<(sup|br)>/i.test(w.PH_REVIEW.run().items[w.PH_REVIEW.run().i].item.qtext) && steps++ < 12) {
+      answerNow(false); $('#checkBtn').click(); await tick(); $('#nextBtn').click(); await tick();
+    }
+    ok('a superscript or line break reaches the page as markup',
+      /<sup>|<br>/i.test($('#qbody').innerHTML), $('#qbody').innerHTML.slice(0, 100));
+    ok('and the reader never sees the tag itself', !/&lt;(sup|br|em)/i.test(txt('#qbody')), txt('#qbody').slice(0, 80));
+    if (w.PH_REVIEW.run()) { $('#stopBtn').click(); await tick(); }
+
+    /* ---- a reference the bank can no longer resolve is not counted ---- */
+    const qsBad = JSON.parse(localStorage.getItem('ph.quiz.v1'));
+    qsBad.attempts.push({ id:'q9', date:D(2), ts:9, lesson:'9.9.9', right:1, total:2, kind:'full', seconds:9, seed:9, missed:[0] });
+    qsBad.attempts.push({ id:'q8', date:D(2), ts:8, lesson:'1.1.1', right:1, total:2, kind:'full', seconds:9, seed:8, missed:[999] });
+    localStorage.setItem('ph.quiz.v1', JSON.stringify(qsBad));
+    w.PH_REVIEW.refresh(); await tick();
+    ok('a question that cannot be rebuilt is left out of the count',
+      !w.PH_REVIEW.open().some(o => /9\.9\.9|\|999$/.test(o.key)), w.PH_REVIEW.open().map(o => o.key).join(' '));
+    localStorage.setItem('ph.quiz.v1', JSON.stringify(Object.assign(qsBad, { attempts: qsBad.attempts.slice(0, -2) })));
+    w.PH_REVIEW.refresh(); await tick();
+
+    /* ---- a miss dated in the future can still be put right ---- */
+    const qsFut = JSON.parse(localStorage.getItem('ph.quiz.v1'));
+    qsFut.attempts.push({ id:'qf', date:D(-3), ts:7, lesson:'1.2.3', right:1, total:2, kind:'full', seconds:9, seed:7, missed:[7] });
+    localStorage.setItem('ph.quiz.v1', JSON.stringify(qsFut));
+    w.PH_REVIEW.refresh(); await tick();
+    const fut = w.PH_REVIEW.open().filter(o => o.key === 'q|1.2.3|7')[0];
+    ok('a miss dated in the future is pulled back to today', !!fut && fut.date === T, fut ? fut.date : 'missing');
+    w.PH_REVIEW.state().cleared['q|1.2.3|7'] = T;
+    w.PH_REVIEW.refresh(); await tick();
+    ok('and can then be cleared like any other', !w.PH_REVIEW.open().some(o => o.key === 'q|1.2.3|7'));
+
+    /* ---- the same question copied into a second set counts once ---- */
+    const aiTwo = JSON.parse(localStorage.getItem('ph.ai.v1'));
+    const copy = JSON.parse(JSON.stringify(aiTwo.sets[0]));
+    copy.id = 's2'; copy.date = D(1); copy.title = 'Practise the missed ones';
+    aiTwo.sets.push(copy);
+    localStorage.setItem('ph.ai.v1', JSON.stringify(aiTwo));
+    w.PH_REVIEW.refresh(); await tick();
+    ok('the same question in two sets is one entry, not two',
+      w.PH_REVIEW.open().filter(o => o.src === 'ai').length === 1,
+      w.PH_REVIEW.open().filter(o => o.src === 'ai').map(o => o.key).join(' '));
+
+    /* ---- the cleared list keeps the newest, not the first seen ---- */
+    const big = { version:1, summary:{}, settings:{}, cleared:{} };
+    for (let n = 0; n < 2100; n++) big.cleared['old|' + n] = D(300);
+    big.cleared['brand|new'] = T;
+    localStorage.setItem('ph.review.v1', JSON.stringify(big));
+    const probe = w.document.createElement('iframe');
+    probe.style.cssText = 'width:800px;height:400px;border:0';
+    w.document.body.appendChild(probe);
+    probe.src = 'review.html?probe=1';
+    await waitFor(() => { try { return !!probe.contentWindow.PH_REVIEW; } catch (e) { return false; } }, 500);
+    ok('past the cap it is the oldest clears that go, not the newest',
+      probe.contentWindow.PH_REVIEW.state().cleared['brand|new'] === T,
+      Object.keys(probe.contentWindow.PH_REVIEW.state().cleared).length + ' kept');
+    probe.remove();
+
     /* ---- clearing, then missing it again ---- */
     const qs = JSON.parse(localStorage.getItem('ph.quiz.v1'));
     qs.attempts.push({ id:'q2', date:T, ts:Date.now(), lesson:'1.1.1', right:9, total:10, kind:'full', seconds:100, seed:2, missed:[0,2] });
     localStorage.setItem('ph.quiz.v1', JSON.stringify(qs));
     w.PH_REVIEW.refresh(); await tick();
     ok('getting it right then missing it again the same day leaves it cleared',
-      w.PH_REVIEW.open().length === 5, String(w.PH_REVIEW.open().length));
+      w.PH_REVIEW.open().length === 7, String(w.PH_REVIEW.open().length));
     /* the next time it is missed, it is open again: the miss is newer than the day it was cleared */
     w.PH_REVIEW.state().cleared[firstKey] = D(1);
     w.PH_REVIEW.refresh(); await tick();
-    ok('missing it after the day it was cleared puts it back', w.PH_REVIEW.open().length === 6, String(w.PH_REVIEW.open().length));
+    ok('missing it after the day it was cleared puts it back', w.PH_REVIEW.open().length === 8, String(w.PH_REVIEW.open().length));
     ok('and it is dated by the newer miss', w.PH_REVIEW.open().some(o => o.key === firstKey && o.date === T));
   } catch (e) { ok('suite ran without throwing', false, e.message); }
 

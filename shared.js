@@ -34,6 +34,26 @@ window.PH = (function () {
   function fmtDate(iso, opts) { return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, opts || { weekday: 'short', month: 'short', day: 'numeric' }); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  /* Question text from the generators is written as a little HTML: <sup> for exponents, <br> between the
+     lines of a system, <em> for emphasis, and &lt; &gt; &times; for symbols. Escaping it wholesale turns
+     "x&lt;sup&gt;2&lt;/sup&gt;" into visible tags, so escape everything and then re-allow exactly that list.
+     Nothing with an attribute survives, so a payload in saved data still cannot execute. */
+  var ALLOWED_TAGS = /&lt;(\/?)(sup|sub|br|em|b|i|strong)&gt;/g;
+  var ALLOWED_ENTS = /&amp;(lt|gt|le|ge|ne|amp|nbsp|deg|times|divide|minus|plusmn|#\d{1,5});/g;
+  function safeHTML(s) { return esc(s).replace(ALLOWED_TAGS, '<$1$2>').replace(ALLOWED_ENTS, '&$1;'); }
+  /** The same text with the markup taken out, for somewhere only plain text fits. */
+  function plainText(s) {
+    return String(s == null ? '' : s)
+      .replace(/<\s*br\s*\/?>/gi, ' ')
+      .replace(/<sup>([^<]*)<\/sup>/gi, '^$1')        /* x<sup>2</sup> reads as x2 if the tag just goes */
+      .replace(/<sub>([^<]*)<\/sub>/gi, '_$1')
+      .replace(/<\/?[a-z][a-z0-9]*[^>]*>/gi, '')
+      .replace(/&(lt|gt|le|ge|ne|amp|nbsp|deg|times|divide|minus|plusmn);/gi, function (m, e) {
+        return { lt: '<', gt: '>', le: '\u2264', ge: '\u2265', ne: '\u2260', amp: '&', nbsp: ' ',
+                 deg: '\u00b0', times: '\u00d7', divide: '\u00f7', minus: '\u2212', plusmn: '\u00b1' }[e.toLowerCase()] || m;
+      })
+      .replace(/\s+/g, ' ').trim();
+  }
   let toastEl, toastTimer;
   function toast(msg, ms) {
     if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'toast'; toastEl.setAttribute('role', 'status'); document.body.appendChild(toastEl); }
@@ -73,7 +93,7 @@ window.PH = (function () {
     setTimeout(function () { a.remove(); }, 0);
     return a.href;
   }
-  return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, uid, toast, download, pickFile, rng, openChatGPT, chatGPTUrl };
+  return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, safeHTML, plainText, uid, toast, download, pickFile, rng, openChatGPT, chatGPTUrl };
 })();
 
 /* Offline support on the hosted site: register the service worker (sw.js) and add the web-app manifest + iOS icon so the
