@@ -166,15 +166,16 @@ main > * + * { margin-top: 1rem; }
     hindi:    { name: 'Hindi flashcards', emoji: '📖', color: '#e0701f', href: 'hindi.html' },
     ai:       { name: 'Make Practice',    emoji: '✏️', color: '#0d9488', href: 'ai.html' },
     badges:   { name: 'Merit badges',     emoji: '🏕️', color: '#2f8f4e', href: 'badges.html' },
+    review:   { name: 'Review Mistakes',  emoji: '🎯', color: '#9333ea', href: 'review.html' },
     schedule: { name: 'Weekly plan',      emoji: '📅', color: '#0f9d9a', href: 'schedule.html' }
   };
-  var ORDER = ['piano', 'quiz', 'math', 'python', 'hindi', 'ai', 'badges', 'schedule'];
+  var ORDER = ['piano', 'quiz', 'math', 'python', 'hindi', 'ai', 'review', 'badges', 'schedule'];
 
   /* ===================== Read every app ===================== */
   /* One event per dated thing that happened: { date, app, label, minutes?, right?, total?, cards? }. */
   function gather() {
     var ev = [], m = { goal: 30, pieces: 0, boxes: [0, 0, 0, 0, 0], seen: 0, due: 0,
-      earned: [], inProgress: 0, want: 0, reqs: 0, custom: 0 };
+      earned: [], inProgress: 0, want: 0, reqs: 0, custom: 0, fixed: 0 };
 
     var p = PH.load('ph.piano.v1', null);
     if (isObj(p)) {
@@ -268,6 +269,21 @@ main > * + * { margin-top: 1rem; }
         right: sc ? Math.round(num(sc.right)) : 0, total: sc ? Math.round(num(sc.total)) : 0,
         label: String(s.title || 'Practice set') + (sc ? ' — ' + Math.round(num(sc.right)) + '/' + Math.round(num(sc.total)) : '') });
     });
+
+    /* Putting a missed question right is work too. The review page records one date per question;
+       several on the same day read better as one line than as five identical ones. */
+    var rv = PH.load('ph.review.v1', null);
+    if (isObj(rv) && isObj(rv.cleared)) {
+      var perDay = {};
+      Object.keys(rv.cleared).forEach(function (k) {
+        var d = rv.cleared[k];
+        if (okISO(d)) { perDay[d] = (perDay[d] || 0) + 1; m.fixed++; }
+      });
+      Object.keys(perDay).forEach(function (d) {
+        ev.push({ date: d, app: 'review', fixed: perDay[d],
+          label: plural(perDay[d], 'missed question') + ' put right' });
+      });
+    }
 
     var sch = PH.load('ph.schedule.v1', null);
     if (isObj(sch)) {
@@ -666,6 +682,7 @@ main > * + * { margin-top: 1rem; }
     if (cards2) push('Hindi cards reviewed', String(cards2), data.meta.seen + ' different words started');
     var ticks = sum(ev, function (e) { return e.ticks || 0; });
     if (ticks) push('Plan items ticked', String(ticks), 'on the weekly plan');
+    if (data.meta.fixed) push('Mistakes put right', String(data.meta.fixed), 'questions missed once and answered since');
 
     host.innerHTML = cards.map(function (c) {
       return '<div class="m"><div class="t">' + esc(c.t) + '</div><div class="v">' + esc(c.v) + '</div>' +

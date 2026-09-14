@@ -5,7 +5,7 @@ const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?''
 const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
 const waitFor=async(cond,n)=>{for(let i=0;i<(n||300);i++){ if(cond()) return true; await tick(); } return cond();};
 
-const KEYS=['ph.piano.v1','ph.quiz.v1','ph.math.v1','ph.python.v1','ph.hindi.v1','ph.badges.v1','ph.ai.v1','ph.schedule.v1','ph.progress.v1'];
+const KEYS=['ph.piano.v1','ph.quiz.v1','ph.math.v1','ph.python.v1','ph.hindi.v1','ph.badges.v1','ph.ai.v1','ph.schedule.v1','ph.review.v1','ph.progress.v1'];
 const snap={}; KEYS.forEach(k=>{ snap[k]=localStorage.getItem(k); });
 
 const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10);};
@@ -49,6 +49,8 @@ localStorage.setItem('ph.schedule.v1', JSON.stringify({ version:1, extras:{}, da
   tasks:[{id:'a',name:'Piano practice',cat:'piano',days:[0,1,2,3,4,5,6],time:'17:00',minutes:30,active:true,order:0},
          {id:'b',name:'Hindi reading',cat:'hindi',days:[0,1,2,3,4,5,6],time:'19:30',minutes:20,active:true,order:1}],
   checks:{ [T]:{a:true,b:true} } }));
+localStorage.setItem('ph.review.v1', JSON.stringify({ version:1, summary:{}, settings:{},
+  cleared:{ 'q|1.1.1|0':D(2), 'q|1.1.1|3':D(2), 'm|31|linear|2|8|1':D(6) } }));
 localStorage.removeItem('ph.progress.v1');
 
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1600px;border:0'; document.body.appendChild(f);
@@ -79,7 +81,7 @@ f.addEventListener('load', async () => {
     await tick();
     const nums = $$('#stats .num').map(n => n.textContent);
     ok('the streak counts every app', nums[0] === '4', nums[0]);
-    ok('active days are counted', nums[1] === '8', nums[1]);
+    ok('active days are counted', nums[1] === '9', nums[1]);
     ok('piano minutes add up', nums[2] === '100m', nums[2]);
     ok('accuracy is right across all four apps', nums[3] === '77%', nums[3] + ' (33 of 43)');
     ok('Hindi cards add up', nums[4] === '20', nums[4]);
@@ -89,7 +91,7 @@ f.addEventListener('load', async () => {
     await tick();
     const n30 = $$('#stats .num').map(n => n.textContent);
     ok('30 days leaves out the older session', n30[2] === '75m', n30[2]);
-    ok('30 days leaves out its day too', n30[1] === '7', n30[1]);
+    ok('30 days leaves out its day too', n30[1] === '8', n30[1]);
     ok('the streak is all-time, not clipped by the range', n30[0] === '4', n30[0]);
     const savedRange = (JSON.parse(localStorage.getItem('ph.progress.v1') || '{}').settings || {}).range;
     ok('the chosen range is remembered', savedRange === '30', String(savedRange));
@@ -100,7 +102,7 @@ f.addEventListener('load', async () => {
     const cells = $$('#calGrid .cell:not(.pad)');
     ok('the calendar draws a cell per day', cells.length >= 90 && cells.length <= 100, cells.length + ' cells');
     ok('today is marked', $$('#calGrid .cell.today').length === 1);
-    ok('busy days are shaded', $$('#calGrid .cell.l1, #calGrid .cell.l2, #calGrid .cell.l3, #calGrid .cell.l4').length === 8);
+    ok('busy days are shaded', $$('#calGrid .cell.l1, #calGrid .cell.l2, #calGrid .cell.l3, #calGrid .cell.l4').length === 9);
     ok('every cell says what happened', cells.every(c => (c.getAttribute('aria-label') || '').length > 8));
     const today = $('#calGrid .cell.today');
     today.click(); await tick();
@@ -112,11 +114,13 @@ f.addEventListener('load', async () => {
 
     /* ---- per-app bars ---- */
     const bars = $$('#appBars .appbar');
-    ok('one bar per app used', bars.length === 8, bars.map(b => b.querySelector('.nm').textContent).join(', '));
+    ok('one bar per app used', bars.length === 9, bars.map(b => b.querySelector('.nm').textContent).join(', '));
     const qty = {}; bars.forEach(b => { qty[b.querySelector('.nm').textContent] = Number(b.querySelector('.qty').textContent); });
     ok('piano is counted right', qty['Piano'] === 4, String(qty['Piano']));
     ok('badges are counted right', qty['Merit badges'] === 2, String(qty['Merit badges']));
     ok('the widest bar is the busiest app', $$('#appBars .fill').some(el => el.style.width === '100%'));
+    /* two questions put right on one day read as one line, not two identical ones */
+    ok('mistakes put right count as activity', qty['Review Mistakes'] === 2, String(qty['Review Mistakes']));
 
     /* ---- accuracy ---- */
     ok('the accuracy chart is drawn', $$('#accHost svg .line').length === 1 && $$('#accHost svg .dot').length >= 2);
@@ -173,6 +177,7 @@ f.addEventListener('load', async () => {
     ok('piano time is a record', recs.some(r => r === 'Piano, all time=100 min'), recs.join(' | '));
     ok('the longest practice day is a record', recs.some(r => /^Longest practice day=40 min/.test(r)));
     ok('records ignore the range', recs.some(r => /^Started tracking=/.test(r)));
+    ok('mistakes put right are a record', recs.some(r => r === 'Mistakes put right=3'), recs.join(' | '));
 
   } catch (e) { ok('suite ran without throwing', false, e.message); }
 
