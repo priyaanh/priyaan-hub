@@ -3,7 +3,7 @@
    output, anything typed). Seed every text field with markup and script payloads, then check that nothing
    executes and the text is shown literally. Also seed nonsense of the wrong types and check the page
    still renders instead of going blank. */
-const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python','progress'];
+const PAGES = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python','progress','review'];
 const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1000px;border:0'; document.body.appendChild(f);
 const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});

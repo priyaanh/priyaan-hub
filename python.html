@@ -130,6 +130,14 @@ details.sheet[open] summary { margin-bottom: .7rem; }
   const validISO = s => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
     const d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s; };
   const ALL = PY.TOPICS.map(t => t.id);
+  /* Indices into a regenerated round: anything out of range would ask the wrong question. */
+  function idxList(v, max) {
+    if (!Array.isArray(v)) return [];
+    const out = [], seen = {};
+    v.forEach(n => { const i = Math.round(Number(n));
+      if (Number.isInteger(i) && i >= 0 && i < max && !seen[i]) { seen[i] = 1; out.push(i); } });
+    return out.slice(0, 60);
+  }
   function normalize(raw) {
     const s = blank();
     if (!isObj(raw)) return s;
@@ -148,7 +156,9 @@ details.sheet[open] summary { margin-bottom: .7rem; }
         total: total,
         seed: isFinite(r.seed) ? Math.round(r.seed) : 0,
         topics: Array.isArray(r.topics) ? r.topics.filter(t => ALL.indexOf(t) >= 0) : [],
-        difficulty: [1, 2, 3].indexOf(r.difficulty) >= 0 ? r.difficulty : 2
+        difficulty: [1, 2, 3].indexOf(r.difficulty) >= 0 ? r.difficulty : 2,
+        kind: r.kind === 'retry' ? 'retry' : 'full',
+        missed: idxList(r.missed, total)
       };
     }).slice(0, 100);
     return s;
@@ -254,8 +264,12 @@ details.sheet[open] summary { margin-bottom: .7rem; }
   }
   function finish() {
     const n = round.set.questions.length, secs = Math.round((Date.now() - round.started) / 1000);
+    /* A retry round is built from a list of questions, not a seed, so it cannot be regenerated —
+       say so, and review.html will leave it alone. */
+    const missedIdx = round.given.map((g, i) => (g && !g.ok) ? i : -1).filter(i => i >= 0);
     state.rounds.unshift({ id: PH.uid(), date: PH.todayISO(), right: round.right, total: n,
-      seed: round.set.seed || 0, topics: round.set.topics || [], difficulty: round.set.difficulty || 2 });
+      seed: round.set.seed || 0, topics: round.set.topics || [], difficulty: round.set.difficulty || 2,
+      kind: round.set.seed ? 'full' : 'retry', missed: missedIdx });
     state.rounds = state.rounds.slice(0, 100); save();
     $('#quizCard').hidden = true; $('#doneCard').hidden = false;
     const pct = Math.round(round.right / n * 100);

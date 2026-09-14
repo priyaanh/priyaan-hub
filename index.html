@@ -181,6 +181,12 @@
       <div class="summary none" id="progSummary"><span class="headline">Nothing logged yet</span><span class="sub">Use the apps and this fills in</span></div>
       <span class="open">Open →</span>
     </a>
+    <a class="app" data-app="review" href="review.html">
+      <div class="top"><span class="emoji">🎯</span><h2>Review Mistakes</h2></div>
+      <p class="desc">Every question you got wrong, from quizzes, worksheets, Python rounds and practice sets, asked again until you have it. Get one right and it comes off the list.</p>
+      <div class="summary none" data-key="ph.review.v1"><span class="headline">Nothing to review</span><span class="sub">Miss a question and it turns up here</span></div>
+      <span class="open">Open →</span>
+    </a>
   </section>
 
   <footer>
@@ -209,6 +215,7 @@
   const colour = c => /^#[0-9a-f]{3,8}$/i.test(String(c || '')) ? String(c) : '#4f6bed';
   const pct = n => Math.max(0, Math.min(100, Math.round(Number(n)) || 0));
   const safe = fn => { try { return fn(); } catch (e) { return null; } };
+  const arr = v => Array.isArray(v) ? v : [];
 
   // piano: minutes today against the daily goal
   safe(() => {
@@ -362,12 +369,48 @@
     el.hidden = false;
   });
 
+  /* review: questions missed anywhere and not yet answered correctly since. Counted here rather than
+     read from review.html's summary so the number is right even if that page has not been opened. */
+  safe(() => {
+    const rv = load('ph.review.v1');
+    const cleared = (rv && rv.cleared && typeof rv.cleared === 'object') ? rv.cleared : {};
+    const openKeys = {};
+    const note = (key, date) => {
+      if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      if (cleared[key] && cleared[key] >= date) return;
+      if (!openKeys[key] || openKeys[key] < date) openKeys[key] = date;
+    };
+    const qz = load('ph.quiz.v1');
+    if (qz) arr(qz.attempts).forEach(a => { if (!a) return; arr(a.missed).forEach(m => {
+      const s = String(m), has = s.indexOf(':') > 0;
+      const lesson = has ? s.split(':')[0] : String(a.lesson || ''), idx = has ? s.split(':')[1] : s;
+      if (lesson && lesson !== 'mix') note('q|' + lesson + '|' + Number(idx), a.date);
+    }); });
+    const mh = load('ph.math.v1');
+    if (mh) arr(mh.history).forEach(h => { if (!h) return; const sig = arr(h.topics).slice().sort().join(',');
+      arr(h.missed).forEach(i => note('m|' + h.seed + '|' + sig + '|' + h.difficulty + '|' + h.count + '|' + i, h.date)); });
+    const pv = load('ph.python.v1');
+    if (pv) arr(pv.rounds).forEach(r => { if (!r || r.kind === 'retry' || !r.seed) return;
+      const sig = arr(r.topics).slice().sort().join(',');
+      arr(r.missed).forEach(i => note('p|' + r.seed + '|' + sig + '|' + r.difficulty + '|' + r.total + '|' + i, r.date)); });
+    const av = load('ph.ai.v1');
+    if (av) arr(av.sets).forEach(x => { if (!x) return; arr(x.missed).forEach(i => note('a|' + x.id + '|' + i, x.date)); });
+
+    const keys = Object.keys(openKeys);
+    if (!keys.length) return;
+    const oldest = keys.map(k => openKeys[k]).sort()[0];
+    const days = PH.daysBetween(oldest, T);
+    tile({ id: 'review', href: 'review.html', emoji: '🎯', label: 'Review',
+      value: keys.length + (keys.length === 1 ? ' question' : ' questions'),
+      sub: days > 0 ? 'Oldest missed ' + days + (days === 1 ? ' day ago' : ' days ago') : 'Missed today',
+      colour: '#9333ea', cls: days >= 14 ? 'due' : '' });
+  });
+
   /* streak: any day that any app recorded something. Kept deliberately loose — a day the child did
      Hindi but no piano still counts, which is the whole point of a hub-wide streak. */
   safe(() => {
     const days = {};
     const mark = d => { if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) days[d] = 1; };
-    const arr = v => Array.isArray(v) ? v : [];
     const pi = load('ph.piano.v1'); if (pi) arr(pi.sessions).forEach(x => { if (x && Number(x.minutes) > 0) mark(x.date); });
     const qz = load('ph.quiz.v1'); if (qz) arr(qz.attempts).forEach(x => x && mark(x.date));
     const mh = load('ph.math.v1'); if (mh) arr(mh.history).forEach(x => x && mark(x.date));

@@ -246,6 +246,26 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   function blank() { return { version: 1, sets: [], settings: { kind: 'worksheet', count: 10, provider: 'free', models: {},
     mode: 'grade', grade: '7', gradeCount: 20, gradeDiff: 2, gradeTopics: [] }, summary: { headline: '', sub: '' } }; }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  /* 2026-02-30 parses as March 2 rather than failing, so require the date to round-trip. */
+  function validISO(v) {
+    if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = new Date(v + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === v;
+  }
+  /* A score with a zero total divides into Infinity, and one better than its total reads over 100%. */
+  function scoreOf(v) {
+    if (!isObj(v)) return null;
+    const total = Math.round(Number(v.total)), right = Math.round(Number(v.right));
+    if (!(total > 0) || !(right >= 0)) return null;
+    return { right: Math.min(right, total), total: total };
+  }
+  /* Indices into the set's own problem list: anything out of range would point at the wrong question. */
+  function idxList(v, max) {
+    if (!Array.isArray(v)) return [];
+    const out = [], seen = {};
+    v.forEach(n => { const i = Math.round(Number(n));
+      if (Number.isInteger(i) && i >= 0 && i < max && !seen[i]) { seen[i] = 1; out.push(i); } });
+    return out.slice(0, 60);
+  }
   function normalize(raw) {
     const s = blank();
     if (!isObj(raw)) return s;
@@ -261,20 +281,25 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (isObj(st.models)) Object.keys(PROVIDERS).forEach(k => {
       if (typeof st.models[k] === 'string' && PROVIDERS[k].models.some(m => m.id === st.models[k])) s.settings.models[k] = st.models[k];
     });
-    if (Array.isArray(raw.sets)) s.sets = raw.sets.filter(isObj).map(x => ({
-      id: typeof x.id === 'string' && x.id ? x.id : PH.uid(),
-      date: typeof x.date === 'string' ? x.date : PH.todayISO(),
-      kind: x.kind === 'quiz' ? 'quiz' : 'worksheet',
-      title: typeof x.title === 'string' ? x.title : 'Practice set',
-      source: typeof x.source === 'string' ? x.source : '',
-      summary: typeof x.summary === 'string' ? x.summary : '',
-      by: typeof x.by === 'string' ? x.by : '',
-      score: isObj(x.score) && isFinite(x.score.right) ? { right: x.score.right, total: x.score.total } : null,
-      problems: Array.isArray(x.problems) ? x.problems.filter(isObj).map(p => ({
+    if (Array.isArray(raw.sets)) s.sets = raw.sets.filter(isObj).map(x => {
+      const problems = Array.isArray(x.problems) ? x.problems.filter(isObj).map(p => ({
         question: String(p.question || ''), answer: String(p.answer || ''), work: String(p.work || ''),
         topic: String(p.topic || ''), choices: Array.isArray(p.choices) ? p.choices.map(String).slice(0, 6) : []
-      })).filter(p => p.question && p.answer) : []
-    })).filter(x => x.problems.length).slice(0, 60);
+      })).filter(p => p.question && p.answer) : [];
+      return {
+        id: typeof x.id === 'string' && x.id ? x.id : PH.uid(),
+        date: validISO(x.date) ? x.date : PH.todayISO(),
+        kind: x.kind === 'quiz' ? 'quiz' : 'worksheet',
+        title: typeof x.title === 'string' ? x.title : 'Practice set',
+        source: typeof x.source === 'string' ? x.source : '',
+        summary: typeof x.summary === 'string' ? x.summary : '',
+        by: typeof x.by === 'string' ? x.by : '',
+        score: scoreOf(x.score),
+        /* which problems were wrong, so review.html can ask exactly those again */
+        missed: idxList(x.missed, problems.length),
+        problems: problems
+      };
+    }).filter(x => x.problems.length).slice(0, 60);
     return s;
   }
   let state = normalize(PH.load(KEY, null));
@@ -874,7 +899,9 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (e.target.closest('#finishBtn')) {
       const done = Object.keys(marks).length, right = Object.keys(marks).filter(k => marks[k].ok).length;
       if (!done) { PH.toast('Answer a question first'); return; }
-      const s = state.sets.filter(x => x.id === cur.id)[0]; if (s) { s.score = { right, total: cur.problems.length }; s.date = PH.todayISO(); }
+      const s = state.sets.filter(x => x.id === cur.id)[0];
+      const missed = cur.problems.map((p, i) => (marks[i] && !marks[i].ok) ? i : -1).filter(i => i >= 0);
+      if (s) { s.score = { right, total: cur.problems.length }; s.missed = missed; s.date = PH.todayISO(); }
       save(); renderSaved(); PH.toast('Saved ' + right + '/' + cur.problems.length); return;
     }
     const open = e.target.closest('[data-open]');

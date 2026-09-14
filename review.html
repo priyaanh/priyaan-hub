@@ -1,0 +1,619 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review Mistakes · Priyaan's Hub</title>
+<meta name="description" content="Every question you got wrong across quizzes, worksheets, Python rounds and practice sets, asked again until you have it.">
+<link rel="stylesheet" href="shared.css"><style>
+main > * + * { margin-top: 1rem; }
+.srcs { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.src { display: flex; gap: .55rem; align-items: center; padding: .55rem .7rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
+.src:hover { border-color: var(--accent-text); }
+.src.on { border-color: var(--accent-text); background: var(--accent-soft); }
+.src.empty { opacity: .5; cursor: default; }
+.src .em { font-size: 1.15rem; flex: none; }
+.src .nm { font-weight: 600; font-size: .9rem; flex: 1; min-width: 0; }
+.src .ct { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent-text); }
+.lacts { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: 1rem; }
+.lacts .grow { flex: 1; }
+
+/* the open list */
+.open { list-style: none; margin: 0; padding: 0; }
+.open li { display: flex; gap: .6rem; align-items: baseline; padding: .5rem 0; border-top: 1px solid var(--border); }
+.open li:first-child { border-top: 0; }
+.open .em { flex: none; }
+.open .what { flex: 1; min-width: 0; }
+.open .what b { font-weight: 600; }
+.open .when { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+.grp { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: .9rem 0 .2rem; font-weight: 700; }
+.grp:first-child { margin-top: 0; }
+
+/* asking */
+.qhead { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; margin-bottom: .6rem; }
+.qhead .pos { font-weight: 700; font-variant-numeric: tabular-nums; }
+.qhead .from { font-size: .82rem; color: var(--muted); }
+.qtext { font-size: 1.05rem; line-height: 1.5; overflow-wrap: anywhere; }
+.qsvg { margin: .8rem 0; text-align: center; }
+.qsvg svg { display: inline-block; max-width: 100%; height: auto; color: var(--text); }
+.code { font-family: var(--mono); font-size: .92rem; line-height: 1.45; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .7rem .8rem; overflow-x: auto; white-space: pre; margin: .8rem 0; }
+.choices { display: grid; gap: .5rem; grid-template-columns: 1fr; margin-top: .9rem; }
+@media (min-width: 640px) { .choices { grid-template-columns: 1fr 1fr; } }
+.choice { text-align: left; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .55rem .7rem; cursor: pointer; display: flex; gap: .5rem; }
+.choice:hover:not(:disabled) { border-color: var(--accent-text); background: var(--surface-2); }
+.choice .ltr { font-weight: 700; color: var(--muted); flex: none; }
+.choice.sel { border-color: var(--accent-text); background: var(--accent-soft); }
+.choice.correct, .choice.correct:disabled { border-color: var(--ok); background: var(--ok-soft); opacity: 1; }
+.choice.wrong, .choice.wrong:disabled { border-color: var(--danger); background: var(--danger-soft); opacity: 1; }
+.choice:disabled { opacity: .65; cursor: default; }
+.typed { display: flex; gap: .5rem; margin-top: .9rem; flex-wrap: wrap; }
+.typed .input { flex: 1; min-width: 11rem; font-family: var(--mono); }
+.verdict { margin-top: .9rem; padding: .65rem .8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.verdict.ok { border-color: var(--ok); background: var(--ok-soft); }
+.verdict.no { border-color: var(--danger); background: var(--danger-soft); }
+.verdict .head { font-weight: 700; }
+.verdict .head.ok { color: var(--ok-text); } .verdict .head.no { color: var(--danger-text); }
+.verdict .why { margin-top: .3rem; font-size: .92rem; line-height: 1.5; }
+.verdict .why code { font-family: var(--mono); background: var(--surface-2); padding: .05rem .25rem; border-radius: 4px; }
+.pbar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-bottom: .9rem; }
+.pbar i { display: block; height: 100%; background: var(--accent-fill); border-radius: 999px; transition: width .2s; }
+.done-big { font-size: 2.2rem; font-weight: 800; color: var(--accent-text); letter-spacing: -.02em; }
+@media print { .topbar, .no-print { display: none !important; } }
+</style></head>
+<body data-app="review">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <h1 class="title"><span class="emoji">🎯</span><span class="name">Review Mistakes</span></h1>
+  <div class="spacer"></div>
+  <a class="btn btn-sm" href="progress.html">📈 Progress</a>
+</div></header>
+<main class="container">
+
+  <div class="stats" id="stats"></div>
+
+  <section class="card" id="pickCard" aria-labelledby="h-pick">
+    <div class="card-head"><h2 id="h-pick">What to go over</h2><span class="small" id="pickSub"></span></div>
+    <div class="srcs" id="srcs"></div>
+    <div class="lacts">
+      <div class="field"><label for="howMany">How many</label>
+        <select class="input" id="howMany">
+          <option value="5">5 questions</option>
+          <option value="10" selected>10 questions</option>
+          <option value="20">20 questions</option>
+          <option value="0">Everything open</option>
+        </select>
+      </div>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="startBtn">Start review</button>
+    </div>
+  </section>
+
+  <section class="card" id="askCard" hidden aria-labelledby="h-ask">
+    <div class="card-head"><h2 id="h-ask">Question</h2><span class="small" id="askSub"></span></div>
+    <div class="pbar"><i id="pbar" style="width:0%"></i></div>
+    <div class="qhead"><span class="pos" id="qpos"></span><span class="from" id="qfrom"></span></div>
+    <div id="qbody"></div>
+    <div id="qanswer"></div>
+    <div id="qverdict"></div>
+    <div class="lacts">
+      <button class="btn btn-primary" id="checkBtn">Check</button>
+      <button class="btn" id="nextBtn" hidden>Next →</button>
+      <span class="grow"></span>
+      <button class="btn btn-ghost" id="stopBtn">Stop</button>
+    </div>
+  </section>
+
+  <section class="card" id="doneCard" hidden aria-labelledby="h-done">
+    <div class="card-head"><h2 id="h-done">How that went</h2></div>
+    <div id="doneBody"></div>
+    <div class="lacts">
+      <button class="btn btn-primary" id="againBtn">Review more</button>
+      <a class="btn" href="progress.html">See progress</a>
+    </div>
+  </section>
+
+  <section class="card" id="listCard" aria-labelledby="h-list">
+    <div class="card-head"><h2 id="h-list">Still open</h2><span class="small" id="listSub"></span></div>
+    <div id="listBody"></div>
+  </section>
+
+</main>
+<script src="shared.js"></script>
+<script>
+/* Review reads what the other apps recorded as wrong and asks those questions again. It regenerates
+   them rather than storing them: every generator here is deterministic from its seed, so a saved
+   {seed, topics, difficulty, count} plus an index is the whole question. The only thing this page
+   writes is which questions have since been answered correctly. */
+(function () {
+  'use strict';
+  var KEY = 'ph.review.v1';
+  var TODAY = PH.todayISO();
+  var esc = PH.esc;
+  var $ = function (s) { return document.querySelector(s); };
+  var isObj = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
+  var okISO = function (s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    var d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s;
+  };
+  var arr = function (v) { return Array.isArray(v) ? v : []; };
+  var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
+
+  var SOURCES = {
+    quiz:   { name: 'Lesson quizzes',  emoji: '📝', href: 'quizzes.html', script: 'cpm_int2_ch1.js', global: 'CPM_QUIZZES' },
+    math:   { name: 'Math worksheets', emoji: '🧮', href: 'math.html',    script: 'im1.js',          global: 'IM1' },
+    python: { name: 'Python',          emoji: '🐍', href: 'python.html',  script: 'pyquiz.js',       global: 'PY' },
+    ai:     { name: 'Make Practice',   emoji: '✏️', href: 'ai.html',      script: 'grades.js',       global: 'GRADES', optional: true }
+  };
+  var ORDER = ['quiz', 'math', 'python', 'ai'];
+
+  /* ===================== State (ours is tiny: what has since been got right) ===================== */
+  function blank() { return { version: 1, cleared: {}, settings: { sources: {}, howMany: 10 }, summary: { headline: '', sub: '' } }; }
+  function normalize(raw) {
+    var s = blank();
+    if (!isObj(raw)) return s;
+    if (isObj(raw.cleared)) Object.keys(raw.cleared).slice(0, 2000).forEach(function (k) {
+      if (typeof k === 'string' && k.length < 200 && okISO(raw.cleared[k])) s.cleared[k] = raw.cleared[k];
+    });
+    var st = isObj(raw.settings) ? raw.settings : {};
+    if (isObj(st.sources)) ORDER.forEach(function (k) { if (typeof st.sources[k] === 'boolean') s.settings.sources[k] = st.sources[k]; });
+    if ([0, 5, 10, 20].indexOf(Number(st.howMany)) >= 0) s.settings.howMany = Number(st.howMany);
+    return s;
+  }
+  var state = normalize(PH.load(KEY, null));
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+
+  /* ===================== What is still open ===================== */
+  /* One descriptor per question that was missed and has not been answered right since. `key` is the
+     question's identity, not the attempt's, so getting it right once clears it wherever it came from,
+     and missing it again later re-opens it. */
+  function collect() {
+    var out = [];
+    var push = function (key, src, date, label, group, gen) {
+      if (!okISO(date)) return;
+      var clearedOn = state.cleared[key];
+      if (clearedOn && clearedOn >= date) return;          // answered right since it was missed
+      out.push({ key: key, src: src, date: date, label: label, group: group, gen: gen });
+    };
+
+    var q = PH.load('ph.quiz.v1', null);
+    if (isObj(q)) arr(q.attempts).forEach(function (a) {
+      if (!isObj(a)) return;
+      arr(a.missed).forEach(function (m) {
+        /* a single-lesson attempt stores bare indices; a mixed one stores "lesson:index" */
+        var lesson, idx;
+        if (typeof m === 'string' && m.indexOf(':') > 0) { lesson = m.split(':')[0]; idx = Number(m.split(':')[1]); }
+        else { lesson = String(a.lesson || ''); idx = Number(m); }
+        if (!lesson || lesson === 'mix' || !Number.isInteger(idx) || idx < 0) return;
+        push('q|' + lesson + '|' + idx, 'quiz', a.date, 'Lesson ' + lesson, lesson,
+          { kind: 'quiz', lesson: lesson, idx: idx });
+      });
+    });
+
+    var mh = PH.load('ph.math.v1', null);
+    if (isObj(mh)) arr(mh.history).forEach(function (h) {
+      if (!isObj(h) || !arr(h.missed).length) return;
+      var topics = arr(h.topics).slice().sort(), sig = topics.join(',');
+      arr(h.missed).forEach(function (i) {
+        push('m|' + h.seed + '|' + sig + '|' + h.difficulty + '|' + h.count + '|' + i, 'math', h.date,
+          'Integrated Math 1', sig || 'maths',
+          { kind: 'math', topics: h.topics, count: h.count, difficulty: h.difficulty, seed: h.seed, idx: i });
+      });
+    });
+
+    var py = PH.load('ph.python.v1', null);
+    if (isObj(py)) arr(py.rounds).forEach(function (r) {
+      /* a retry round was built from a list of questions, not a seed, so it cannot be regenerated */
+      if (!isObj(r) || r.kind === 'retry' || !r.seed || !arr(r.missed).length) return;
+      var topics = arr(r.topics).slice().sort(), sig = topics.join(',');
+      arr(r.missed).forEach(function (i) {
+        push('p|' + r.seed + '|' + sig + '|' + r.difficulty + '|' + r.total + '|' + i, 'python', r.date,
+          'Python', sig || 'python',
+          { kind: 'python', topics: r.topics, count: r.total, difficulty: r.difficulty, seed: r.seed, idx: i });
+      });
+    });
+
+    var ai = PH.load('ph.ai.v1', null);
+    if (isObj(ai)) arr(ai.sets).forEach(function (x) {
+      if (!isObj(x) || !arr(x.missed).length) return;
+      arr(x.missed).forEach(function (i) {
+        if (!isObj(arr(x.problems)[i])) return;
+        push('a|' + x.id + '|' + i, 'ai', x.date, String(x.title || 'Practice set'), String(x.title || 'Practice set'),
+          { kind: 'ai', setId: x.id, idx: i });
+      });
+    });
+
+    /* one entry per question, keeping the most recent time it was missed */
+    var byKey = {};
+    out.forEach(function (d) { if (!byKey[d.key] || d.date > byKey[d.key].date) byKey[d.key] = d; });
+    var list = Object.keys(byKey).map(function (k) { return byKey[k]; });
+    list.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.key < b.key ? -1 : 1); });
+    return list;
+  }
+
+  /* ===================== Loading a generator only when it is needed ===================== */
+  var loading = {};
+  function need(srcKey) {
+    var src = SOURCES[srcKey];
+    return new Promise(function (resolve) {
+      if (!src || !src.script) return resolve(true);
+      if (window[src.global]) return resolve(true);
+      /* an optional helper only sharpens the marking; without it the source still works */
+      if (loading[src.script]) return loading[src.script].then(resolve);
+      loading[src.script] = new Promise(function (done) {
+        var sc = document.createElement('script');
+        sc.src = src.script;
+        sc.onload = function () { done(!!window[src.global]); };
+        sc.onerror = function () { done(false); };
+        document.head.appendChild(sc);
+      });
+      loading[src.script].then(resolve);
+    });
+  }
+  function needAll(keys) {
+    return Promise.all(keys.filter(function (k, i) { return keys.indexOf(k) === i; }).map(need));
+  }
+
+  /* ===================== Turning a descriptor back into a question ===================== */
+  /* Every generator here is deterministic, so this rebuilds the exact question that was missed.
+     Returns null if the generator is missing or the saved parameters no longer make sense. */
+  function build(desc) {
+    var g = desc.gen;
+    try {
+      if (g.kind === 'quiz') {
+        var BANK = window.CPM_QUIZZES;
+        if (!BANK || !BANK.materialise) return null;
+        /* a fixed seed per question, so the same question comes back the same way every time */
+        var item = BANK.materialise(g.lesson, g.idx, PH.rng(hash(desc.key)));
+        if (!item) return null;
+        return {
+          from: 'Lesson ' + g.lesson, topic: g.lesson, qtext: item.q, svg: item.svg, code: '',
+          choices: item.type === 'mc' ? item.choices : null,
+          answerText: item.type === 'mc' ? item.choices[item.answer] : String(item.answer) + (item.unit ? ' ' + item.unit : ''),
+          explain: item.explain,
+          ok: function (pick, typed) { return BANK.checkAnswer(item, item.type === 'mc' ? pick : typed); }
+        };
+      }
+      if (g.kind === 'math') {
+        if (!window.IM1) return null;
+        var ws = IM1.generate({ topics: g.topics, count: g.count, difficulty: g.difficulty, seed: g.seed });
+        var p = ws && ws.problems && ws.problems[g.idx];
+        if (!p) return null;
+        return {
+          from: p.topicName || 'Integrated Math 1', topic: p.topic || 'maths', qtext: p.question, svg: '', code: '',
+          choices: null, answerText: String(p.answer), explain: p.work || '',
+          ok: function (pick, typed) { return IM1.checkAnswer(p, typed); }
+        };
+      }
+      if (g.kind === 'python') {
+        if (!window.PY) return null;
+        var set = PY.generate({ topics: g.topics, count: g.count, difficulty: g.difficulty, seed: g.seed });
+        var q = set && set.questions && set.questions[g.idx];
+        if (!q) return null;
+        return {
+          from: q.topicName || 'Python', topic: q.topic || 'python', qtext: q.prompt || 'What does this print?',
+          svg: '', code: q.code || '', choices: (q.choices && q.choices.length) ? q.choices.slice() : null,
+          answerText: String(q.answer), explain: q.explain || '',
+          ok: function (pick, typed) { return PY.checkAnswer(q, q.choices && q.choices.length ? q.choices[pick] : typed); }
+        };
+      }
+      if (g.kind === 'ai') {
+        var st = PH.load('ph.ai.v1', null);
+        var one = isObj(st) ? arr(st.sets).filter(function (x) { return isObj(x) && x.id === g.setId; })[0] : null;
+        var pr = one && arr(one.problems)[g.idx];
+        if (!pr) return null;
+        var choices = arr(pr.choices).length ? pr.choices.slice() : null;
+        return {
+          from: String(one.title || 'Practice set'), topic: String(pr.topic || one.title || 'practice'),
+          qtext: String(pr.question), svg: '', code: '', choices: choices,
+          answerText: String(pr.answer), explain: String(pr.work || ''),
+          ok: function (pick, typed) {
+            if (choices) return choices[pick] === pr.answer;
+            if (window.GRADES && typeof GRADES.checkAnswer === 'function') return GRADES.checkAnswer({ answer: pr.answer, accept: [] }, typed);
+            var n = function (v) { return String(v).toLowerCase().replace(/\s+/g, '').replace(/[−–]/g, '-').replace(/^[a-z]=/, ''); };
+            return n(typed) === n(pr.answer);
+          }
+        };
+      }
+    } catch (e) { return null; }
+    return null;
+  }
+  var builtCache = {};
+  function buildCached(desc) {
+    if (!(desc.key in builtCache)) builtCache[desc.key] = build(desc);
+    return builtCache[desc.key];
+  }
+  /* a stable number from a key, so a question's choices are shuffled the same way each time */
+  function hash(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+
+  /* ===================== Summary the hub reads ===================== */
+  var open_ = [];
+  function buildSummary() {
+    if (!open_.length) return { headline: 'Nothing to review', sub: 'Everything you missed has been put right' };
+    var byS = {};
+    open_.forEach(function (d) { byS[d.src] = (byS[d.src] || 0) + 1; });
+    var parts = ORDER.filter(function (k) { return byS[k]; }).map(function (k) { return byS[k] + ' ' + SOURCES[k].name.toLowerCase(); });
+    return { headline: plural(open_.length, 'question') + ' to go over', sub: parts.join(' · ') };
+  }
+
+  /* ===================== The picker ===================== */
+  function refresh() {
+    open_ = collect();
+    var byS = {};
+    open_.forEach(function (d) { byS[d.src] = (byS[d.src] || 0) + 1; });
+
+    var chosen = pickedSources(byS);
+    var inScope = open_.filter(function (d) { return chosen[d.src]; });
+    var oldest = open_.length ? open_[0].date : '';
+    var cleared = Object.keys(state.cleared).length;
+
+    /* what keeps coming back: the group with the most open questions */
+    var byGroup = {};
+    open_.forEach(function (d) { var g = d.group || SOURCES[d.src].name; byGroup[g] = (byGroup[g] || 0) + 1; });
+    var worst = Object.keys(byGroup).sort(function (a, b) { return byGroup[b] - byGroup[a] || (a < b ? -1 : 1); })[0];
+
+    $('#stats').innerHTML = [
+      { n: open_.length, l: 'to go over' },
+      { n: worst ? byGroup[worst] : 0, l: worst ? 'on ' + worst + ', the one that keeps coming back' : 'nothing sticking out' },
+      { n: cleared, l: 'put right so far' },
+      { n: oldest ? PH.fmtDate(oldest, { month: 'short', day: 'numeric' }) : '—', l: oldest ? 'oldest one still open' : 'nothing missed yet' }
+    ].map(function (c) {
+      return '<div class="stat"><div class="num">' + esc(String(c.n)) + '</div><div class="lbl">' + esc(c.l) + '</div></div>';
+    }).join('');
+
+    $('#srcs').innerHTML = ORDER.map(function (k) {
+      var n = byS[k] || 0, src = SOURCES[k];
+      return '<button type="button" class="src' + (n ? (chosen[k] ? ' on' : '') : ' empty') + '" data-src="' + k + '"' +
+        (n ? '' : ' disabled') + ' aria-pressed="' + (n && chosen[k] ? 'true' : 'false') + '">' +
+        '<span class="em" aria-hidden="true">' + src.emoji + '</span>' +
+        '<span class="nm">' + esc(src.name) + '</span><span class="ct">' + n + '</span></button>';
+    }).join('');
+
+    $('#pickSub').textContent = open_.length ? 'Tap a source to leave it out' : '';
+    $('#startBtn').disabled = !inScope.length;
+    $('#startBtn').textContent = inScope.length ? 'Start review' : 'Nothing to review';
+    $('#howMany').value = String(state.settings.howMany);
+
+    renderList(inScope);
+    save();
+  }
+
+  function pickedSources(byS) {
+    var out = {}, any = false;
+    ORDER.forEach(function (k) {
+      var on = state.settings.sources[k];
+      out[k] = (on === undefined ? true : on) && !!(byS[k]);
+      if (out[k]) any = true;
+    });
+    if (!any) ORDER.forEach(function (k) { out[k] = !!(byS[k]); });   // never leave the child with nothing
+    return out;
+  }
+
+  function clip(s, n) { s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+  function firstLine(code) {
+    var lines = String(code).split('\n').filter(function (l) { return l.trim(); });
+    return lines.length > 1 ? lines[0] + ' …' : (lines[0] || '');
+  }
+  function renderList(inScope) {
+    var host = $('#listBody');
+    if (!open_.length) {
+      host.innerHTML = '<p class="empty">Nothing outstanding. Miss a question anywhere on the site and it turns up here. ' +
+        '<a href="quizzes.html">Take a quiz →</a></p>';
+      $('#listSub').textContent = '';
+      return;
+    }
+    var groups = {}, order = [];
+    inScope.forEach(function (d) {
+      var g = SOURCES[d.src].name + ' · ' + d.group;
+      if (!groups[g]) { groups[g] = []; order.push(g); }
+      groups[g].push(d);
+    });
+    if (!order.length) { host.innerHTML = '<p class="empty">Every source is switched off above.</p>'; $('#listSub').textContent = ''; return; }
+    host.innerHTML = order.map(function (g) {
+      var list = groups[g].slice(0, 8);
+      return '<div class="grp">' + esc(g) + ' · ' + plural(groups[g].length, 'question') + '</div><ul class="open">' +
+        list.map(function (d) {
+          var it = buildCached(d);
+          var text = it ? (it.code ? firstLine(it.code) : it.qtext) : d.label;
+          return '<li><span class="em" aria-hidden="true">' + SOURCES[d.src].emoji + '</span>' +
+            '<span class="what"><b>' + esc(clip(text, 96)) + '</b></span>' +
+            '<span class="when">missed ' + esc(PH.fmtDate(d.date, { month: 'short', day: 'numeric' })) + '</span></li>';
+        }).join('') +
+        (groups[g].length > list.length ? '<li><span class="what small" style="color:var(--muted)">and ' + (groups[g].length - list.length) + ' more</span></li>' : '') +
+        '</ul>';
+    }).join('');
+    $('#listSub').textContent = plural(inScope.length, 'question') + ' picked, oldest first';
+  }
+
+  /* ===================== Asking ===================== */
+  var run = null;
+
+  function start() {
+    var byS = {};
+    open_.forEach(function (d) { byS[d.src] = (byS[d.src] || 0) + 1; });
+    var chosen = pickedSources(byS);
+    var pool = open_.filter(function (d) { return chosen[d.src]; });
+    if (!pool.length) return;
+    var want = state.settings.howMany || pool.length;
+    var picked = pool.slice(0, want);
+
+    $('#startBtn').disabled = true;
+    $('#startBtn').textContent = 'Getting them ready…';
+    needAll(picked.map(function (d) { return d.src; })).then(function () {
+      var items = [];
+      picked.forEach(function (d) {
+        var it = buildCached(d);
+        if (it) items.push({ desc: d, item: it });
+      });
+      $('#startBtn').disabled = false;
+      $('#startBtn').textContent = 'Start review';
+      if (!items.length) {
+        PH.toast('Could not rebuild those questions on this device', 3200);
+        return;
+      }
+      run = { items: items, i: 0, right: 0, checked: false, pick: -1, cleared: [] };
+      $('#pickCard').hidden = true; $('#listCard').hidden = true; $('#doneCard').hidden = true;
+      $('#askCard').hidden = false;
+      renderQuestion();
+      $('#askCard').scrollIntoView({ block: 'start' });
+    });
+  }
+
+  function renderQuestion() {
+    var cur = run.items[run.i], it = cur.item;
+    run.checked = false; run.pick = -1;
+    $('#h-ask').textContent = 'Question ' + (run.i + 1);
+    $('#askSub').textContent = 'Missed ' + PH.fmtDate(cur.desc.date, { month: 'short', day: 'numeric', year: 'numeric' });
+    $('#qpos').textContent = (run.i + 1) + ' of ' + run.items.length;
+    $('#qfrom').textContent = SOURCES[cur.desc.src].emoji + ' ' + it.from;
+    $('#pbar').style.width = Math.round(run.i / run.items.length * 100) + '%';
+
+    $('#qbody').innerHTML =
+      (it.svg ? '<div class="qsvg">' + it.svg + '</div>' : '') +
+      '<div class="qtext">' + esc(it.qtext) + '</div>' +
+      (it.code ? '<div class="code">' + esc(it.code) + '</div>' : '');
+
+    $('#qanswer').innerHTML = it.choices
+      ? '<div class="choices" role="group" aria-label="Choose an answer">' + it.choices.map(function (c, i) {
+          return '<button type="button" class="choice" data-pick="' + i + '">' +
+            '<span class="ltr" aria-hidden="true">' + String.fromCharCode(65 + i) + '</span>' +
+            '<span>' + esc(c) + '</span></button>';
+        }).join('') + '</div>'
+      : '<div class="typed"><input class="input" id="typedIn" type="text" autocomplete="off" autocapitalize="off" ' +
+        'spellcheck="false" aria-label="Your answer" placeholder="Your answer"></div>';
+
+    $('#qverdict').innerHTML = '';
+    $('#checkBtn').hidden = false; $('#checkBtn').disabled = false;
+    $('#nextBtn').hidden = true;
+    if (!it.choices) { var inp = $('#typedIn'); if (inp) inp.focus(); }
+  }
+
+  function check() {
+    if (!run || run.checked) return;
+    var cur = run.items[run.i], it = cur.item;
+    var typed = it.choices ? '' : ($('#typedIn') ? $('#typedIn').value.trim() : '');
+    if (it.choices && run.pick < 0) { PH.toast('Pick an answer first'); return; }
+    if (!it.choices && !typed) { PH.toast('Type an answer first'); if ($('#typedIn')) $('#typedIn').focus(); return; }
+
+    var ok = false;
+    try { ok = !!it.ok(run.pick, typed); } catch (e) { ok = false; }
+    run.checked = true;
+    if (ok) {
+      run.right++;
+      run.cleared.push(cur.desc.key);
+      state.cleared[cur.desc.key] = TODAY;
+      save();
+    }
+    if (it.choices) {
+      Array.prototype.forEach.call(document.querySelectorAll('#qanswer .choice'), function (b, i) {
+        b.disabled = true;
+        b.classList.remove('sel');
+        if (it.choices[i] === it.answerText) b.classList.add('correct');
+        else if (i === run.pick) b.classList.add('wrong');
+      });
+    } else if ($('#typedIn')) {
+      $('#typedIn').disabled = true;
+    }
+    $('#qverdict').innerHTML =
+      '<div class="verdict ' + (ok ? 'ok' : 'no') + '">' +
+        '<div class="head ' + (ok ? 'ok' : 'no') + '">' + (ok ? '✓ Right — that one is done' : '✗ Not yet') + '</div>' +
+        (ok ? '' : '<div class="why">The answer is <b>' + esc(it.answerText) + '</b>.</div>') +
+        (it.explain ? '<div class="why">' + esc(it.explain) + '</div>' : '') +
+      '</div>';
+    $('#checkBtn').hidden = true;
+    $('#nextBtn').hidden = false;
+    $('#nextBtn').textContent = run.i + 1 >= run.items.length ? 'See how it went →' : 'Next →';
+    $('#nextBtn').focus();
+  }
+
+  function next() {
+    if (!run) return;
+    if (!run.checked) return check();
+    run.i++;
+    if (run.i >= run.items.length) return finish();
+    renderQuestion();
+  }
+
+  function finish() {
+    var n = run.items.length, right = run.right;
+    $('#pbar').style.width = '100%';
+    $('#askCard').hidden = true;
+    $('#doneCard').hidden = false;
+    var left = collect().length;
+    $('#doneBody').innerHTML =
+      '<div class="done-big">' + right + ' / ' + n + '</div>' +
+      '<p>' + (right === n ? 'Every one of them put right. ' : right ? plural(right, 'question') + ' cleared off the list. ' : 'None cleared this time. ') +
+      (left ? plural(left, 'question') + ' still to go over.' : 'Nothing is outstanding now.') + '</p>' +
+      (right < n ? '<p class="small" style="color:var(--muted)">The ones you missed again stay on the list, so they will come back.</p>' : '');
+    run = null;
+    refresh();
+    $('#pickCard').hidden = false;
+    $('#listCard').hidden = false;
+  }
+
+  function stop() {
+    run = null;
+    $('#askCard').hidden = true;
+    $('#pickCard').hidden = false;
+    $('#listCard').hidden = false;
+    refresh();
+  }
+
+  /* ===================== Wiring ===================== */
+  document.addEventListener('click', function (e) {
+    var s = e.target.closest('.src[data-src]');
+    if (s && !s.disabled) {
+      var k = s.getAttribute('data-src');
+      var byS = {}; open_.forEach(function (d) { byS[d.src] = (byS[d.src] || 0) + 1; });
+      var chosen = pickedSources(byS);
+      state.settings.sources[k] = !chosen[k];
+      refresh();
+      return;
+    }
+    var p = e.target.closest('.choice[data-pick]');
+    if (p && !p.disabled && run) {
+      run.pick = Number(p.getAttribute('data-pick'));
+      Array.prototype.forEach.call(document.querySelectorAll('#qanswer .choice'), function (b) { b.classList.remove('sel'); });
+      p.classList.add('sel');
+      return;
+    }
+    if (e.target.closest('#startBtn')) { start(); return; }
+    if (e.target.closest('#checkBtn')) { check(); return; }
+    if (e.target.closest('#nextBtn')) { next(); return; }
+    if (e.target.closest('#stopBtn')) { stop(); return; }
+    if (e.target.closest('#againBtn')) { $('#doneCard').hidden = true; start(); return; }
+  });
+  document.getElementById('howMany').addEventListener('change', function (e) {
+    state.settings.howMany = Number(e.target.value) || 0;
+    save();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!run || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'Enter') {
+      if (/^(input)$/i.test((e.target && e.target.tagName) || '') || !run.checked) { e.preventDefault(); check(); }
+      else { e.preventDefault(); next(); }
+      return;
+    }
+    if (/^(input|textarea|select)$/i.test((e.target && e.target.tagName) || '')) return;
+    var it = run.items[run.i].item;
+    if (it.choices && !run.checked && /^[1-9a-dA-D]$/.test(e.key)) {
+      var i = /[1-9]/.test(e.key) ? Number(e.key) - 1 : e.key.toLowerCase().charCodeAt(0) - 97;
+      var b = document.querySelectorAll('#qanswer .choice')[i];
+      if (b) { e.preventDefault(); b.click(); }
+    }
+  });
+
+  refresh();
+  /* The list is useful straight away, but it reads far better once each row can name its question,
+     so pull in the generators for whatever is open and draw it again. */
+  if (open_.length) {
+    needAll(open_.map(function (d) { return d.src; })).then(function () {
+      builtCache = {};
+      try { refresh(); } catch (e) { /* the list already works without them */ }
+    });
+  }
+  window.PH_REVIEW = { collect: collect, build: build, refresh: refresh, start: start, check: check, next: next,
+    state: function () { return state; }, open: function () { return open_; }, run: function () { return run; },
+    ready: function () { return !!(window.CPM_QUIZZES || window.IM1 || window.PY); } };
+})();
+</script>
+</body></html>

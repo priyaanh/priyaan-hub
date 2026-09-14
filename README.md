@@ -1,6 +1,6 @@
 # Priyaan's Hub
 
-Ten small practice apps for Priyaan, in one folder, with no build step. Open `index.html` in a browser, or visit the GitHub Pages site once it is enabled.
+Eleven small practice apps for Priyaan, in one folder, with no build step. Open `index.html` in a browser, or visit the GitHub Pages site once it is enabled.
 
 | App | File | What it does |
 | --- | --- | --- |
@@ -12,6 +12,7 @@ Ten small practice apps for Priyaan, in one folder, with no build step. Open `in
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day, plus any Google Tasks that are due or overdue. |
 | 🐍 Python Practice | `python.html` | Short rounds of "what does this print?" on eleven topics: types, strings, lists, loops, if/elif/else, functions, dictionaries, f-strings, list comprehensions, tuples and sets, and errors. A quick reference sits under the topic picker. Multiple choice or typed, with an explanation after each one, a review of what you missed, and history. Questions are generated on the device. |
 | ✏️ Make Practice | `ai.html` | **By grade:** pick Grade 6, 7 or 8, choose topics, and get a printable worksheet with an answer key immediately - generated on the device, no key, no internet. **From a PDF:** turn a chapter or study guide into fresh problems or a quiz with the free ChatGPT (copy a prompt, paste the reply back) or, with an API key, with Claude or ChatGPT directly. |
+| 🎯 Review Mistakes | `review.html` | Every question missed anywhere on the site — lesson quizzes, maths worksheets, Python rounds, generated practice sets — collected in one place and asked again. Get one right and it comes off the list; miss it again later and it comes back. Nothing is stored but the list of what has since been put right: each question is rebuilt from the seed it was generated with. |
 | 📈 Progress | `progress.html` | Every app's history in one picture: an activity calendar going back up to a year, accuracy over time across quizzes, worksheets and Python rounds, piano minutes by week against the goal, Hindi words split across the five review boxes, merit badges by status, and records like the longest streak and the best round. Reads the other apps and writes nothing back. |
 | 🗓️ Calendar &amp; Tasks | `calendar.html` | Google Calendar embedded (week / month / agenda) for as many Google accounts as you add, one-tap "add event" buttons for each activity, and Google Tasks: tick items off, add tasks with due dates, grouped into Overdue / Today / Coming up. |
 
@@ -88,10 +89,24 @@ The page then shows **Workbook · offline** and opens the local file. The PDFs s
 ./tests/run.sh
 ```
 
-Loads every page in headless Chrome and fails on any console error, runs twenty-two browser suites (about 690
+Loads every page in headless Chrome and fails on any console error, runs twenty-three browser suites (about 800
 checks) that drive the real pages with the network stubbed — including accessibility, phone layout, WCAG
 contrast in both light and dark, and the offline service worker — then runs the 142,148 maths-generator
 checks in `test_im1.js`, the 111,628 in `test_grades.js` and the 41,527 in `test_pyquiz.js`. See `tests/README.md`.
+
+## Reviewing mistakes
+
+Every app that marks an answer now records *which* questions were wrong, not just how many. `review.html`
+gathers them and asks them again.
+
+Nothing is copied: each generator on this site is deterministic, so a saved `{seed, topics, difficulty,
+count}` plus an index is the whole question, and the page rebuilds it exactly. A lesson-quiz reference like
+`1.1.1:3` is turned back into a question by `cpm_int2_ch1.js`, which also holds the marking rules, so the
+quiz page and the review page can never disagree about whether `6 + 5x + x^2` answers `x^2 + 5x + 6`.
+
+A question is identified by what it *is*, not by the attempt it came from, so getting it right once clears
+it wherever it appeared, and missing it again on a later day puts it back. The only thing the page saves is
+that list of dates.
 
 ## Editing the content
 

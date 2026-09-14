@@ -19,6 +19,7 @@ CHROME=/path/to/chrome ./tests/run.sh
 | --- | --- |
 | `hub.html` | the Today panel's counting rules, streaks, tile links, survival of a corrupt saved key, and that backups leave API keys out |
 | `search.html` | the hub's search box: what each kind of content matches, the ranking, the ten-result cap, the deep links, the keyboard, and that the index is not fetched until the box is focused |
+| `review.html` | Review Mistakes: what it collects from each of the four sources, that a retry round is skipped, rebuilding a question exactly, clearing one by answering it right, a wrong answer staying on the list, the source filter, re-opening a question missed again later, and the empty case |
 | `progress.html` | the Progress page: what it reads out of each app, junk entries being dropped, the headline numbers, the range picker, the activity calendar and its day detail, every chart, the records, and the empty case |
 | `dates.html` | `PH.todayISO`, `addDays`, `daysBetween` and `mondayOf` across daylight saving, month ends and year ends |
 | `free.html` | the free-ChatGPT flow: the generated prompt, the one-click handoff, the three reply formats it can read, and the printable sheet |

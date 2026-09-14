@@ -35,6 +35,12 @@
       "description": "What is on for today"
     },
     {
+      "name": "Review mistakes",
+      "short_name": "Review",
+      "url": "./review.html",
+      "description": "Questions you got wrong, asked again"
+    },
+    {
       "name": "Log piano practice",
       "short_name": "Piano",
       "url": "./piano.html",

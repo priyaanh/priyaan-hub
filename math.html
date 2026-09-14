@@ -137,6 +137,14 @@ main > * + * { margin-top: 1rem; }
     if (!(total > 0) || !(right >= 0)) return null;
     return { right: Math.min(right, total), total: total };
   }
+  /* Indices into a regenerated sheet: anything out of range would ask the wrong question. */
+  function idxList(v, max) {
+    if (!Array.isArray(v)) return [];
+    const out = [], seen = {};
+    v.forEach(n => { const i = Math.round(Number(n));
+      if (Number.isInteger(i) && i >= 0 && i < max && !seen[i]) { seen[i] = 1; out.push(i); } });
+    return out.slice(0, 60);
+  }
   function normalize(raw) {
     const s = blank();
     if (!isObj(raw)) return s;
@@ -155,7 +163,8 @@ main > * + * { margin-top: 1rem; }
         difficulty: [1, 2, 3].indexOf(h.difficulty) >= 0 ? h.difficulty : 2,
         seed: isFinite(h.seed) ? Math.round(h.seed) : 1,
         name: typeof h.name === 'string' ? h.name : '',
-        score: scoreOf(h.score)
+        score: scoreOf(h.score),
+        missed: idxList(h.missed, isFinite(h.count) ? Math.round(h.count) : 60)
       })).filter(h => h.topics.length).slice(0, 100);
     }
     return s;
@@ -238,7 +247,10 @@ main > * + * { margin-top: 1rem; }
   function finish() {
     const total = ws.problems.length, right = Object.keys(marks).filter(k => marks[k].ok).length;
     const h = state.history.filter(x => x.id === lastHistId)[0] || state.history[0];
-    if (h) { h.score = { right, total }; h.date = PH.todayISO(); }
+    /* Which ones, not just how many: the same seed regenerates this sheet exactly, so the indices
+       are enough for review.html to ask these again next week. */
+    const missed = ws.problems.map((p, i) => (marks[p.id] && !marks[p.id].ok) ? i : -1).filter(i => i >= 0);
+    if (h) { h.score = { right, total }; h.missed = missed; h.date = PH.todayISO(); }
     save(); renderHistory(); renderStats();
     PH.toast(right === total ? '🎉 ' + right + '/' + total + ' — perfect!' : 'Saved: ' + right + '/' + total);
   }

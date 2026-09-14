@@ -963,5 +963,83 @@ window.CPM_QUIZZES = (function () {
     ]
   });
 
-  return { book: 'Core Connections Integrated II', chapter: 1, title: 'Exploring Algebraic and Geometric Relationships', lessons: lessons };
+  function shuffle(rnd, arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  /* Turn one bank entry into a question ready to ask: run a 'gen' template, shuffle the choices, and
+     settle how the answer is checked. Lives here, not in a page, so quizzes.html and review.html
+     cannot drift apart about what question a saved reference like "1.1.1:3" actually means.
+     rnd is a seeded PH.rng; returns null for anything malformed. */
+  function materialise(lessonId, idx, rnd) {
+    const lesson = lessons.filter(function (l) { return l.id === lessonId; })[0];
+    if (!lesson || !lesson.questions[idx]) return null;
+    let def = lesson.questions[idx];
+    if (def && def.type === 'gen' && typeof def.make === 'function') {
+      try { def = def.make(rnd); } catch (e) { return null; }
+    }
+    if (!def || !def.q || ['mc', 'num', 'text'].indexOf(def.type) < 0) return null;
+    const item = { lessonId: lesson.id, idx: idx, type: def.type, q: String(def.q),
+      explain: String(def.explain || ''), svg: typeof def.svg === 'string' ? def.svg : '',
+      unit: def.unit ? String(def.unit) : '' };
+    if (def.type === 'mc') {
+      if (!Array.isArray(def.choices) || def.choices.length < 2) return null;
+      const order = shuffle(rnd, def.choices.map(function (_, i) { return i; }));
+      item.choices = order.map(function (i) { return String(def.choices[i]); });
+      item.answer = order.indexOf(Number(def.answer));
+      if (item.answer < 0) return null;
+    } else if (def.type === 'num') {
+      item.answer = Number(def.answer);
+      if (!isFinite(item.answer)) return null;
+      item.tolerance = isFinite(def.tolerance) ? def.tolerance : 0.01;
+    } else {
+      item.answer = String(def.answer);
+      item.accept = Array.isArray(def.accept) ? def.accept.map(String) : [];
+    }
+    return item;
+  }
+
+  /* Is this answer right? One rule per question kind, shared the same way materialise is, so the
+     quiz page and the review page always agree about what counts as correct.
+       num  — strips "degrees", units and commas, understands a fraction, allows a tolerance
+       text — compares an order-independent form, so x^2+5x+6 and 6+5x+x^2 both pass */
+  function normNum(s) {
+    s = String(s).trim().toLowerCase().replace(/^[a-z]\s*=\s*/, '').replace(/[\u2212\u2013]/g, '-').replace(/,/g, '');
+    s = s.replace(/[a-z\u00b0\u00ba%\s]/g, '');
+    const fr = s.match(/^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/);
+    if (fr) return Number(fr[1]) / Number(fr[2]);
+    return s === '' ? NaN : Number(s);
+  }
+  function checkNum(given, item) {
+    const g = normNum(given);
+    return isFinite(g) && Math.abs(g - item.answer) <= (item.tolerance != null ? item.tolerance : 0.01) + 1e-9;
+  }
+  function normText(s) {
+    return String(s).toLowerCase().replace(/\s+/g, '').replace(/\u00b2/g, '^2').replace(/\*\*/g, '^')
+      .replace(/[\u2212\u2013]/g, '-').replace(/[*\u00b7\u00d7]/g, '').replace(/^[a-z]=/, '');
+  }
+  /** Order-independent form for sums like x^2+5x+6 (leaves products such as (x+2)(x+3) alone). */
+  function canonPoly(s) {
+    s = normText(s);
+    const sum = function (t) {
+      return t.replace(/-/g, '+-').split('+').filter(Boolean)
+        .map(function (u) { return u.replace(/^(-?)1(?=[a-z])/, '$1'); }).sort().join('+');
+    };
+    if (/^(\([^()]*\))+$/.test(s)) return s.match(/\([^()]*\)/g).map(function (g) { return '(' + sum(g.slice(1, -1)) + ')'; }).sort().join('');
+    if (/[()]/.test(s)) return s;
+    return sum(s);
+  }
+  function checkText(given, item) {
+    const g = canonPoly(given);
+    return !!g && [item.answer].concat(item.accept || []).some(function (a) { return canonPoly(a) === g; });
+  }
+  /** One entry point: give it the materialised item and what the child answered. */
+  function checkAnswer(item, given) {
+    if (!item) return false;
+    if (item.type === 'mc') return Number(given) === Number(item.answer);
+    if (given == null || String(given).trim() === '') return false;
+    return item.type === 'num' ? checkNum(given, item) : checkText(given, item);
+  }
+
+  return { book: 'Core Connections Integrated II', chapter: 1, title: 'Exploring Algebraic and Geometric Relationships',
+    lessons: lessons, materialise: materialise, checkAnswer: checkAnswer, shuffle: shuffle,
+    normNum: normNum, checkNum: checkNum, normText: normText, canonPoly: canonPoly, checkText: checkText };
 })();

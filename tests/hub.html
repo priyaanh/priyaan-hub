@@ -33,8 +33,9 @@ f.addEventListener('load', async () => {
       summary:{} }));
     w.localStorage.setItem('ph.hindi.v1', JSON.stringify({ version:1, days:{ [T]:1, [Y]:1 },
       progress:{ 'c6-01:सिंधु':{box:1,due:T,last:T}, 'c6-01:नत':{box:0,due:Y,last:Y}, 'c6-02:गोल':{box:3,due:TOM,last:T} }, quizzes:[], custom:[], settings:{} }));
-    w.localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, attempts:[{id:'x',date:T,lesson:'1.3.1',right:8,total:10,kind:'full',ts:Date.now()}], settings:{}, summary:{} }));
-    w.localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, history:[{id:'m',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:9,total:10}}], settings:{}, summary:{} }));
+    w.localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, attempts:[{id:'x',date:T,lesson:'1.3.1',right:8,total:10,kind:'full',ts:Date.now(),missed:[0,3]}], settings:{}, summary:{} }));
+    w.localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, history:[{id:'m',date:T,topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:9,total:10},missed:[2]},
+               {id:'m0',date:D2,topics:['linear'],count:10,difficulty:2,seed:9,name:'P',score:{right:7,total:10},missed:[1]}], settings:{}, summary:{} }));
     w.localStorage.setItem('ph.badges.v1', JSON.stringify({ version:1, done:{ 'kayaking:1a':{date:T,by:''}, 'kayaking:1b':{date:Y,by:''}, 'kayaking:2':{date:w.PH.addDays(T,-3),by:''}, 'canoeing:2':{date:w.PH.addDays(T,-30),by:''} }, notes:{}, counselors:{}, targetDates:{}, custom:[], hidden:[], catalog:{}, summary:{} }));
     w.localStorage.setItem('ph.ai.v1', JSON.stringify({ version:1, settings:{}, sets:[
       {id:'s1',date:T,kind:'worksheet',title:'Grade 7 practice',source:'Grade 7',summary:'',by:'Grade 7 generator',
@@ -48,7 +49,7 @@ f.addEventListener('load', async () => {
   }
   const restore = () => { Object.keys(snap).forEach(k => { if (snap[k] == null) w.localStorage.removeItem(k); else w.localStorage.setItem(k, snap[k]); }); };
   if (phase === 2) {
-    ok('page survives a corrupt app key', !$('#todayCard').hidden && $$('.tile').length === 8, $$('.tile').length + ' tiles');
+    ok('page survives a corrupt app key', !$('#todayCard').hidden && $$('.tile').length === 9, $$('.tile').length + ' tiles');
     ok('the other tiles still work', /1 of 2/.test($('#tiles').textContent) && /25 \/ 30/.test($('#tiles').textContent));
     restore();
     console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
@@ -57,7 +58,13 @@ f.addEventListener('load', async () => {
   try {
     ok('today panel appears with data', !$('#todayCard').hidden);
     const txt = $('#tiles').textContent;
-    ok('9 tiles rendered', $$('.tile').length === 9, $$('.tile').length + ' found');
+    ok('10 tiles rendered', $$('.tile').length === 10, $$('.tile').length + ' found');
+    /* the review count is worked out on the hub, not read from review.html, so it is right even
+       if that page has never been opened */
+    const rev = $('[data-tile="review"]');
+    ok('a review tile counts what is still missed', !!rev && /4 questions/.test(rev.textContent), rev ? rev.textContent : 'missing');
+    ok('and says how stale the oldest one is', !!rev && /2 days ago/.test(rev.textContent), rev ? rev.textContent : 'missing');
+    ok('the review tile opens the review page', !!rev && rev.getAttribute('href') === 'review.html');
     ok('python tile shows today\'s round', /9 \/ 10/.test($('[data-tile="python"]').textContent) && /one round today/.test($('[data-tile="python"]').textContent));
     const calTile = $('[data-tile="calendar"]');
     ok('calendar tile counts today only', /2 events/.test(calTile.textContent));
