@@ -322,6 +322,52 @@ assert(G.generate({ grade: '8', count: 5, difficulty: 9 }).difficulty === 2, 'ba
 [['x = 5', '5'], ['x = −5', 'x=-5'], ['(2, −3)', '2,-3'], ['12π', '12 pi'], ['$14.00', '14'], ['3/4', '3/4']]
   .forEach(([ans, typed]) => assert(G.checkAnswer({ answer: ans, accept: [] }, typed), 'checkAnswer("' + ans + '", "' + typed + '")'));
 
+/* An answer that normalises away to nothing must not pass. norm() strips $ , ( ) so all of these once
+   became the empty string, and Number('') is 0, which marked them right for any zero answer. */
+[['0', '$'], ['0', '()'], ['0', ','], ['0', '  '], ['12', 'zzz12']]
+  .forEach(([ans, typed]) => assert(!G.checkAnswer({ answer: ans, accept: [] }, typed),
+    'checkAnswer must reject "' + typed + '" for "' + ans + '"'));
+/* A label is only wrong when the question named a different one. */
+assert(G.checkAnswer({ answer: 'x = 3', accept: ['3'] }, 'x = 3'), 'the named variable is accepted');
+assert(!G.checkAnswer({ answer: 'x = 3', accept: ['3'] }, 'y = 3'), 'a different variable is refused');
+assert(G.checkAnswer({ answer: '8', accept: ['k = 8'] }, 'k = 8'), 'a variant the question lists is accepted');
+assert(G.checkAnswer({ answer: '(1, 4)', accept: ['x=1, y=4'] }, 'x=1, y=4'), 'a system written out is accepted');
+
+/* Wording and workings that a person would notice but a value check never would. */
+{
+  const rng = G.rng || (seed => { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; });
+  const hcf = (a, b) => { while (b) { const t = a % b; a = b; b = t; } return a; };
+  let factored = 0;
+  for (const level of G.LEVELS) for (const topic of level.topics) {
+    for (let seed = 1; seed <= 120; seed++) {
+      let p; try { p = topic.gen(rng(seed * 7919 + level.id.charCodeAt(0)), 2); } catch (e) { continue; }
+      if (!p) continue;
+      const q = plain(p.question), hint = plain(p.hint || '');
+      assert(!/(^|[^0-9a-z])1[a-z]\b/.test(q), level.id + '/' + topic.id + ': a coefficient of 1 written out in "' + q + '"');
+      assert(!/\bAdd \d+ from both sides/.test(hint), level.id + '/' + topic.id + ': "add N from both sides" in "' + hint + '"');
+      const m = /^Factor: (\d+)x \+ (\d+)$/.exec(q);
+      if (m) {
+        factored++;
+        const outer = /^(\d+)\(/.exec(String(p.answer));
+        assert(outer && Number(outer[1]) === hcf(Number(m[1]), Number(m[2])),
+          topic.id + ': "' + q + '" answered "' + p.answer + '" is not fully factored');
+      }
+    }
+  }
+  assert(factored > 20, 'the factoring questions were actually exercised (' + factored + ')');
+}
+/* The topic is named for the mode, so it has to ask for one. */
+{
+  const rng = G.rng || (seed => { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; });
+  const topic = G.LEVELS.filter(l => l.id === '6')[0].topics.filter(t => t.id === 'data6')[0];
+  const asked = {};
+  for (let seed = 1; seed <= 600; seed++) {
+    const m = /Find the (\w+)/.exec(plain(topic.gen(rng(seed * 7919), 2).question));
+    if (m) asked[m[1]] = 1;
+  }
+  ['mean', 'median', 'mode', 'range'].forEach(k => assert(asked[k], 'Grade 6 statistics never asks for the ' + k));
+}
+
 console.log('\n  topic                     made  verified  unchecked  failures');
 Object.keys(table).forEach(k => { const r = table[k];
   console.log('  ' + k.padEnd(24) + String(r.made).padStart(6) + String(r.verified).padStart(10) + String(r.unchecked).padStart(11) + String(r.failures).padStart(10)); });

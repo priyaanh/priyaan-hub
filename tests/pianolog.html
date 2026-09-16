@@ -29,6 +29,10 @@ f.addEventListener('load', async () => {
     ok('names the student', /Asha Example/.test(html), 'the saved name should head the log');
     const noName = (w.localStorage.removeItem('ph.name'), D.practiceLogHTML(1));
     ok('and leaves the heading blank rather than naming someone else', !/Asha Example/.test(noName));
+    /* a four-week window crosses a month, so the header has to say which month a "1" belongs to */
+    ok('the day grid marks where a new month starts', (html.match(/class="mo"/g) || []).length >= 1,
+      'no month marker in a 28-day grid');
+    ok('and marks the first column too', /<th[^>]*><span class="dw">[A-Z]<\/span><span class="mo">/.test(html));
     if (nameSnap == null) w.localStorage.removeItem('ph.name'); else w.localStorage.setItem('ph.name', nameSnap);
     ok('landscape page for a month of columns', /size:letter landscape/.test(html));
     ok('rows for the pieces practised', /Study in C/.test(html) && /Hanon No\. 12/.test(html));

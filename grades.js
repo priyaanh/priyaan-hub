@@ -150,7 +150,7 @@
         var n = pick(r, [5, 5, 7]), set = [], i;
         for (i = 0; i < n; i++) set.push(ri(r, 1, 30));
         var sorted = set.slice().sort(function (a, b) { return a - b; });
-        var k = ri(r, 1, 3);
+        var k = ri(r, 1, 4);
         var list = set.join(', ');
         if (k === 1) {
           var sum = set.reduce(function (a, b) { return a + b; }, 0);
@@ -159,7 +159,16 @@
           return P('Find the mean of: ' + list, String(sum / n), [], 'Sum = ' + sum + ', then ÷ ' + n + '.');
         }
         if (k === 2) return P('Find the median of: ' + list, String(sorted[(n - 1) / 2]), [], 'In order: ' + sorted.join(', ') + '. The middle value is ' + sorted[(n - 1) / 2] + '.');
-        return P('Find the range of: ' + list, String(sorted[n - 1] - sorted[0]), [], 'Largest ' + sorted[n - 1] + ' − smallest ' + sorted[0] + '.');
+        if (k === 3) return P('Find the range of: ' + list, String(sorted[n - 1] - sorted[0]), [], 'Largest ' + sorted[n - 1] + ' − smallest ' + sorted[0] + '.');
+        /* Mode: the topic is named for it, so it has to be asked. Build a set with exactly one value
+           repeated, or "the mode" would have more than one right answer. */
+        var mode = ri(r, 1, 30), rest = [], used = {};
+        used[mode] = 1;
+        while (rest.length < n - 2) { var v = ri(r, 1, 30); if (!used[v]) { used[v] = 1; rest.push(v); } }
+        var mset = rest.concat([mode, mode]);
+        for (i = mset.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = mset[i]; mset[i] = mset[j]; mset[j] = t; }
+        return P('Find the mode of: ' + mset.join(', '), String(mode), [],
+          mode + ' appears twice and every other number appears once, so it is the mode.');
       } }
   ];
 
@@ -226,7 +235,7 @@
             'Subtract ' + num(cc) + ', then multiply both sides by ' + den + '.');
         }
         return P('Solve for x:  ' + lhs + ' = ' + num(rhs), 'x = ' + num(x), [num(x)],
-          (b < 0 ? 'Add ' + Math.abs(b) : 'Subtract ' + b) + ' from both sides, then divide by ' + num(a) + '.');
+          (b < 0 ? 'Add ' + Math.abs(b) + ' to' : 'Subtract ' + b + ' from') + ' both sides, then divide by ' + num(a) + '.');
       } },
     { id: 'inequalities7', name: 'Inequalities', description: 'Solve and interpret two-step inequalities.',
       gen: function (r, d) {
@@ -257,6 +266,12 @@
           return P('Simplify: ' + term(p, 'x') + plus(q) + second + plus(t), ans,
             [], 'Add the x terms and the numbers separately.'); }
         var g = ri(r, 2, 9), m = ri(r, 2, 9), n = ri(r, 1, 9);
+        /* m and n must share nothing, or g is not the greatest common factor and the answer is
+           only half factored: 27x + 27 came out as 9(3x + 3). */
+        var hcf = function (a, b) { while (b) { var t = a % b; a = b; b = t; } return a; };
+        var guard = 0;
+        while (hcf(m, n) !== 1 && guard++ < 40) { n = ri(r, 1, 9); if (hcf(m, n) !== 1) m = ri(r, 2, 9); }
+        if (hcf(m, n) !== 1) { m = 2; n = 1; }
         return P('Factor: ' + (g * m) + 'x + ' + (g * n), g + '(' + m + 'x + ' + n + ')', [],
           'The greatest common factor is ' + g + '.');
       } },
@@ -344,7 +359,10 @@
         var x = rnz(r, -6, 6), y = rnz(r, -6, 6);
         var a = rnz(r, -4, 4), b = rnz(r, -4, 4), c = rnz(r, -4, 4), e = rnz(r, -4, 4);
         while (a * e - b * c === 0) { c = rnz(r, -4, 4); e = rnz(r, -4, 4); }
-        var eq = function (p, q, rhs) { return term(p, 'x') + (q < 0 ? ' ' + MINUS + ' ' + Math.abs(q) : ' + ' + q) + 'y = ' + num(rhs); };
+        /* q went in raw, so a coefficient of one printed as "1y" beside a properly written "3x" */
+        var eq = function (p, q, rhs) {
+          return term(p, 'x') + (q < 0 ? ' ' + MINUS + ' ' + term(Math.abs(q), 'y') : ' + ' + term(q, 'y')) + ' = ' + num(rhs);
+        };
         return P('Solve the system:<br>' + eq(a, b, a * x + b * y) + '<br>' + eq(c, e, c * x + e * y),
           '(' + num(x) + ', ' + num(y) + ')', [num(x) + ',' + num(y), 'x=' + num(x) + ', y=' + num(y)],
           'Eliminate one variable, then substitute back.');
@@ -454,12 +472,24 @@
       .replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&')
       .replace(/[−–]/g, '-').replace(/[×·*]/g, '*').replace(/÷/g, '/')
       .replace(/\bpi\b/gi, 'π').replace(/\s+/g, '').toLowerCase()
-      .replace(/^[a-z]=/, '').replace(/^\(|\)$/g, '').replace(/[$,]/g, '');
+      .replace(/^\(|\)$/g, '').replace(/[$,]/g, '');
   }
   function checkAnswer(p, typed) {
     if (!p || typed == null || String(typed).trim() === '') return false;
     var want = [p.answer].concat(p.accept || []).map(norm);
     var got = norm(typed);
+    /* "x = 3" answers "x = 3" and "k = 8" answers "8", but "y = 3" does not answer "x = 3".
+       A label is only wrong when the question named a different one. */
+    var labelOf = function (v) { var m = /^([a-z])=/.exec(v); return m ? m[1] : ''; };
+    var named = {};
+    want.forEach(function (v) { var L = labelOf(v); if (L) named[L] = 1; });
+    var mine = labelOf(got);
+    if (mine && Object.keys(named).length && !named[mine]) return false;
+    var unlabel = function (v) { return v.replace(/^[a-z]=/, ''); };
+    if (want.map(unlabel).indexOf(unlabel(got)) >= 0) return true;
+    /* norm() strips $ , ( ) and a leading "x=", so "$", "()" and "," all come out empty. Number('')
+       is 0, which used to mark any of them right for a question whose answer is zero. */
+    if (got === '') return false;
     if (want.indexOf(got) >= 0) return true;
     var gn = Number(got), wn = Number(want[0]);
     if (isFinite(gn) && isFinite(wn) && Math.abs(gn - wn) < 0.005) return true;

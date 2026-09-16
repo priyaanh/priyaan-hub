@@ -1,6 +1,6 @@
 <!doctype html><title>hindi flashcards test</title><body style="margin:0"><script>
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../hindi.html'; document.body.appendChild(f);
-const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
   try {
@@ -35,6 +35,19 @@ f.addEventListener('load', async () => {
     await new Promise(r => setTimeout(r, 400));
     const fr = d.getElementById('cardFrame');
     ok('print frame built with the cards', !!fr && /class="sheet"/.test(fr.srcdoc || ''));
+
+    /* The hub's search deep-links to a chapter. The deck used to be built before the link was read,
+       so the page showed one chapter's title over another chapter's words. */
+    const tick = () => new Promise(r => { const rd = new w.FileReader(); rd.onloadend = r; rd.readAsText(new w.Blob(['x'])); });
+    const waitFor = async (cond, n) => { for (let i = 0; i < (n || 200); i++) { if (cond()) return true; await tick(); } return cond(); };
+    w.location.hash = '#c7-03';
+    await waitFor(() => D.settings().ch === 'c7-03', 200);
+    const want = D.cardsOf('c7-03').map(c => c.hi);
+    const got = (D.deck().cards || []).map(c => c.hi);
+    ok('a chapter link loads that chapter\'s words', got.length > 0 && got.every(h => want.indexOf(h) >= 0),
+      got.slice(0, 3).join(', ') + ' — expected words from c7-03');
+    ok('and the whole chapter is in the deck, not part of another one',
+      D.settings().ch === 'c7-03' && got.length === want.length, got.length + ' of ' + want.length);
   } catch (e) { console.log('FAIL threw: ' + e.message); }
   console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
 });

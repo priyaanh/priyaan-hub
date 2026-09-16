@@ -1,6 +1,6 @@
 <!doctype html><title>tasks test</title><body style="margin:0"><script>
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1400px;border:0'; f.src='../calendar.html'; document.body.appendChild(f);
-const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 let W=null; const tick=()=>new Promise(r=>{const fr=new W.FileReader(); fr.onloadend=r; fr.readAsText(new W.Blob(['x']));});
 const waitFor=async(cond,n)=>{for(let i=0;i<(n||60);i++){ if(cond()) return true; await tick(); } return cond();};
 f.addEventListener('load', async () => {
@@ -86,6 +86,34 @@ f.addEventListener('load', async () => {
     w.PH_CAL.setToken('fake-token'); w.PH_CAL.loadTasks();
     await waitFor(() => /Tasks API has not been used/.test($('#taskStatus').textContent));
     ok('API error shown to the user', /Tasks API has not been used/.test($('#taskStatus').textContent));
+
+    /* A Google token lasts about an hour, so every session ends in a 401. The way back has to come
+       back with it: clearing the token used to leave only Refresh, which does nothing without one. */
+    w.fetch = async () => ({ ok:false, status:401, json: async () => ({}) });
+    w.PH_CAL.setToken('about-to-expire');
+    $('#signin').hidden = true; $('#refresh').hidden = false; $('#signout').hidden = false;
+    w.PH_CAL.loadTasks();
+    await waitFor(() => !$('#signin').hidden, 120);
+    ok('an expired token brings the sign-in button back', !$('#signin').hidden);
+    ok('and takes away the ones that cannot work', $('#refresh').hidden && $('#signout').hidden);
+
+    /* Google answers one page at a time. Stopping at the first quietly dropped the 101st task. */
+    const pageCalls = [];
+    const many = n => Array.from({ length: n }, (_, i) => ({ id: 'p' + i, title: 'Task ' + i, status: 'needsAction', position: String(1000 + i) }));
+    w.fetch = async (url) => {
+      const m = String(url); pageCalls.push(m);
+      const json = b => ({ ok:true, status:200, json: async () => b });
+      if (m.includes('/users/@me/lists')) return json({ items: [ { id:'L1', title:'My Tasks' } ] });
+      if (/\/lists\/L1\/tasks\?/.test(m)) {
+        if (!/pageToken=/.test(m)) return json({ items: many(100), nextPageToken: 'PAGE2' });
+        if (/pageToken=PAGE2/.test(m)) return json({ items: many(40).map(t => ({ ...t, id: t.id + 'b' })), nextPageToken: '' });
+      }
+      return json({});
+    };
+    w.PH_CAL.setToken('fake-token'); w.PH_CAL.loadTasks();
+    await waitFor(() => $$('.task').length > 100, 200);
+    ok('a long list is followed past the first page', $$('.task').length === 140, $$('.task').length + ' shown');
+    ok('and the second page was actually asked for', pageCalls.some(u => /pageToken=PAGE2/.test(u)));
   } catch (e) { console.log('FAIL threw: ' + e.message + ' @ ' + (e.stack||'').split('\n')[1]); }
   try { if (snap) w.localStorage.setItem('ph.calendar.v1', snap); else w.localStorage.removeItem('ph.calendar.v1'); } catch(e){}
   console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);

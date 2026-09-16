@@ -413,13 +413,17 @@ b. Option two
   function shownBadges() { return allBadges().filter(b => state.hidden.indexOf(b.id) < 0); }
   function findBadge(id) { return allBadges().filter(b => b.id === id)[0] || null; }
   function k(bid, rid) { return bid + ':' + rid; }
+  /* A requirement id comes out of saved data, and an imported badge can carry anything in one. Left
+     raw in a selector, a quote throws SyntaxError and the note box silently stops working. */
+  function cssSafe(v) { return String(v).replace(/["\\]/g, '\\$&'); }
   function hasKids(r) { return !!(r.children && r.children.length); }
   function reqStatus(b, r) {
     if (hasKids(r)) {
       const dates = r.children.map(c => state.done[k(b.id, c.id)]).filter(Boolean).map(d => d.date).sort();
       const needed = r.pick || r.children.length;
       const complete = dates.length >= needed;
-      return { needed, done: Math.min(dates.length, needed), complete, date: complete ? dates[dates.length - 1] : null };
+      /* dates is sorted, so the one that satisfied "any 3 of 6" is the third, not the last ticked. */
+      return { needed, done: Math.min(dates.length, needed), complete, date: complete ? dates[needed - 1] : null };
     }
     const d = state.done[k(b.id, r.id)];
     return { needed: 1, done: d ? 1 : 0, complete: !!d, date: d ? d.date : null };
@@ -732,8 +736,10 @@ b. Option two
     const c = CAT.filter(x => x.id === id)[0];
     if (c) PH.toast(c.name + ': ' + (CAT_STATUS[status] || 'not started'));
   }
+  let pendingCatId = '';          // the catalog badge a new checklist is being made for
   function trackFromCatalog(id) {
     const c = CAT.filter(x => x.id === id)[0]; if (!c) return;
+    pendingCatId = BADGES.some(b => b.id === id) ? '' : id;
     const card = $('#addCard'); card.hidden = false;
     const opener = document.querySelector('[data-action="toggle-add"][aria-controls]');
     if (opener) opener.setAttribute('aria-expanded', 'true');
@@ -876,7 +882,7 @@ b. Option two
   function setNote(key, value) {
     if (value.trim()) state.notes[key] = value; else delete state.notes[key];
     save();
-    const btn = document.querySelector('[data-note="' + key + '"]');
+    const btn = document.querySelector('[data-note="' + cssSafe(key) + '"]');
     if (btn) { btn.classList.toggle('has', !!value.trim()); btn.textContent = '✎ Note' + (value.trim() ? ' •' : ''); }
   }
   function saveField(input) {
@@ -935,7 +941,11 @@ b. Option two
     const reqs = parseReqs($('#cbReqs').value);
     if (!name) { PH.toast('Give the badge a name first'); $('#cbName').focus(); return; }
     if (!reqs.length) { PH.toast('Paste at least one requirement'); $('#cbReqs').focus(); return; }
-    const badge = { id: 'c_' + PH.uid(), name, emoji, edition: year, eagleRequired: false, custom: true, reqs };
+    /* Keep the catalog's id when the checklist was started from a catalog row, so the two are the
+       same badge everywhere: the row links to it, and Trail to Eagle counts it. */
+    const id = (pendingCatId && !state.custom.some(b => b.id === pendingCatId)) ? pendingCatId : 'c_' + PH.uid();
+    pendingCatId = '';
+    const badge = { id, name, emoji, edition: year, eagleRequired: false, custom: true, reqs };
     state.custom.push(badge); save();
     $('#cbName').value = ''; $('#cbReqs').value = ''; $('#cbYear').value = ''; $('#cbEmoji').value = '🎖️';
     $('#addCard').hidden = true; previewParse();
@@ -1002,7 +1012,7 @@ b. Option two
       const key = noteBtn.dataset.note;
       if (ui.openNotes[key]) delete ui.openNotes[key]; else ui.openNotes[key] = true;
       render();
-      if (ui.openNotes[key]) { const ta = document.querySelector('[data-notefor="' + key + '"]'); if (ta) ta.focus(); }
+      if (ui.openNotes[key]) { const ta = document.querySelector('[data-notefor="' + cssSafe(key) + '"]'); if (ta) ta.focus(); }
       return;
     }
     const btn = e.target.closest('[data-action]');

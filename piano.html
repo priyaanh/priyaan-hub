@@ -851,7 +851,11 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
       const inp = $('#np-name'); const name = inp.value.trim();
       if (!name) { inp.focus(); return; }
       const dup = state.pieces.find(p => p.name.toLowerCase() === name.toLowerCase());
-      if (dup) { dup.archived = false; PH.toast('Already in your list' + (dup.archived ? '' : ' — restored')); }
+      if (dup) {
+        const wasArchived = dup.archived;      // read it before clearing, or the message is always "restored"
+        dup.archived = false;
+        PH.toast('Already in your list' + (wasArchived ? ' — restored' : ''));
+      }
       else { addPiece(name, $('#np-group').value); PH.toast('Added ' + name); }
       inp.value = '';
       persist(); render();
@@ -915,9 +919,13 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
     const weeks = [];
     for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
     const notes = inRange.filter(s => s.note).slice(-8).reverse();
-    const head = days.map(d => {
+    /* The window is four weeks, so it usually crosses a month. Without a marker the header reads
+       "30 31 1 2" and whoever signs the sheet cannot tell August from September. */
+    const head = days.map((d, i) => {
       const dt = new Date(d + 'T00:00:00');
-      return '<th' + (dayTotal(d) ? '' : ' class="off"') + '><span class="dw">' + 'SMTWTFS'[dt.getDay()] + '</span>' + dt.getDate() + '</th>';
+      const day = dt.getDate();
+      const mark = (i === 0 || day === 1) ? '<span class="mo">' + dt.toLocaleDateString(undefined, { month: 'short' }) + '</span>' : '';
+      return '<th' + (dayTotal(d) ? '' : ' class="off"') + '><span class="dw">' + 'SMTWTFS'[dt.getDay()] + '</span>' + mark + day + '</th>';
     }).join('');
     const rows = pieces.map(p => '<tr><th class="pc">' + esc(p.name) + '</th>' +
       days.map(d => { const m = cell(p.id, d); return '<td' + (m ? '' : ' class="off"') + '>' + (m || '') + '</td>'; }).join('') +
@@ -937,7 +945,7 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
       'table{width:100%;border-collapse:collapse;margin-top:12px;font-size:8.5pt;table-layout:fixed}',
       'th,td{border:1px solid #d5d9e0;padding:3px 2px;text-align:center}',
       'th.pc{text-align:left;width:2.1in;font-weight:600;padding-left:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      'thead th{font-size:7.5pt;color:#4b5563;font-weight:700}.dw{display:block;font-size:6.5pt;color:#9aa0ab}',
+      'thead th{font-size:7.5pt;color:#4b5563;font-weight:700}.dw{display:block;font-size:6.5pt;color:#9aa0ab}.mo{display:block;font-size:6pt;font-weight:700;color:#374151;letter-spacing:.02em}',
       'td.off,th.off{background:#f6f7f9;color:#c3c8d2}',
       'tr.sum th,tr.sum td{background:#f0f2f5;font-weight:700}.tot{width:.6in;font-weight:700;background:#f0f2f5}',
       '.weeks{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:9pt;color:#4b5563}',
@@ -1047,6 +1055,8 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
   $('#m-beatsper').addEventListener('change', e => { metro.beatsPer = Number(e.target.value) || 4; metro.beat = 0; renderMetro(); });
   document.addEventListener('click', e => { const b = e.target.closest('[data-bpm]'); if (b) setBpm(metro.bpm + Number(b.dataset.bpm)); });
   document.addEventListener('keydown', e => {
+    /* without this, Cmd+M starts the metronome and never reaches the browser's minimise */
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (/^(input|textarea|select)$/i.test((e.target && e.target.tagName) || '')) return;
     if (e.key === 'm') { e.preventDefault(); toggleMetro(); }
     if (e.key === 't') { e.preventDefault(); tapTempo(); }

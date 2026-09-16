@@ -692,7 +692,8 @@ main > * + * { margin-top: 1rem; }
     frame.onload = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { PH.toast('Could not open the print dialog'); } };
     PH.toast(cards.length + ' cards · print double-sided, then cut');
   }
-  window.PHHindiDebug = Object.assign(window.PHHindiDebug || {}, { flashcardHTML, cardsOf, printFlashcards });
+  window.PHHindiDebug = Object.assign(window.PHHindiDebug || {}, { flashcardHTML, cardsOf, printFlashcards,
+    deck: () => deck, settings: () => state.settings });
   $('#list-wrap').addEventListener('click', e => {
     const r = e.target.closest('[data-reset]'); if (r) { resetWord(r.dataset.reset); return; }
     const d = e.target.closest('[data-del]'); if (d) deleteMine(d.dataset.del);
@@ -726,7 +727,6 @@ main > * + * { margin-top: 1rem; }
   window.addEventListener('focus', () => { renderStats(); renderChips(); });
 
   /* ===================== Go ===================== */
-  buildDeck();
   /* A link like hindi.html#c6-01 (used by the hub's search) opens that chapter. */
   function applyHash() {
     const want = decodeURIComponent(location.hash.replace(/^#/, ''));
@@ -738,8 +738,11 @@ main > * + * { margin-top: 1rem; }
     if (ch) state.settings.cls = ch.cls;
     return true;
   }
+  /* The deck has to be built after the link is read, or the page shows one chapter's title over
+     another chapter's words. Same on a later hash change. */
   if (applyHash()) save();
-  window.addEventListener('hashchange', () => { if (applyHash()) { save(); renderAll(); } });
+  buildDeck();
+  window.addEventListener('hashchange', () => { if (applyHash()) { save(); buildDeck(); renderAll(); } });
 
   renderAll();
   if (stored) save(); // refresh the hub summary against today's dates

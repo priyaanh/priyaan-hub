@@ -381,14 +381,20 @@ details[open] summary { margin-bottom: .6rem; }
     const all = []; const problems = [];
     for (const cal of shown()) {
       const url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(cal.src) + '/events?' + new URLSearchParams({ timeMin: min.toISOString(), timeMax: max.toISOString(), singleEvents: 'true', orderBy: 'startTime', maxResults: '50' });
-      let r;
-      try { r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } }); }
-      catch (e) { problems.push(cal.name + ' (offline)'); continue; }
-      if (r.status === 401) { token = null; $('#upStatus').textContent = 'Signed out — sign in again'; return; }
-      if (r.status === 404 || r.status === 403) { problems.push(cal.name + ' (not shared with you)'); continue; }
-      if (!r.ok) { problems.push(cal.name + ' (HTTP ' + r.status + ')'); continue; }
-      const data = await r.json();
-      (data.items || []).forEach(it => {
+      let items = [], page = '', guard = 0, failed = false;
+      do {
+        let r;
+        try { r = await fetch(url + (page ? '&pageToken=' + encodeURIComponent(page) : ''), { headers: { Authorization: 'Bearer ' + token } }); }
+        catch (e) { problems.push(cal.name + ' (offline)'); failed = true; break; }
+        if (r.status === 401) { tokenExpired(); return; }
+        if (r.status === 404 || r.status === 403) { problems.push(cal.name + ' (not shared with you)'); failed = true; break; }
+        if (!r.ok) { problems.push(cal.name + ' (HTTP ' + r.status + ')'); failed = true; break; }
+        const data = await r.json();
+        (data.items || []).forEach(x => items.push(x));
+        page = data.nextPageToken || '';
+      } while (page && ++guard < 20);
+      if (failed) continue;
+      items.forEach(it => {
         const allDay = !!(it.start && it.start.date);
         const start = allDay ? it.start.date + 'T00:00:00' : (it.start && it.start.dateTime);
         if (!start) return;
@@ -402,29 +408,39 @@ details[open] summary { margin-bottom: .6rem; }
       allDay: !!e.allDay, date: e.date, calName: e.calName, color: e.color })) };
     save(); renderUpcoming();
     $('#upStatus').textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + (problems.length ? ' · could not read ' + problems.join(', ') : '');
-    $('#signin').hidden = true; $('#refresh').hidden = false; $('#signout').hidden = false;
+    showAuthButtons(true);
   }
   /* ---------------- Google Tasks ---------------- */
   const TASKS_API = 'https://tasks.googleapis.com/tasks/v1';
   async function api(path, opts) {
     const r = await fetch(TASKS_API + path, Object.assign({}, opts, {
       headers: Object.assign({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, (opts || {}).headers) }));
-    if (r.status === 401) { token = null; throw new Error('Signed out — sign in again'); }
+    if (r.status === 401) { tokenExpired(); throw new Error('Signed out — sign in again'); }
     if (!r.ok) { let m = 'HTTP ' + r.status; try { const e = await r.json(); if (e.error && e.error.message) m = e.error.message; } catch (err) {} throw new Error(m); }
     return r.status === 204 ? null : r.json();
+  }
+  /** Follow nextPageToken so a long list is not silently cut off at the first page. */
+  async function apiAll(path, key) {
+    const out = [];
+    let page = '', guard = 0;
+    do {
+      const data = await api(path + (page ? '&pageToken=' + encodeURIComponent(page) : ''));
+      (data && data.items ? data.items : []).forEach(x => out.push(x));
+      page = (data && data.nextPageToken) || '';
+    } while (page && ++guard < 20);
+    return out;
   }
   async function loadTasks() {
     if (!token) return;
     $('#taskStatus').textContent = 'Loading…';
     try {
-      const lists = await api('/users/@me/lists?maxResults=50');
-      taskLists = (lists.items || []).map(l => ({ id: l.id, title: l.title }));
+      taskLists = (await apiAll('/users/@me/lists?maxResults=100')).map(l => ({ id: l.id, title: l.title }));
       if (!taskLists.length) { tasks = []; renderTasks(); $('#taskStatus').textContent = 'No task lists'; return; }
       if (!curList || !taskLists.some(l => l.id === curList)) {
         curList = (state.settings.taskList && taskLists.some(l => l.id === state.settings.taskList)) ? state.settings.taskList : taskLists[0].id;
       }
-      const data = await api('/lists/' + encodeURIComponent(curList) + '/tasks?maxResults=100&showCompleted=true&showHidden=false');
-      tasks = (data.items || []).filter(t => !t.deleted).map(t => ({ id: t.id, title: t.title || '(no title)', notes: t.notes || '',
+      const items = await apiAll('/lists/' + encodeURIComponent(curList) + '/tasks?maxResults=100&showCompleted=true&showHidden=false');
+      tasks = items.filter(t => !t.deleted).map(t => ({ id: t.id, title: t.title || '(no title)', notes: t.notes || '',
         due: t.due || '', status: t.status === 'completed' ? 'completed' : 'needsAction', position: t.position || '' }));
       tasks.sort((a, b) => (a.position || '').localeCompare(b.position || ''));
       tasksAt = Date.now();
@@ -514,11 +530,20 @@ details[open] summary { margin-bottom: .6rem; }
         (e.link ? '<a href="' + esc(e.link) + '" target="_blank" rel="noopener">' + esc(e.title) + '</a>' : esc(e.title)) +
         (e.loc ? '<div class="loc">📍 ' + esc(e.loc) + '</div>' : '') + '</div></div>').join('') + '</div>').join('');
   }
+  /** Which buttons make sense right now. Every path that drops the token must call this. */
+  function showAuthButtons(signedIn) {
+    $('#signin').hidden = signedIn; $('#refresh').hidden = !signedIn; $('#signout').hidden = !signedIn;
+  }
+  function tokenExpired(msg) {
+    token = null;
+    showAuthButtons(false);
+    $('#upStatus').textContent = msg || 'Signed out — sign in again';
+  }
   function signOut() {
     if (token && window.google && google.accounts && google.accounts.oauth2) { try { google.accounts.oauth2.revoke(token, () => {}); } catch (e) {} }
     token = null; events = null; tasks = null; taskLists = null; save(); renderTasks();   // caches stay for the hub
     $('#upcoming').innerHTML = '<div class="empty">Signed out. The calendar above still works.</div>';
-    $('#upStatus').textContent = ''; $('#signin').hidden = false; $('#refresh').hidden = true; $('#signout').hidden = true;
+    $('#upStatus').textContent = ''; showAuthButtons(false);
   }
 
   /* ---------------- settings & wiring ---------------- */
