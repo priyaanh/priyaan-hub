@@ -1,0 +1,110 @@
+<!doctype html><title>themes</title><body style="margin:0"><script>
+/* The palette button is built by shared.js, so every page gets it. Checks that a choice sticks, that
+   it reaches the page before anything paints, and that a junk value falls back rather than breaking. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||300);i++){ if(cond()) return true; await tick(); } return cond();};
+const KEY='ph.theme';
+const snap = localStorage.getItem(KEY);
+const f=document.createElement('iframe'); f.style.cssText='width:1100px;height:700px;border:0'; document.body.appendChild(f);
+
+/* Records what data-theme was at the moment the document started running, which is what decides
+   whether the first paint is the right colour. */
+let atParse = null, nav = 0;
+async function go(page) {
+  atParse = null;
+  const want = page.replace(/\?.*/, '');
+  /* a unique query every time, or setting src to the URL already loaded does not navigate at all */
+  f.src = '../' + page + (page.indexOf('?') < 0 ? '?' : '&') + 'n=' + (++nav);
+  const deadline = Date.now() + 15000;
+  for (let i = 0; i < 5000 && Date.now() < deadline; i++) {
+    await tick();
+    try {
+      const d = f.contentDocument;
+      if (atParse === null && d && d.documentElement && d.location.href.indexOf(want) >= 0)
+        atParse = d.documentElement.getAttribute('data-theme');
+      if (d && d.location.href.indexOf(want) >= 0 && d.readyState === 'complete' && d.querySelector('#themeBtn')) break;
+    } catch (e) {}
+  }
+  for (let i = 0; i < 8; i++) await tick();
+}
+
+(async () => {
+  try {
+    localStorage.removeItem(KEY);
+    await go('index.html');
+    let w = f.contentWindow, d = f.contentDocument;
+    ok('the palette button is on the page', !!d.querySelector('#themeBtn'));
+    ok('it says what it is for', (d.querySelector('#themeBtn').getAttribute('aria-label') || '').length > 8,
+      d.querySelector('#themeBtn').getAttribute('aria-label'));
+    ok('the menu starts closed', d.querySelector('#themeMenu').hidden
+      && d.querySelector('#themeBtn').getAttribute('aria-expanded') === 'false');
+    ok('with no choice saved it follows the device', ['light','dark'].indexOf(d.documentElement.getAttribute('data-theme')) >= 0,
+      d.documentElement.getAttribute('data-theme'));
+
+    d.querySelector('#themeBtn').click(); await tick();
+    ok('clicking opens the menu', !d.querySelector('#themeMenu').hidden
+      && d.querySelector('#themeBtn').getAttribute('aria-expanded') === 'true');
+    const opts = Array.from(d.querySelectorAll('.theme-opt'));
+    ok('every theme is offered', opts.length === w.PH.THEMES.length && opts.length === 6, opts.length + ' options');
+    ok('each one is named', opts.every(o => o.textContent.trim().length > 2));
+    ok('the current one is marked', d.querySelectorAll('.theme-opt[aria-checked="true"]').length === 1);
+
+    /* picking one */
+    opts.filter(o => o.getAttribute('data-theme-id') === 'midnight')[0].click();
+    await tick();
+    ok('picking a theme applies it', d.documentElement.getAttribute('data-theme') === 'midnight',
+      d.documentElement.getAttribute('data-theme'));
+    ok('and saves it', localStorage.getItem(KEY) === 'midnight', String(localStorage.getItem(KEY)));
+    ok('and closes the menu', d.querySelector('#themeMenu').hidden);
+    const cs = w.getComputedStyle(d.body);
+    ok('the page really is dark now', cs.backgroundColor === 'rgb(8, 11, 20)', cs.backgroundColor);
+
+    /* it has to be there before the first paint, or the page flashes the wrong colour */
+    await go('review.html');
+    d = f.contentDocument; w = f.contentWindow;
+    ok('the choice carries to another page', d.documentElement.getAttribute('data-theme') === 'midnight');
+    ok('and is set before the page runs, so nothing flashes', atParse === 'midnight', String(atParse));
+    ok('the button shows the chosen theme', (d.querySelector('#themeBtn').getAttribute('aria-label') || '').indexOf('Midnight') > 0,
+      d.querySelector('#themeBtn').getAttribute('aria-label'));
+
+    /* every page builds the button, not just the ones that remembered to */
+    for (const page of ['piano.html', 'hindi.html', 'calendar.html', 'quizzes.html']) {
+      await go(page);
+      ok(page + ' has the palette button too', !!f.contentDocument.querySelector('#themeBtn'));
+    }
+
+    /* keyboard */
+    await go('index.html');
+    d = f.contentDocument; w = f.contentWindow;
+    d.querySelector('#themeBtn').click(); await tick();
+    ok('opening moves focus into the menu', !!d.activeElement && d.activeElement.classList.contains('theme-opt'));
+    d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await tick();
+    ok('escape closes it', d.querySelector('#themeMenu').hidden);
+
+    /* going back to following the device */
+    w.PH.setTheme('system'); await tick();
+    ok('choosing "match my device" resolves to a real theme', ['light','dark'].indexOf(d.documentElement.getAttribute('data-theme')) >= 0,
+      d.documentElement.getAttribute('data-theme'));
+    ok('and that is what is stored, not the resolved one', localStorage.getItem(KEY) === 'system');
+
+    /* junk in storage */
+    localStorage.setItem(KEY, 'chartreuse');
+    await go('index.html');
+    d = f.contentDocument;
+    ok('a theme that does not exist falls back instead of breaking',
+      ['light','dark'].indexOf(d.documentElement.getAttribute('data-theme')) >= 0,
+      d.documentElement.getAttribute('data-theme'));
+    ok('and the page still renders', !!d.querySelector('main') && d.body.innerText.trim().length > 40);
+
+    /* a light theme too, so the check is not only ever dark */
+    w = f.contentWindow;
+    w.PH.setTheme('paper');
+    await waitFor(() => f.contentDocument.documentElement.getAttribute('data-theme') === 'paper', 200);
+    const paperBg = w.getComputedStyle(f.contentDocument.documentElement).getPropertyValue('--bg').trim();
+    ok('a light theme applies too', paperBg === '#f3ece0', paperBg);
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  if (snap == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, snap);
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+})();
+</script></body>

@@ -1,5 +1,7 @@
 /* Priyaan Hub — shared design system. No external dependencies; works over file:// and GitHub Pages. */
 :root {
+  /* Light is the base palette. A theme is a set of overrides on top of it, chosen with the palette
+     button in the top bar and applied as data-theme on <html> before the page paints. */
   --bg: #f5f6fa;
   --surface: #ffffff;
   --surface-2: #eef0f6;
@@ -9,7 +11,6 @@
   --accent: #4f6bed;
   --accent-ink: #ffffff;
   --accent-soft: rgba(79,107,237,.13);
-  /* Accent-coloured *text* needs more contrast than an accent fill: mix the accent toward the page ink. */
 
   --ok: #1f9d55;
   --ok-soft: rgba(31,157,85,.14);
@@ -22,19 +23,70 @@
   --shadow: 0 1px 2px rgba(16,24,40,.05), 0 8px 24px -10px rgba(16,24,40,.14);
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Noto Sans Devanagari", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color-scheme: light dark;
+  color-scheme: light;
+
+  /* Coloured text needs more contrast than a coloured fill, so each role is mixed toward the page's
+     ink (--mix-to) by its own amount. Every percentage here was measured against every app accent on
+     both --surface and --surface-2: the largest value that still clears WCAG AA, then a little back.
+     Changing one without re-measuring is how this palette breaks. */
+  --mix-to: #000;
+  --p-accent-text: 72%;
+  --p-accent-fill: 78%;
+  --p-ok: 76%;
+  --p-warn: 66%;
+  --p-danger: 84%;
 }
+
+/* ---- themes ------------------------------------------------------------------------------------
+   shared.js resolves the stored choice (including "system") to one of these before the first paint. */
+:root[data-theme="dark"], :root[data-theme="midnight"] { color-scheme: dark; }
+:root[data-theme="dark"] {
+  --bg: #0f1117; --surface: #171a23; --surface-2: #1f232e;
+  --text: #e8eaf0; --muted: #98a2b3; --border: #2a2f3c;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px -12px rgba(0,0,0,.7);
+  --accent-ink: #0f1117;                                      /* dark ink on a light fill reads better in the dark */
+  --mix-to: #fff;
+  --p-accent-text: 70%; --p-accent-fill: 80%; --p-ok: 70%; --p-warn: 78%; --p-danger: 76%;
+}
+:root[data-theme="midnight"] {
+  --bg: #080b14; --surface: #0f1524; --surface-2: #18203a;
+  --text: #dfe7fb; --muted: #9aaacb; --border: #25304f;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 32px -14px rgba(0,0,0,.85);
+  --accent-ink: #080b14;
+  --mix-to: #fff;
+  --p-accent-text: 70%; --p-accent-fill: 82%; --p-ok: 70%; --p-warn: 78%; --p-danger: 76%;
+}
+:root[data-theme="paper"] {
+  --bg: #f3ece0; --surface: #fffaf1; --surface-2: #eae1d1;
+  --text: #2b2417; --muted: #635941; --border: #ded2bd;
+  --shadow: 0 1px 2px rgba(80,60,20,.06), 0 8px 24px -10px rgba(80,60,20,.18);
+  --mix-to: #000;
+  --p-accent-text: 66%; --p-accent-fill: 77%; --p-ok: 69%; --p-warn: 60%; --p-danger: 79%;
+}
+:root[data-theme="contrast"] {
+  --bg: #ffffff; --surface: #ffffff; --surface-2: #f0f0f0;
+  --text: #000000; --muted: #3a3a3a; --border: #6b6b6b;
+  --shadow: none;
+  --mix-to: #000;
+  --p-accent-text: 62%; --p-accent-fill: 70%; --p-ok: 70%; --p-warn: 60%; --p-danger: 78%;
+}
+:root[data-theme="contrast"] .card, :root[data-theme="contrast"] .btn,
+:root[data-theme="contrast"] .input, :root[data-theme="contrast"] select,
+:root[data-theme="contrast"] textarea { border-width: 2px; }
+
+/* Without JavaScript nothing sets data-theme, so follow the device the way the site always did. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #0f1117; --surface: #171a23; --surface-2: #1f232e;
     --text: #e8eaf0; --muted: #98a2b3; --border: #2a2f3c;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px -12px rgba(0,0,0,.7);
-    --accent-ink: #0f1117;                                      /* dark ink on a light fill reads better in the dark */
-    --ok-text: color-mix(in srgb, var(--ok) 70%, #fff);
-    --warn-text: color-mix(in srgb, var(--warn) 80%, #fff);
-    --danger-text: color-mix(in srgb, var(--danger) 78%, #fff);
+    --accent-ink: #0f1117;
+    --mix-to: #fff;
+    --p-accent-text: 70%; --p-accent-fill: 80%; --p-ok: 70%; --p-warn: 78%; --p-danger: 76%;
+    color-scheme: dark;
   }
 }
+
 /* Per-app accent. Set <body data-app="piano"> etc. */
 body[data-app="piano"]    { --accent:#7c5cff; --accent-soft:rgba(124,92,255,.15); }
 body[data-app="badges"]   { --accent:#2f8f4e; --accent-soft:rgba(47,143,78,.15); }
@@ -50,21 +102,40 @@ body[data-app="review"]   { --accent:#9333ea; --accent-soft:rgba(147,51,234,.15)
 
 /* Resolved per element, not once at the root, so each page's own --accent feeds the mix. */
 *, *::before, *::after {
-  --accent-text: color-mix(in srgb, var(--accent) 72%, #000);   /* accent text on a light background (worst case 4.98:1) */
-  --accent-fill: color-mix(in srgb, var(--accent) 78%, #000);   /* filled controls: white on it reads at 5.00:1 */
-  --ok-text: color-mix(in srgb, var(--ok) 82%, #000);
-  --warn-text: color-mix(in srgb, var(--warn) 78%, #000);
-  --danger-text: color-mix(in srgb, var(--danger) 82%, #000);
+  --accent-text: color-mix(in srgb, var(--accent) var(--p-accent-text), var(--mix-to));
+  --accent-fill: color-mix(in srgb, var(--accent) var(--p-accent-fill), var(--mix-to));
+  --ok-text: color-mix(in srgb, var(--ok) var(--p-ok), var(--mix-to));
+  --warn-text: color-mix(in srgb, var(--warn) var(--p-warn), var(--mix-to));
+  --danger-text: color-mix(in srgb, var(--danger) var(--p-danger), var(--mix-to));
 }
-@media (prefers-color-scheme: dark) {
-  *, *::before, *::after {
-    --accent-text: color-mix(in srgb, var(--accent) 72%, #fff);
-    --accent-fill: color-mix(in srgb, var(--accent) 80%, #fff);
-    --ok-text: color-mix(in srgb, var(--ok) 70%, #fff);
-    --warn-text: color-mix(in srgb, var(--warn) 80%, #fff);
-    --danger-text: color-mix(in srgb, var(--danger) 78%, #fff);
-  }
+/* ---- the palette button in the top bar ---- */
+.theme-wrap { position: relative; display: inline-flex; flex: none; }
+#themeBtn { font-size: 1rem; line-height: 1; }
+.theme-menu {
+  position: absolute; top: calc(100% + .4rem); right: 0; z-index: 60;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); padding: .3rem; min-width: 12.5rem; display: grid; gap: .1rem;
 }
+.theme-opt {
+  display: flex; align-items: center; gap: .55rem; width: 100%; text-align: left;
+  font: inherit; font-size: .9rem; color: inherit; background: transparent; border: 0;
+  padding: .4rem .5rem; border-radius: 7px; cursor: pointer;
+}
+.theme-opt:hover { background: var(--surface-2); }
+.theme-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.theme-opt.on { background: var(--accent-soft); }
+.theme-opt .nm { flex: 1; min-width: 0; }
+.theme-opt .tick { color: var(--accent-text); font-weight: 700; width: .9rem; text-align: right; }
+/* a two-tone chip, so each theme can be told apart at a glance rather than by name alone */
+.theme-opt .sw { width: 18px; height: 18px; border-radius: 5px; flex: none; border: 1px solid var(--border); background-size: 100% 100%; }
+.theme-opt .sw[data-swatch="system"]   { background-image: linear-gradient(135deg, #ffffff 0 50%, #171a23 50% 100%); }
+.theme-opt .sw[data-swatch="light"]    { background-image: linear-gradient(135deg, #ffffff 0 50%, #eef0f6 50% 100%); }
+.theme-opt .sw[data-swatch="dark"]     { background-image: linear-gradient(135deg, #171a23 0 50%, #0f1117 50% 100%); }
+.theme-opt .sw[data-swatch="midnight"] { background-image: linear-gradient(135deg, #18203a 0 50%, #080b14 50% 100%); }
+.theme-opt .sw[data-swatch="paper"]    { background-image: linear-gradient(135deg, #fffaf1 0 50%, #eae1d1 50% 100%); }
+.theme-opt .sw[data-swatch="contrast"] { background-image: linear-gradient(135deg, #ffffff 0 50%, #000000 50% 100%); }
+@media print { .theme-wrap { display: none !important; } }
+
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -211,6 +282,15 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .kbd { font-family: var(--mono); font-size: .8em; padding: .1em .4em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--surface-2); color: var(--text); }   /* its own colour: inside a filled button it would inherit white on light grey */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 560px) { .topbar .title .name { display: none; } .topbar .btn .lbl { display: none; } .container { padding: 1rem .75rem 4rem; } .card { padding: 1rem; } }
+/* The narrowest phones: the top bar carries one more control than it used to, so give back the
+   padding rather than let the page scroll sideways. */
+@media (max-width: 400px) {
+  .topbar .inner { gap: .4rem; padding: .6rem .6rem; }
+  .topbar .back { padding: .3rem .5rem; }
+  .topbar .title { min-width: 0; }
+  .topbar .btn-sm { padding: .3rem .45rem; }
+  .theme-menu { right: -.4rem; min-width: 11.5rem; }
+}
 @media print {
   .topbar, .no-print, .toast { display: none !important; }
   body { background: #fff; color: #000; }

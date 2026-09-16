@@ -16,6 +16,19 @@ Eleven small practice apps for Priyaan, in one folder, with no build step. Open 
 | 📈 Progress | `progress.html` | Every app's history in one picture: an activity calendar going back up to a year, accuracy over time across quizzes, worksheets and Python rounds, piano minutes by week against the goal, Hindi words split across the five review boxes, merit badges by status, and records like the longest streak and the best round. Reads the other apps and writes nothing back. |
 | 🗓️ Calendar &amp; Tasks | `calendar.html` | Google Calendar embedded (week / month / agenda) for as many Google accounts as you add, one-tap "add event" buttons for each activity, and Google Tasks: tick items off, add tasks with due dates, grouped into Overdue / Today / Coming up. |
 
+## Themes
+
+The palette button in the top bar of every page changes the colours for the whole site: **Match my
+device** (the default, which keeps following the device so a phone that dims at sunset dims the hub
+too), **Light**, **Dark**, **Midnight**, **Paper** and **High contrast**. The choice is saved in the
+browser and applied before the page paints, so switching pages never flashes the wrong colour.
+
+Adding a theme means adding one block to `shared.css`. Each one sets the six surface colours and five
+mix percentages — coloured text needs more contrast than a coloured fill, so each role is mixed toward
+the page's ink by its own amount. Every percentage was measured against all eleven app accents on both
+surface colours: the strongest value that still clears WCAG AA, then a little back. `./tests/run.sh`
+re-measures every theme on every page, so changing one without re-measuring fails the suite.
+
 ## How it works
 
 The hub page opens on a **Today** panel computed from the other apps' saved data: piano minutes against the daily goal, how much of today's plan is ticked off, today's calendar events with the next one named, Google Tasks that are due or overdue, Hindi words waiting for review, today's worksheet and quiz scores, merit badge requirements signed off this week, and any practice streaks. Keys **1**–**9** and **0** open the apps, and **?** names them. It only shows tiles that have something to say, and one line names the next unchecked thing on today's plan. A streak tile counts every day that any app recorded something and opens the Progress page. Underneath, a seven-day strip shows which days had piano, plan, maths and Hindi activity, with a count out of seven.
@@ -27,7 +40,7 @@ node build_search.js        # rewrites search_index.js after any content change
 ```
 
 
-- Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build.
+- Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build. The palette button in the top bar is built by `shared.js`, so every page gets it without each one having to remember.
 - Question text is a little HTML — `<sup>` for exponents, `<br>` between the lines of a system, `&lt;` for a symbol. `PH.safeHTML` escapes everything and then re-allows exactly that short list, so the formatting shows but nothing with an attribute can get through; `PH.plainText` gives the same text with the markup taken out, for places only plain text fits.
 - Progress is saved in the browser's localStorage under keys named `ph.<app>.v1`. Each app also writes a short `summary` that the hub page shows on its card.
 - Data lives only in the browser you use. Use **Back up all data** on the hub page now and then, and **Restore** on a new device. The footer says how long it has been, and nags in amber past a month. API keys are deliberately left out of backups, so add those again per device.

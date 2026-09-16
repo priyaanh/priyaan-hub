@@ -93,7 +93,112 @@ window.PH = (function () {
     setTimeout(function () { a.remove(); }, 0);
     return a.href;
   }
-  return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, safeHTML, plainText, uid, toast, download, pickFile, rng, openChatGPT, chatGPTUrl };
+  /* ---- themes ----------------------------------------------------------------------------------
+     One stored choice for the whole site. "system" follows the device and keeps following it, so a
+     phone that dims at sunset dims the hub too. Everything else is resolved once and pinned. */
+  var THEMES = [
+    { id: 'system',   name: 'Match my device', emoji: '🌗' },
+    { id: 'light',    name: 'Light',           emoji: '☀️' },
+    { id: 'dark',     name: 'Dark',            emoji: '🌙' },
+    { id: 'midnight', name: 'Midnight',        emoji: '🌌' },
+    { id: 'paper',    name: 'Paper',           emoji: '📜' },
+    { id: 'contrast', name: 'High contrast',   emoji: '◐' }
+  ];
+  var THEME_KEY = 'ph.theme';
+  function themeChoice() {
+    try { var v = localStorage.getItem(THEME_KEY); return THEMES.some(function (t) { return t.id === v; }) ? v : 'system'; }
+    catch (e) { return 'system'; }
+  }
+  function prefersDark() {
+    try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return false; }
+  }
+  function applyTheme(choice) {
+    var resolved = choice === 'system' ? (prefersDark() ? 'dark' : 'light') : choice;
+    document.documentElement.setAttribute('data-theme', resolved);
+    return resolved;
+  }
+  function setTheme(choice) {
+    if (!THEMES.some(function (t) { return t.id === choice; })) choice = 'system';
+    try { localStorage.setItem(THEME_KEY, choice); } catch (e) { /* a private window still themes this visit */ }
+    applyTheme(choice);
+    document.dispatchEvent(new CustomEvent('ph:theme', { detail: { choice: choice } }));
+  }
+  applyTheme(themeChoice());
+  /* keep following the device while the choice is "system" */
+  try {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function () { if (themeChoice() === 'system') applyTheme('system'); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+  } catch (e) { /* older browser: the page is still themed, it just will not follow along */ }
+  /* another tab changed it */
+  window.addEventListener('storage', function (e) { if (e.key === THEME_KEY) applyTheme(themeChoice()); });
+
+  return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, safeHTML, plainText, uid, toast, download, pickFile, rng, openChatGPT, chatGPTUrl,
+    THEMES: THEMES, themeChoice: themeChoice, setTheme: setTheme };
+})();
+
+/* A palette button in every page's top bar. Built here rather than in each page so all twelve get it,
+   and so the markup stays in one place. */
+(function () {
+  var bar = document.querySelector('.topbar .inner');
+  if (!bar || document.getElementById('themeBtn')) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'theme-wrap no-print';
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-sm btn-icon';
+  btn.id = 'themeBtn';
+  btn.setAttribute('aria-haspopup', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.title = 'Change the colours';
+  var menu = document.createElement('div');
+  menu.className = 'theme-menu';
+  menu.id = 'themeMenu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'Colour theme');
+
+  function label() {
+    var cur = PH.themeChoice();
+    var t = PH.THEMES.filter(function (x) { return x.id === cur; })[0] || PH.THEMES[0];
+    btn.textContent = t.emoji;
+    btn.setAttribute('aria-label', 'Colour theme: ' + t.name + '. Change it');
+  }
+  function draw() {
+    var cur = PH.themeChoice();
+    menu.innerHTML = PH.THEMES.map(function (t) {
+      return '<button type="button" role="menuitemradio" class="theme-opt' + (t.id === cur ? ' on' : '') + '"' +
+        ' data-theme-id="' + t.id + '" aria-checked="' + (t.id === cur ? 'true' : 'false') + '">' +
+        '<span class="sw" aria-hidden="true" data-swatch="' + t.id + '"></span>' +
+        '<span class="nm">' + PH.esc(t.name) + '</span>' +
+        '<span class="tick" aria-hidden="true">' + (t.id === cur ? '✓' : '') + '</span></button>';
+    }).join('');
+    label();
+  }
+  function open(yes) {
+    menu.hidden = !yes;
+    btn.setAttribute('aria-expanded', yes ? 'true' : 'false');
+    if (yes) { draw(); var first = menu.querySelector('.theme-opt.on') || menu.querySelector('.theme-opt'); if (first) first.focus(); }
+  }
+  btn.addEventListener('click', function (e) { e.stopPropagation(); open(menu.hidden); });
+  menu.addEventListener('click', function (e) {
+    var opt = e.target.closest('[data-theme-id]');
+    if (!opt) return;
+    PH.setTheme(opt.getAttribute('data-theme-id'));
+    draw();
+    open(false);
+    btn.focus();
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('.theme-wrap')) open(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
+  });
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+  var spacer = bar.querySelector('.spacer');
+  if (spacer && spacer.nextSibling) bar.insertBefore(wrap, spacer.nextSibling);
+  else bar.appendChild(wrap);
+  draw();
 })();
 
 /* Offline support on the hosted site: register the service worker (sw.js) and add the web-app manifest + iOS icon so the

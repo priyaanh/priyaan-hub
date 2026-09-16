@@ -22,7 +22,7 @@ for page in index piano badges math quizzes hindi schedule calendar ai python pr
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub search progress review dates free ai gradesheet python tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark hostile offline)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub search progress review theme dates free ai gradesheet python tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark contrast-midnight contrast-paper contrast-contrast hostile offline)
 
 # The offline suite needs a real origin: service workers do not run from file://.
 serve() {
@@ -33,7 +33,12 @@ serve() {
   for _ in $(seq 1 50); do curl -sf "http://127.0.0.1:$PORT/shared.js" >/dev/null && break; done
 }
 for name in "${want[@]}"; do
-  suite="tests/${name%-dark}.html"
+  # contrast-<theme> runs the contrast suite again with that theme chosen
+  case "$name" in
+    contrast-dark)  suite="tests/contrast.html"; query="" ;;
+    contrast-*)     suite="tests/contrast.html"; query="?theme=${name#contrast-}" ;;
+    *)              suite="tests/$name.html";    query="" ;;
+  esac
   [ -f "$suite" ] || { echo "▶ $name — no such suite"; fail=1; continue; }
   # Every suite runs in REAL time through the DevTools driver. Under --virtual-time-budget the clock races
   # ahead: waits for the next page expire instantly, colours are read mid-transition, and suites end early
@@ -44,7 +49,7 @@ for name in "${want[@]}"; do
     CHROME="$CHROME" node tests/cdp.js "http://127.0.0.1:$PORT/$suite" 60000 "RESULTS" >"$TMP/$name.err" 2>&1
     kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null
   else
-    CHROME="$CHROME" node tests/cdp.js "file://$ROOT/$suite" 180000 "RESULTS" $darkflag >"$TMP/$name.err" 2>&1
+    CHROME="$CHROME" node tests/cdp.js "file://$ROOT/$suite$query" 180000 "RESULTS" $darkflag >"$TMP/$name.err" 2>&1
   fi
   # each suite ends with "RESULTS <n> failed of <m>" — trust that over counting console lines, which
   # Chrome can drop when several runs are in flight.

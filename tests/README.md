@@ -43,7 +43,8 @@ CHROME=/path/to/chrome ./tests/run.sh
 | `metronome.html` | the metronome: tempo clamping and memory, tempo names, beats per bar, tap tempo, start/stop, the keyboard shortcuts |
 | `a11y.html` | every page: one h1, no skipped heading levels, named controls, labelled inputs, alt text, titled iframes, no positive tabindex, no duplicate ids |
 | `mobile.html` | every page at 390px and 320px: the document never scrolls sideways, and topbar buttons stay tappable |
-| `contrast.html` | every page, light and dark: text meets WCAG AA against the background actually behind it (4.5:1, or 3:1 for large text) |
+| `theme.html` | the palette button: it is on every page, a choice applies and sticks, it reaches the next page before anything paints, "match my device" resolves and keeps following, a junk value falls back, and the keyboard works |
+| `contrast.html` | every page in light and dark, and the busiest six in Midnight, Paper and High contrast: text meets WCAG AA against the background actually behind it (4.5:1, or 3:1 for large text). Run once per theme by `run.sh` as `contrast`, `contrast-dark`, `contrast-midnight`, `contrast-paper`, `contrast-contrast` |
 | `python.html` | the Python app: topic choice, a round end to end, right and wrong answers, the keyboard, saved rounds |
 | `gradesheet.html` | the by-grade worksheet maker: grade and topic choice, seeds, instant generation, printing |
 | `hostile.html` | every page seeded with script payloads in every text field, then with wrong-typed values, then with corrupt JSON: nothing executes, payloads show as text, pages still render |
