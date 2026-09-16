@@ -232,6 +232,14 @@ window.CPM_QUIZZES = (function () {
 
   var POLYGONS = [[3, 'triangle'], [4, 'quadrilateral'], [5, 'pentagon'], [6, 'hexagon'], [7, 'heptagon'], [8, 'octagon'], [9, 'nonagon'], [10, 'decagon'], [12, 'dodecagon']];
   function polyName(n) { for (var i = 0; i < POLYGONS.length; i++) if (POLYGONS[i][0] === n) return POLYGONS[i][1]; return n + '-gon'; }
+  /** "an 8", "a 6" — said aloud, eight, eleven and eighteen start with a vowel. */
+  function aNum(n) { return (n === 8 || n === 11 || n === 18 ? 'An ' : 'A ') + n; }
+  /** "an octagon", "a hexagon", "an 8-gon" — said aloud, eight and eighteen start with a vowel. */
+  function aPoly(n) {
+    var name = polyName(n);
+    var vowel = /^[aeiou]/i.test(name) || /^(8|11|18)\b/.test(name);
+    return (vowel ? 'an ' : 'a ') + name;
+  }
 
   var lessons = [];
 
@@ -283,12 +291,13 @@ window.CPM_QUIZZES = (function () {
         ['Parallelogram', 'Trapezoid', 'Kite', 'Rectangle'], 0, 'That is the definition of a parallelogram.'),
       gen(function (rnd) {
         var p = pick(rnd, POLYGONS.slice(2));
-        return num('How many sides does a ' + p[1] + ' have?', p[0], '', 'A ' + p[1] + ' has ' + p[0] + ' sides.', p[0] <= 12 ? SHAPES.regular(p[0]) : null);
+        var an = aPoly(p[0]);
+        return num('How many sides does ' + an + ' have?', p[0], '', an.charAt(0).toUpperCase() + an.slice(1) + ' has ' + p[0] + ' sides.', p[0] <= 12 ? SHAPES.regular(p[0]) : null);
       }),
       gen(function (rnd) {
         var p = pick(rnd, POLYGONS.slice(2));
         var c = choices4(rnd, p[1], POLYGONS.map(function (x) { return x[1]; }));
-        return mc('What is the name of a polygon with ' + p[0] + ' sides?', c.choices, 0, 'A ' + p[0] + '-sided polygon is a ' + p[1] + '.');
+        return mc('What is the name of a polygon with ' + p[0] + ' sides?', c.choices, 0, aNum(p[0]) + '-sided polygon is ' + aPoly(p[0]) + '.');
       }),
       gen(function (rnd) {
         var n = pick(rnd, [3, 5, 6, 8, 10]);
@@ -317,6 +326,29 @@ window.CPM_QUIZZES = (function () {
         var items = [['Square', SHAPES.square, 4], ['Rectangle', SHAPES.rectangle, 2], ['Rhombus', SHAPES.rhombus, 2], ['Isosceles triangle', SHAPES.isosceles, 1], ['Equilateral triangle', SHAPES.equilateral, 3], ['Parallelogram', SHAPES.parallelogram, 0], ['Kite', SHAPES.kite, 1]];
         var it = pick(rnd, items);
         return num('How many lines of symmetry does this ' + it[0].toLowerCase() + ' have?', it[2], '', it[2] === 0 ? 'A parallelogram that is not a rectangle or rhombus has no line of symmetry (it only has rotation symmetry).' : 'This ' + it[0].toLowerCase() + ' has ' + plural(it[2], 'line') + ' of symmetry.', it[1]());
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var n = ri(rnd, 4, 10), d = n * (n - 3) / 2;
+        return num('How many diagonals does ' + aPoly(n) + ' have?', d, '',
+          'Every one of the ' + n + ' vertices joins to ' + (n - 3) + ' others that are not next to it, and that counts each diagonal twice: ' + n + ' × ' + (n - 3) + ' ÷ 2 = ' + d + '.');
+      }),
+      gen(function (rnd) {
+        var n = pick(rnd, [3, 4, 5, 6, 8, 9, 10, 12]), what = pick(rnd, ['sides', 'vertices', 'angles']);
+        return num('How many ' + what + ' does ' + aPoly(n) + ' have?', n, '',
+          aPoly(n).charAt(0).toUpperCase() + aPoly(n).slice(1) + ' has ' + n + ' sides, and a polygon always has as many vertices and angles as sides.');
+      }),
+      gen(function (rnd) {
+        var kind = pick(rnd, ['equilateral', 'isosceles', 'scalene']), a, b, c;
+        if (kind === 'equilateral') { a = b = c = ri(rnd, 4, 12); }
+        else if (kind === 'isosceles') { a = b = ri(rnd, 6, 12); c = ri(rnd, 3, 2 * a - 1); if (c === a) c = a - 1; }
+        else { a = ri(rnd, 5, 9); b = a + ri(rnd, 1, 3); c = b + 1; }
+        var sides = shuffle(rnd, [a, b, c]);
+        var correct = kind.charAt(0).toUpperCase() + kind.slice(1);
+        var others = ['Equilateral', 'Isosceles', 'Scalene'].filter(function (x) { return x !== correct; });
+        var why = { equilateral: 'All three sides are the same length.', isosceles: 'Exactly two sides are the same length.', scalene: 'No two sides are the same length.' };
+        return mc('A triangle has sides of ' + sides[0] + ', ' + sides[1] + ' and ' + sides[2] + ' units. Classify it by its sides.',
+          [correct].concat(others, ['Right']), 0, why[kind]);
       })
     ]
   });
@@ -390,6 +422,24 @@ window.CPM_QUIZZES = (function () {
         ];
         var f = pick(rnd, facts);
         return mc('Jamal says his shape is ' + f[0] + '. Which statement <em>must</em> be true about it?', [f[1]].concat(f[2]), 0, 'For ' + f[0] + ': ' + f[1].toLowerCase() + '. The other statements are not guaranteed.');
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var n = ri(rnd, 3, 12), sum = (n - 2) * 180;
+        return num('What do the interior angles of ' + aPoly(n) + ' add up to?', sum, '°',
+          'The interior angles of a shape with n sides add to (n − 2) × 180°, so (' + n + ' − 2) × 180° = ' + sum + '°.');
+      }),
+      gen(function (rnd) {
+        var n = pick(rnd, [3, 4, 5, 6, 8, 9, 10, 12]), each = (n - 2) * 180 / n;
+        return num('Each interior angle of a regular ' + polyName(n) + ' measures how many degrees?', each, '°',
+          'The angles add to (' + n + ' − 2) × 180° = ' + ((n - 2) * 180) + '°, shared equally between ' + n + ' of them: ' + each + '°.', SHAPES.regular(n));
+      }),
+      gen(function (rnd) {
+        var n = pick(rnd, [3, 4, 5, 6, 8, 9, 10, 12, 15, 18]), ext = 360 / n;
+        if (rnd() < 0.5) return num('Each exterior angle of a regular ' + polyName(n) + ' measures how many degrees?', ext, '°',
+          'The exterior angles of any polygon add to 360°, so each of the ' + n + ' is 360° ÷ ' + n + ' = ' + ext + '°.');
+        return num('Each exterior angle of a regular polygon measures ' + ext + '°. How many sides does it have?', n, '',
+          'Exterior angles always add to 360°, so the number of sides is 360 ÷ ' + ext + ' = ' + n + '.');
       })
     ]
   });
@@ -467,6 +517,26 @@ window.CPM_QUIZZES = (function () {
         return mc('A trend line for ' + ctx[0] + ' is ' + ctx[3] + '. What does the slope ' + ctx[4] + ' mean?',
           ['About ' + ctx[4] + ' more ' + ctx[1] + ' for each additional ' + ctx[2], 'The starting value is ' + ctx[4] + ' ' + ctx[1], 'There were ' + ctx[4] + ' data points', 'y is always ' + ctx[4] + ' times x'], 0,
           'Slope is the rate of change: ' + ctx[4] + ' ' + ctx[1] + ' per ' + ctx[2] + '. The ' + ctx[5] + ' is the starting value (y-intercept).');
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var r = ri(rnd, 2, 6), b = ri(rnd, 2, 6), g = ri(rnd, 2, 5);
+        var total = r + b + g, k = ri(rnd, 3, 9), trials = total * k;
+        var want = pick(rnd, [['red', r], ['blue', b], ['green', g]]);
+        return num('A bag holds ' + r + ' red, ' + b + ' blue and ' + g + ' green marbles. One is drawn and put back, ' + trials + ' times over. About how many draws would you expect to be ' + want[0] + '?', k * want[1], '',
+          'P(' + want[0] + ') is ' + want[1] + ' out of ' + total + ', and ' + trials + ' × ' + want[1] + ' ÷ ' + total + ' = ' + (k * want[1]) + '.');
+      }),
+      gen(function (rnd) {
+        var faces = pick(rnd, [6, 8, 10, 12]), k = ri(rnd, 4, 12), rolls = faces * k, face = ri(rnd, 1, faces);
+        return num(aNum(faces) + '-sided die is fair and is rolled ' + rolls + ' times. About how many times would you expect to roll ' + aNum(face) + '?', k, '',
+          'Every face is equally likely, one chance in ' + faces + ', so ' + rolls + ' ÷ ' + faces + ' = ' + k + '.');
+      }),
+      gen(function (rnd) {
+        var out = ri(rnd, 12, 40), tot = out * ri(rnd, 4, 9), part = ri(rnd, 2, 5), whole = ri(rnd, 6, 10);
+        if (part >= whole) part = whole - 2;
+        var sample = whole * ri(rnd, 5, 15), hits = sample / whole * part;
+        return num('In a sample of ' + sample + ' students, ' + hits + ' walk to school. At that rate, how many of the school’s ' + (sample * 4) + ' students would you expect to walk?', hits * 4, '',
+          hits + ' out of ' + sample + ' is the same rate as ' + (hits * 4) + ' out of ' + (sample * 4) + '.');
       })
     ]
   });
@@ -532,6 +602,22 @@ window.CPM_QUIZZES = (function () {
         var c = choices4(rnd, a1 * n * n, [a1 * n, a1 + n * n, a1 * n * 2, a1 * (n + 1) * (n + 1)]);
         return mc('Figure 1 has area ' + a1 + ' sq units, Figure 2 has area ' + (a1 * 4) + ', Figure 3 has area ' + (a1 * 9) + '. What is the area of Figure ' + n + '?', c.choices, 0,
           'Area = ' + a1 + ' × n²: ' + a1 + ' × ' + n + '² = ' + a1 + ' × ' + (n * n) + ' = ' + (a1 * n * n) + '.');
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var a = ri(rnd, 2, 6), b = ri(rnd, 2, 9), k = ri(rnd, 5, 12);
+        return num('Figure 1 of a tile pattern has a perimeter of ' + (a + b) + ' units, Figure 2 has ' + (2 * a + b) + ', and Figure 3 has ' + (3 * a + b) + '. What is the perimeter of Figure ' + k + '?', a * k + b, ' units',
+          'Each figure adds ' + a + ' units, so the rule is ' + a + 'n + ' + b + '. Figure ' + k + ' gives ' + a + ' × ' + k + ' + ' + b + ' = ' + (a * k + b) + '.');
+      }),
+      gen(function (rnd) {
+        var a = ri(rnd, 2, 6), b = ri(rnd, 2, 9), k = ri(rnd, 6, 15);
+        return num('A tile pattern grows by ' + a + ' units every figure, and Figure 1 has a perimeter of ' + (a + b) + ' units. Which figure has a perimeter of ' + (a * k + b) + ' units?', k, '',
+          'The rule is ' + a + 'n + ' + b + '. Solving ' + a + 'n + ' + b + ' = ' + (a * k + b) + ' gives n = ' + k + '.');
+      }),
+      gen(function (rnd) {
+        var a1 = ri(rnd, 2, 5), k = ri(rnd, 4, 9);
+        return num('Figure 1 of a tile pattern has an area of ' + a1 + ' square units, and Figure n is Figure 1 enlarged by a factor of n. What is the area of Figure ' + k + '?', a1 * k * k, ' square units',
+          'Lengths grow by ' + k + ', so areas grow by ' + k + ' × ' + k + ' = ' + (k * k) + '. The area is ' + a1 + ' × ' + (k * k) + ' = ' + (a1 * k * k) + '.');
       })
     ]
   });
@@ -614,6 +700,24 @@ window.CPM_QUIZZES = (function () {
       gen(function (rnd) {
         var a = ri(rnd, 1, 6), x = ri(rnd, 2, 9);
         return num('A rectangle has dimensions x and (x + ' + a + '). If x = ' + x + ', what is its area?', x * (x + a), 'sq units', x + ' × (' + x + ' + ' + a + ') = ' + x + ' × ' + (x + a) + ' = ' + (x * (x + a)) + '.');
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var a = ri(rnd, 2, 7), b = ri(rnd, 2, 7), sum = sumForm(a, b);
+        return txt('Write the area of a rectangle with dimensions (x + ' + a + ') and (x + ' + b + ') as a sum.', sum, [pretty(sum)],
+          'x · x = x², x · ' + b + ' = ' + b + 'x, ' + a + ' · x = ' + a + 'x and ' + a + ' · ' + b + ' = ' + (a * b) + '. Altogether that is ' + pretty(sum) + '.',
+          genRect(['x', String(b)], ['x', String(a)], [['x²', b + 'x'], [a + 'x', String(a * b)]]));
+      }),
+      gen(function (rnd) {
+        var c = ri(rnd, 2, 9), b = ri(rnd, 2, 9);
+        return txt('Write ' + c + '(x + ' + b + ') as a sum.', c + 'x+' + (c * b), [(c * b) + '+' + c + 'x'],
+          'Distribute across both parts: ' + c + ' · x = ' + c + 'x and ' + c + ' · ' + b + ' = ' + (c * b) + '.');
+      }),
+      gen(function (rnd) {
+        var a = ri(rnd, 2, 6), b = ri(rnd, 2, 6);
+        if (a === b) b = a + 1;
+        return txt('Write x<sup>2</sup> + ' + (a + b) + 'x + ' + (a * b) + ' as a product of two factors.', '(x+' + a + ')(x+' + b + ')', ['(x+' + b + ')(x+' + a + ')'],
+          'Look for two numbers that multiply to ' + (a * b) + ' and add to ' + (a + b) + ': they are ' + a + ' and ' + b + '.');
       })
     ]
   });
@@ -685,6 +789,25 @@ window.CPM_QUIZZES = (function () {
         var ans = (up ? 'Minimum' : 'Maximum') + ' at (' + h + ', ' + k + ')';
         return mc('Describe the highest or lowest point of this graph.', [ans, (up ? 'Maximum' : 'Minimum') + ' at (' + h + ', ' + k + ')', (up ? 'Minimum' : 'Maximum') + ' at (' + h + ', ' + (k + 2) + ')', 'It has no maximum or minimum'], 0,
           'The vertex is at (' + h + ', ' + k + '). The parabola opens ' + (up ? 'up, so that point is a minimum.' : 'down, so that point is a maximum.'), svg);
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var m = pick(rnd, [-4, -3, -2, 2, 3, 4]), b = ri(rnd, 2, 12) * (rnd() < 0.5 ? 1 : -1);
+        var line = 'y = ' + m + 'x ' + (b < 0 ? '− ' + (-b) : '+ ' + b);
+        return num('At what value of y does the line ' + line + ' cross the y-axis?', b, '',
+          'A line meets the y-axis where x = 0, and putting x = 0 into ' + line + ' leaves y = ' + b + '.');
+      }),
+      gen(function (rnd) {
+        var m = pick(rnd, [-4, -3, -2, 2, 3, 4]), x0 = ri(rnd, 1, 6) * (rnd() < 0.5 ? 1 : -1), b = -m * x0;
+        var line = 'y = ' + m + 'x ' + (b < 0 ? '− ' + (-b) : '+ ' + b);
+        return num('Where does the line ' + line + ' cross the x-axis? Give the x-value.', x0, '',
+          'Set y to 0 and solve ' + m + 'x ' + (b < 0 ? '− ' + (-b) : '+ ' + b) + ' = 0, which gives x = ' + x0 + '.');
+      }),
+      gen(function (rnd) {
+        var up = rnd() < 0.5, m = (up ? 1 : -1) * ri(rnd, 2, 5);
+        return mc('A line has a slope of ' + m + '. Read left to right, what does the graph do?',
+          [up ? 'It goes up' : 'It goes down', up ? 'It goes down' : 'It goes up', 'It stays flat', 'It goes up and then back down'], 0,
+          'A ' + (up ? 'positive' : 'negative') + ' slope means y ' + (up ? 'rises' : 'falls') + ' as x increases. A flat line has slope 0.');
       })
     ]
   });
@@ -748,6 +871,31 @@ window.CPM_QUIZZES = (function () {
       gen(function (rnd) {
         var a = ri(rnd, 80, 140), b = ri(rnd, 60, 120), c = 360 - a - b;
         return num('Three angles meet around a point. Two of them measure ' + deg(a) + ' and ' + deg(b) + '. What is the third angle?', c, '°', 'Angles around a point add to 360°: 360 − ' + a + ' − ' + b + ' = ' + c + '°.');
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var x = ri(rnd, 15, 75);
+        return num('Two angles are complementary. One measures ' + deg(x) + '. What does the other measure?', 90 - x, '°',
+          'Complementary angles add to 90°, so the other is 90° − ' + x + '° = ' + (90 - x) + '°.');
+      }),
+      gen(function (rnd) {
+        var x = ri(rnd, 25, 155);
+        return num('Two angles are supplementary. One measures ' + deg(x) + '. What does the other measure?', 180 - x, '°',
+          'Supplementary angles add to 180°, so the other is 180° − ' + x + '° = ' + (180 - x) + '°.');
+      }),
+      gen(function (rnd) {
+        var kind = pick(rnd, ['complementary', 'supplementary', 'vertical']), a, b;
+        /* 45° + 45° is both complementary and equal, and 90° + 90° is both supplementary and equal,
+           so those two are kept out: a question must have exactly one right answer. */
+        if (kind === 'complementary') { a = ri(rnd, 20, 70); if (a === 45) a = 40; b = 90 - a; }
+        else if (kind === 'supplementary') { a = ri(rnd, 30, 150); if (a === 90) a = 80; b = 180 - a; }
+        else { a = ri(rnd, 25, 155); if (a === 45 || a === 90) a = 65; b = a; }
+        var correct = kind.charAt(0).toUpperCase() + kind.slice(1) + ' angles';
+        var wrong = ['Complementary angles', 'Supplementary angles', 'Vertical angles'].filter(function (t) { return t !== correct; });
+        return mc('One angle measures ' + deg(a) + ' and another measures ' + deg(b) + '. What could this pair be?',
+          [correct].concat(wrong, ['Angles that add to 360°']), 0,
+          kind === 'vertical' ? 'They are equal, and equal angles across an intersection are vertical angles.'
+                              : 'They add to ' + (a + b) + '°, which is what makes a pair ' + kind + '.');
       })
     ]
   });
@@ -817,6 +965,27 @@ window.CPM_QUIZZES = (function () {
         var name = pick(rnd, ['Corresponding angles', 'Alternate interior angles', 'Alternate exterior angles', 'Same-side interior angles', 'Vertical angles']);
         var rel = name === 'Same-side interior angles' ? 'Supplementary (they add to 180°)' : 'Congruent (equal)';
         return mc('Two parallel lines are cut by a transversal. ' + name + ' are…', [rel, rel[0] === 'C' ? 'Supplementary (they add to 180°)' : 'Congruent (equal)', 'Complementary (they add to 90°)', 'Always right angles'], 0, pairExplain(name));
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var x = ri(rnd, 35, 145), rel = pick(rnd, ['corresponding', 'alternate interior', 'alternate exterior', 'co-interior']);
+        var ans = rel === 'co-interior' ? 180 - x : x;
+        return num('Two parallel lines are cut by a transversal, and one angle measures ' + deg(x) + '. What is its ' + rel + ' angle?', ans, '°',
+          rel === 'co-interior'
+            ? 'Co-interior angles sit on the same side between the parallels and are supplementary: 180° − ' + x + '° = ' + ans + '°.'
+            : rel.charAt(0).toUpperCase() + rel.slice(1) + ' angles are equal when the lines are parallel, so it is ' + ans + '° too.');
+      }),
+      gen(function (rnd) {
+        var pairs = [
+          ['on the same side of the transversal, one above each parallel line', 'Corresponding angles'],
+          ['on opposite sides of the transversal, both between the parallel lines', 'Alternate interior angles'],
+          ['on opposite sides of the transversal, both outside the parallel lines', 'Alternate exterior angles'],
+          ['on the same side of the transversal, both between the parallel lines', 'Co-interior angles']
+        ];
+        var p = pick(rnd, pairs);
+        var others = pairs.filter(function (q) { return q[1] !== p[1]; }).map(function (q) { return q[1]; });
+        return mc('Two angles sit ' + p[0] + '. What are they called?', [p[1]].concat(shuffle(rnd, others)), 0,
+          p[1] + ' are the pair that sit ' + p[0] + '.');
       })
     ]
   });
@@ -883,6 +1052,24 @@ window.CPM_QUIZZES = (function () {
         var lab = { 1: exprS(m, c), 8: deg(a) };
         return num('Lines m ∥ n. ∠1 = ' + expr(m, c) + ' and ∠8 = ' + deg(a) + '. Find x. (Hint: ∠1 is vertical to ∠4, and ∠4 corresponds to ∠8.)', x, '',
           '∠1 = ∠4 (vertical) and ∠4 = ∠8 (corresponding), so ∠1 = ∠8: ' + m + 'x + ' + c + ' = ' + a + ', x = ' + x + '.', trans(lab));
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var x = ri(rnd, 3, 10), c = ri(rnd, 2, 5), a = c + ri(rnd, 1, 3), b = ri(rnd, 2, 12);
+        var d = (a - c) * x + b;
+        return num('Two parallel lines are cut by a transversal. A pair of alternate interior angles measure (' + a + 'x + ' + b + ')° and (' + c + 'x + ' + d + ')°. Find x.', x, '',
+          'Alternate interior angles are equal, so ' + a + 'x + ' + b + ' = ' + c + 'x + ' + d + '. That leaves ' + (a - c) + 'x = ' + (d - b) + ', so x = ' + x + '.');
+      }),
+      gen(function (rnd) {
+        var x = ri(rnd, 4, 12), a = ri(rnd, 2, 5), c = ri(rnd, 2, 5);
+        var b = ri(rnd, 5, 30), v1 = a * x + b, v2 = 180 - v1, d = v2 - c * x;
+        return num('Two parallel lines are cut by a transversal. A pair of co-interior angles measure (' + a + 'x + ' + b + ')° and (' + c + 'x + ' + d + ')°. Find x.', x, '',
+          'Co-interior angles are supplementary, so (' + a + 'x + ' + b + ') + (' + c + 'x + ' + d + ') = 180. That gives ' + (a + c) + 'x + ' + (b + d) + ' = 180, so x = ' + x + '.');
+      }),
+      gen(function (rnd) {
+        var x = ri(rnd, 5, 20), a = ri(rnd, 2, 6), b = ri(rnd, 2, 20), v = a * x + b;
+        return num('Two parallel lines are cut by a transversal. One angle measures (' + a + 'x + ' + b + ')° and its corresponding angle measures ' + deg(v) + '. Find x.', x, '',
+          'Corresponding angles are equal, so ' + a + 'x + ' + b + ' = ' + v + '. Subtracting ' + b + ' leaves ' + a + 'x = ' + (v - b) + ', so x = ' + x + '.');
       })
     ]
   });
@@ -959,6 +1146,34 @@ window.CPM_QUIZZES = (function () {
       gen(function (rnd) {
         var a = ri(rnd, 15, 75);
         return num('A right triangle has one acute angle of ' + deg(a) + '. What is the other acute angle?', 90 - a, '°', 'The two acute angles of a right triangle add to 90°: 90 − ' + a + ' = ' + (90 - a) + '°.', tri({ A: deg(a), B: 'x', C: '', ra: true }));
+      }),
+      /* --- more variety, so a second attempt is not a repeat of the first --- */
+      gen(function (rnd) {
+        var a = ri(rnd, 30, 90), b = ri(rnd, 30, 150 - a);
+        return num('Two angles of a triangle measure ' + deg(a) + ' and ' + deg(b) + '. What is the third angle?', 180 - a - b, '°',
+          'The three angles of a triangle add to 180°, so 180° − ' + a + '° − ' + b + '° = ' + (180 - a - b) + '°.');
+      }),
+      gen(function (rnd) {
+        var a = ri(rnd, 30, 80), b = ri(rnd, 30, 80);
+        return num('In a triangle, the two angles not next to a particular exterior angle measure ' + deg(a) + ' and ' + deg(b) + '. What does that exterior angle measure?', a + b, '°',
+          'An exterior angle equals the two remote interior angles added together: ' + a + '° + ' + b + '° = ' + (a + b) + '°.');
+      }),
+      gen(function (rnd) {
+        var apex = ri(rnd, 10, 80) * 2;
+        return num('An isosceles triangle has an apex angle of ' + deg(apex) + '. What does each base angle measure?', (180 - apex) / 2, '°',
+          'The other 180° − ' + apex + '° = ' + (180 - apex) + '° is shared equally between the two base angles, giving ' + ((180 - apex) / 2) + '° each.', SHAPES.isosceles());
+      }),
+      gen(function (rnd) {
+        var works = rnd() < 0.5, a, b, c;
+        if (works) { a = ri(rnd, 5, 12); b = ri(rnd, 5, 12); c = ri(rnd, Math.abs(a - b) + 1, a + b - 1); }
+        else { a = ri(rnd, 3, 8); b = ri(rnd, 3, 8); c = a + b + ri(rnd, 1, 5); }
+        return mc('Can a triangle have sides of ' + a + ', ' + b + ' and ' + c + ' units?',
+          works
+            ? ['Yes, because every pair of sides adds to more than the third', 'No, because the two shorter sides cannot reach', 'Only if one angle is a right angle', 'Only if the triangle is isosceles']
+            : ['No, because ' + a + ' and ' + b + ' add to ' + (a + b) + ', which does not reach ' + c, 'Yes, because any three lengths make a triangle', 'Only if one angle is a right angle', 'Only if the triangle is isosceles'],
+          0,
+          works ? 'Each pair of sides adds to more than the third, so the sides meet and the triangle closes.'
+                : a + ' + ' + b + ' = ' + (a + b) + ', which is not more than ' + c + ', so the two shorter sides never meet.');
       })
     ]
   });

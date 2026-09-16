@@ -2,6 +2,12 @@
 
 Two kinds, both run by `./tests/run.sh`:
 
+- **`../test_quizbank.js`** — the CPM question bank, in Node. Two phases. The first exercises every
+  question, and every `gen` template over 300 seeds, looking for what a reader would notice: a coefficient
+  of 1 written out, two signs in a row, multiplying by 1, choices that repeat, a template that never
+  varies, or a marking rule that rejects the question's own answer. The second re-derives the answer from
+  the *wording* — reading the numbers out of the question the way a child would and working it out
+  independently of the code that produced it — for every numeric question a rule can parse.
 - **`../test_im1.js`**, **`../test_grades.js`** and **`../test_pyquiz.js`** — the generators, in Node. The Python one executes every snippet with python3 and compares the real output with the claimed answer. Generates 1,260 problems per topic per level and
   checks them: no junk in the text, deterministic for a seed, no duplicates in a sheet, and, where the
   question can be re-solved, that the answer is actually right (substituting back into equations, systems
