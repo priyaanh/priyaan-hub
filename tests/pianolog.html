@@ -21,9 +21,15 @@ f.addEventListener('load', async () => {
   try {
     const D = w.PHPianoDebug;
     ok('debug hook available', !!D && typeof D.practiceLogHTML === 'function');
+    /* the log is headed with whatever name this hub is set to, not one baked into the page */
+    const nameSnap = w.localStorage.getItem('ph.name');
+    w.localStorage.setItem('ph.name', 'Asha Example');
     const html = D.practiceLogHTML(1);
     ok('complete document', /^<!DOCTYPE html>/.test(html) && /<\/html>$/.test(html));
-    ok('names the student', /Priyaan Haldiya/.test(html));
+    ok('names the student', /Asha Example/.test(html), 'the saved name should head the log');
+    const noName = (w.localStorage.removeItem('ph.name'), D.practiceLogHTML(1));
+    ok('and leaves the heading blank rather than naming someone else', !/Asha Example/.test(noName));
+    if (nameSnap == null) w.localStorage.removeItem('ph.name'); else w.localStorage.setItem('ph.name', nameSnap);
     ok('landscape page for a month of columns', /size:letter landscape/.test(html));
     ok('rows for the pieces practised', /Study in C/.test(html) && /Hanon No\. 12/.test(html));
     ok('leaves out pieces outside the window', !/Old piece/.test(html));

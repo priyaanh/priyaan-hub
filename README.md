@@ -1,6 +1,6 @@
 # Priyaan's Hub
 
-Eleven small practice apps for Priyaan, in one folder, with no build step. Open `index.html` in a browser, or visit the GitHub Pages site once it is enabled.
+Twelve small practice apps, with no build step, in one folder, with no build step. Open `index.html` in a browser, or visit the GitHub Pages site once it is enabled.
 
 | App | File | What it does |
 | --- | --- | --- |
@@ -12,9 +12,35 @@ Eleven small practice apps for Priyaan, in one folder, with no build step. Open 
 | 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day, plus any Google Tasks that are due or overdue. |
 | 🐍 Python Practice | `python.html` | Short rounds of "what does this print?" on eleven topics: types, strings, lists, loops, if/elif/else, functions, dictionaries, f-strings, list comprehensions, tuples and sets, and errors. A quick reference sits under the topic picker. Multiple choice or typed, with an explanation after each one, a review of what you missed, and history. Questions are generated on the device. |
 | ✏️ Make Practice | `ai.html` | **By grade:** pick Grade 6, 7 or 8, choose topics, and get a printable worksheet with an answer key immediately - generated on the device, no key, no internet. **From a PDF:** turn a chapter or study guide into fresh problems or a quiz with the free ChatGPT (copy a prompt, paste the reply back) or, with an API key, with Claude or ChatGPT directly. |
+| 👤 Profile | `profile.html` | Your name, the colour theme, and a plain list of everything the hub has saved — what each app holds, how much space it takes, and a way to forget any one of them. Save or load a copy as a file, or connect a private GitHub gist so a second device can see the same hub. |
 | 🎯 Review Mistakes | `review.html` | Every question missed anywhere on the site — lesson quizzes, maths worksheets, Python rounds, generated practice sets — collected in one place and asked again. Get one right and it comes off the list; miss it again later and it comes back. Nothing is stored but the list of what has since been put right: each question is rebuilt from the seed it was generated with. |
 | 📈 Progress | `progress.html` | Every app's history in one picture: an activity calendar going back up to a year, accuracy over time across quizzes, worksheets and Python rounds, piano minutes by week against the goal, Hindi words split across the five review boxes, merit badges by status, and records like the longest streak and the best round. Reads the other apps and writes nothing back. |
 | 🗓️ Calendar &amp; Tasks | `calendar.html` | Google Calendar embedded (week / month / agenda) for as many Google accounts as you add, one-tap "add event" buttons for each activity, and Google Tasks: tick items off, add tasks with due dates, grouped into Overdue / Today / Coming up. |
+
+## Whose hub it is
+
+No name is written into any page. They all say **Practice Hub**, and whatever name is saved in the
+browser replaces it: the heading on the hub, the tab title, the footer of every printed worksheet and
+quiz, the heading on the piano practice log, and the name the “Make Practice” prompt uses. The hub asks
+once on first use and never again; **Profile** changes it later. With no name set, everything still
+reads sensibly — the greeting is just “Good morning 👋” and the printed name line is left blank to fill
+in by hand.
+
+## Keeping it on more than one device
+
+Everything lives in the browser, so a second device starts empty and a cleared browser starts over.
+**Profile** has two answers to that.
+
+**A file.** *Save a copy* downloads everything as JSON; *Load a copy* puts it back. Nothing leaves the
+device.
+
+**A private gist.** Connecting one gives the hub somewhere of its own to keep a copy. It needs a GitHub
+fine-grained token with **Gists: read and write** and nothing else; the page walks through making one.
+Press *Save to the gist* here, then *Load from the gist* on the other device. The gist is private, it
+costs nothing, and the data stays in an account you already own. The token is stored the way an API key
+is — on that device only, left out of every backup, and never written into the gist itself. One rule in
+`shared.js` decides what counts as a secret, so the backup file, the gist and the profile page can't
+disagree about it.
 
 ## Themes
 

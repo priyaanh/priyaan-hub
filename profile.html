@@ -1,0 +1,420 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile · Practice Hub</title>
+<meta name="description" content="Your name, the colours, everything this hub has saved, and how to keep it on more than one device.">
+<link rel="stylesheet" href="shared.css">
+<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+main > * + * { margin-top: 1rem; }
+.row2 { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; }
+.row2 .field { flex: 1; min-width: 12rem; }
+.acts { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: 1rem; }
+.acts .grow { flex: 1; }
+/* themes */
+.themes { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.themecard { display: flex; align-items: center; gap: .6rem; padding: .6rem .7rem; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; color: inherit; text-align: left; }
+.themecard:hover { border-color: var(--accent-text); }
+.themecard.on { border-color: var(--accent-text); background: var(--accent-soft); }
+.themecard .chip { width: 30px; height: 22px; border-radius: 5px; flex: none; border: 1px solid var(--border); }
+.themecard .nm { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; }
+.themecard .tick { color: var(--accent-text); font-weight: 700; }
+/* data table */
+.dtable { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.dtable th, .dtable td { text-align: left; padding: .5rem .4rem; border-top: 1px solid var(--border); vertical-align: top; }
+.dtable th { color: var(--muted); font-weight: 600; font-size: .8rem; border-top: 0; }
+.dtable td.num, .dtable th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dtable .what { color: var(--muted); font-size: .82rem; }
+.dtable tr.total td { font-weight: 700; border-top: 2px solid var(--border); }
+.bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-top: .7rem; display: flex; }
+.bar i { display: block; height: 100%; }
+/* sync */
+.steps { margin: .4rem 0 0; padding-left: 1.2rem; font-size: .9rem; line-height: 1.6; }
+.steps li { margin: .25rem 0; }
+.state { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; font-size: .88rem; margin-top: .8rem; }
+.keyrow { display: flex; gap: .5rem; align-items: flex-end; flex-wrap: wrap; }
+.keyrow .field { flex: 1; min-width: 14rem; }
+code.mono { font-family: var(--mono); font-size: .85em; background: var(--surface-2); padding: .05rem .3rem; border-radius: 4px; }
+@media print { .topbar, .no-print { display: none !important; } }
+</style></head>
+<body data-app="profile">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <h1 class="title"><span class="emoji">👤</span><span class="name">Profile</span></h1>
+  <div class="spacer"></div>
+</div></header>
+<main class="container">
+
+  <section class="card" aria-labelledby="h-you">
+    <div class="card-head"><h2 id="h-you">You</h2><span class="small" id="youSub"></span></div>
+    <p class="muted">Your name goes at the top of the hub, on printed worksheets and on the piano practice log.</p>
+    <form class="row2" id="nameForm">
+      <div class="field"><label for="nameIn">Your name</label>
+        <input class="input" id="nameIn" maxlength="40" autocomplete="given-name" spellcheck="false" placeholder="Your name"></div>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn btn-ghost" type="button" id="clearName">Clear</button>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="h-colours">
+    <div class="card-head"><h2 id="h-colours">Colours</h2><span class="small">Also in the top bar of every page</span></div>
+    <div class="themes" id="themes"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-data">
+    <div class="card-head"><h2 id="h-data">What this hub has saved</h2><span class="small" id="dataSub"></span></div>
+    <div style="overflow-x:auto"><table class="dtable" id="dtable"></table></div>
+    <div class="bar" id="sizeBar" role="img" aria-label="How the saved space is shared out"></div>
+    <div class="acts">
+      <button class="btn" id="backupBtn">⬇ Save a copy</button>
+      <button class="btn" id="restoreBtn">⬆ Load a copy</button>
+      <span class="grow"></span>
+      <span class="small muted" id="backupAge"></span>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-sync">
+    <div class="card-head"><h2 id="h-sync">The same hub on another device</h2><span class="small" id="syncSub"></span></div>
+    <p class="muted">Everything here lives in this browser, so a second device starts empty and a cleared
+      browser starts over. Connecting a private GitHub gist gives the hub somewhere of its own to keep a
+      copy: still yours, still private, and free.</p>
+    <div id="syncBody"></div>
+  </section>
+
+</main>
+<script src="shared.js"></script>
+<script>
+/* The profile page: who this hub belongs to, what it looks like, everything it has saved, and the one
+   optional piece of plumbing that lets a second device see the same thing. */
+(function () {
+  'use strict';
+  var KEY = 'ph.sync.v1';
+  var TOKEN_KEY = 'ph.sync.token';       // never backed up, never synced — see PH.isSecretKey
+  var BACKUP_AT = 'ph.meta.backupAt';
+  var FILE = 'practice-hub.json';
+  var esc = PH.esc;
+  var $ = function (s) { return document.querySelector(s); };
+  var isObj = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
+
+  /* What each saved key actually holds, in words, so "clear this" is never a guess. */
+  var WHAT = [
+    ['ph.piano.v1',    '🎹', 'Piano',            'Pieces, every practice session and the daily goal'],
+    ['ph.badges.v1',   '🏕️', 'Merit badges',     'Which requirements are signed off, by whom and when'],
+    ['ph.math.v1',     '🧮', 'Math worksheets',  'Worksheets made, their seeds and what you scored'],
+    ['ph.quiz.v1',     '📝', 'Lesson quizzes',   'Every attempt, the score and which questions were missed'],
+    ['ph.hindi.v1',    '📖', 'Hindi flashcards', 'Which box each word is in, when it is next due, your own words'],
+    ['ph.schedule.v1', '📅', 'Weekly plan',      'The plan itself and what has been ticked off each day'],
+    ['ph.python.v1',   '🐍', 'Python',           'Rounds played, scores and which questions were missed'],
+    ['ph.ai.v1',       '✏️', 'Make Practice',    'Generated sets, their problems and scores'],
+    ['ph.calendar.v1', '🗓️', 'Calendar & tasks', 'Which Google accounts to show, and the last copy of events and tasks'],
+    ['ph.review.v1',   '🎯', 'Review',           'Which missed questions you have since put right'],
+    ['ph.progress.v1', '📈', 'Progress',         'Which stretch of time the charts are showing'],
+    ['ph.theme',       '🎨', 'Colours',          'The theme you chose'],
+    ['ph.name',        '👤', 'Your name',        'The name shown on the hub and on printouts'],
+    ['ph.sync.v1',     '☁️', 'Sync',             'Where the copy is kept and when it was last written']
+  ];
+
+  function blank() { return { version: 1, gist: '', at: '', pulledAt: '', auto: false, summary: { headline: '', sub: '' } }; }
+  function normalize(raw) {
+    var s = blank();
+    if (!isObj(raw)) return s;
+    if (typeof raw.gist === 'string' && /^[a-f0-9]{8,64}$/i.test(raw.gist)) s.gist = raw.gist;
+    if (typeof raw.at === 'string' && raw.at.length < 40) s.at = raw.at;
+    if (typeof raw.pulledAt === 'string' && raw.pulledAt.length < 40) s.pulledAt = raw.pulledAt;
+    s.auto = raw.auto === true;
+    return s;
+  }
+  var state = normalize(PH.load(KEY, null));
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+  function buildSummary() {
+    if (!state.gist) return { headline: '', sub: '' };
+    return { headline: 'Kept in a private gist', sub: state.at ? 'Last saved ' + when(state.at) : 'Not saved yet' };
+  }
+  function token() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function setToken(v) { try { v ? localStorage.setItem(TOKEN_KEY, v) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+  function when(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return 'at an unknown time';
+    var mins = Math.round((Date.now() - d.getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + (mins === 1 ? ' minute ago' : ' minutes ago');
+    if (mins < 60 * 36) return Math.round(mins / 60) + (Math.round(mins / 60) === 1 ? ' hour ago' : ' hours ago');
+    return 'on ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' at ' +
+      d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+  function bytes(n) { return n < 1024 ? n + ' B' : n < 1024 * 1024 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB'; }
+
+  /* ===================== You ===================== */
+  function renderYou() {
+    $('#nameIn').value = PH.person();
+    $('#youSub').textContent = PH.person() ? 'This hub is ' + PH.hubName() : 'No name set yet';
+  }
+  $('#nameForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var set = PH.setPerson($('#nameIn').value);
+    renderYou();
+    PH.toast(set ? 'Hello, ' + set : 'Name cleared');
+  });
+  $('#clearName').addEventListener('click', function () { PH.setPerson(''); renderYou(); PH.toast('Name cleared'); });
+
+  /* ===================== Colours ===================== */
+  function renderThemes() {
+    var cur = PH.themeChoice();
+    $('#themes').innerHTML = PH.THEMES.map(function (t) {
+      return '<button type="button" class="themecard' + (t.id === cur ? ' on' : '') + '" data-theme-id="' + t.id + '"' +
+        ' aria-pressed="' + (t.id === cur ? 'true' : 'false') + '">' +
+        '<span class="chip sw" aria-hidden="true" data-swatch="' + t.id + '"></span>' +
+        '<span class="nm">' + esc(t.name) + '</span>' +
+        '<span class="tick" aria-hidden="true">' + (t.id === cur ? '✓' : '') + '</span></button>';
+    }).join('');
+  }
+  $('#themes').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-theme-id]');
+    if (!b) return;
+    PH.setTheme(b.getAttribute('data-theme-id'));
+    renderThemes();
+  });
+  document.addEventListener('ph:theme', renderThemes);
+
+  /* ===================== What is saved ===================== */
+  function sizes() {
+    var rows = [], total = 0, seen = {};
+    WHAT.forEach(function (w) {
+      var v = null;
+      try { v = localStorage.getItem(w[0]); } catch (e) {}
+      seen[w[0]] = true;
+      if (v == null) return;
+      var n = w[0].length + v.length;
+      total += n;
+      rows.push({ key: w[0], emoji: w[1], name: w[2], what: w[3], size: n });
+    });
+    /* anything else this hub has put there, so the page never hides something from you */
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || k.indexOf('ph.') !== 0 || seen[k]) continue;
+        var val = localStorage.getItem(k) || '';
+        var n2 = k.length + val.length;
+        total += n2;
+        rows.push({ key: k, emoji: '•', name: k, what: PH.isSecretKey(k) ? 'A key you typed in. Never backed up and never synced.' : 'Saved by this hub', size: n2, secret: PH.isSecretKey(k) });
+      }
+    } catch (e) {}
+    rows.sort(function (a, b) { return b.size - a.size; });
+    return { rows: rows, total: total };
+  }
+  function renderData() {
+    var s = sizes();
+    if (!s.rows.length) {
+      $('#dtable').innerHTML = '<tr><td class="what">Nothing saved yet. Use any of the apps and it will show up here.</td></tr>';
+      $('#sizeBar').innerHTML = '';
+      $('#dataSub').textContent = '';
+    } else {
+      $('#dtable').innerHTML =
+        '<thead><tr><th>App</th><th>What it holds</th><th class="num">Size</th><th></th></tr></thead><tbody>' +
+        s.rows.map(function (r) {
+          return '<tr><td><b>' + r.emoji + ' ' + esc(r.name) + '</b></td>' +
+            '<td class="what">' + esc(r.what) + '</td>' +
+            '<td class="num">' + bytes(r.size) + '</td>' +
+            '<td class="num"><button class="btn btn-sm btn-ghost btn-danger" data-forget="' + esc(r.key) + '">Forget</button></td></tr>';
+        }).join('') +
+        '<tr class="total"><td>All together</td><td class="what">' + s.rows.length + ' of them</td>' +
+        '<td class="num">' + bytes(s.total) + '</td><td></td></tr></tbody>';
+      $('#sizeBar').innerHTML = s.rows.map(function (r, i) {
+        return '<i style="width:' + (r.size / s.total * 100).toFixed(2) + '%;background:color-mix(in srgb, var(--accent) ' +
+          (85 - i * 7) + '%, var(--surface-2))" title="' + esc(r.name) + ' · ' + bytes(r.size) + '"></i>';
+      }).join('');
+      $('#dataSub').textContent = bytes(s.total) + ' in this browser';
+    }
+    var at = null;
+    try { at = localStorage.getItem(BACKUP_AT); } catch (e) {}
+    $('#backupAge').textContent = at ? 'Last copy saved ' + PH.fmtDate(at, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No copy saved yet';
+  }
+  $('#dtable').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-forget]');
+    if (!b) return;
+    var k = b.getAttribute('data-forget');
+    var row = WHAT.filter(function (w) { return w[0] === k; })[0];
+    var name = row ? row[2] : k;
+    if (!confirm('Forget everything ' + name + ' has saved?\n\nThis cannot be undone. Save a copy first if you are not sure.')) return;
+    try { localStorage.removeItem(k); } catch (er) {}
+    renderData(); renderYou(); renderThemes(); renderSync();
+    PH.toast(name + ' forgotten');
+  });
+  $('#backupBtn').addEventListener('click', function () {
+    var data = PH.exportable();
+    PH.download('practice-hub-backup-' + PH.todayISO() + '.json',
+      JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(), data: data }, null, 2));
+    try { localStorage.setItem(BACKUP_AT, PH.todayISO()); } catch (e) {}
+    renderData();
+    PH.toast('Copy saved (keys left out)');
+  });
+  $('#restoreBtn').addEventListener('click', function () {
+    PH.pickFile('application/json').then(function (text) {
+      if (!text) return;
+      applyBundle(text, 'the file');
+    });
+  });
+  /** Put a saved bundle back. Shared by "Load a copy" and by pulling from the gist. */
+  function applyBundle(text, where) {
+    var parsed;
+    try { parsed = JSON.parse(text); } catch (e) { PH.toast('That does not look like a hub backup'); return false; }
+    var data = isObj(parsed) && isObj(parsed.data) ? parsed.data : null;
+    if (!data) { PH.toast('That does not look like a hub backup'); return false; }
+    var keys = Object.keys(data).filter(function (k) { return k.indexOf('ph.') === 0 && !PH.isSecretKey(k); });
+    if (!keys.length) { PH.toast('There was nothing in it'); return false; }
+    if (!confirm('Replace what is in this browser with what is in ' + where + '?\n\n' +
+        keys.length + ' things would be overwritten. Save a copy first if you are not sure.')) return false;
+    var n = 0;
+    keys.forEach(function (k) {
+      try { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } catch (e) {}
+    });
+    PH.applyName();
+    renderYou(); renderThemes(); renderData(); renderSync();
+    PH.toast('Loaded ' + n + ' things — reopen the apps to see them');
+    return true;
+  }
+
+  /* ===================== The copy kept somewhere else ===================== */
+  /* A private gist is a small private file you already own: no new account, no cost, and nothing to run.
+     The token is stored the way an API key is — on this device only, never in a backup, never synced. */
+  var API = 'https://api.github.com';
+  function headers() {
+    return { 'Authorization': 'Bearer ' + token(), 'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' };
+  }
+  function explain(res) {
+    if (res.status === 401) return 'GitHub did not accept that token. It may have been typed wrong, or it may have expired.';
+    if (res.status === 403) return 'GitHub refused. The token probably does not have the gist permission.';
+    if (res.status === 404) return 'That gist is gone, or this token cannot see it.';
+    if (res.status === 422) return 'GitHub would not accept the contents.';
+    return 'GitHub answered ' + res.status + '.';
+  }
+  var busy = false;
+  function setBusy(on, msg) {
+    busy = on;
+    Array.prototype.forEach.call(document.querySelectorAll('#syncBody button'), function (b) { b.disabled = on; });
+    if (msg) $('#syncState').textContent = msg;
+  }
+
+  function saveToken() {
+    var v = ($('#tokenIn').value || '').trim();
+    setToken(v);
+    renderSync();
+    PH.toast(v ? 'Token saved on this device' : 'Token forgotten');
+  }
+
+  function createStore() {
+    if (busy) return;
+    setBusy(true, 'Making a private gist…');
+    fetch(API + '/gists', { method: 'POST', headers: headers(), body: JSON.stringify({
+      description: PH.hubName() + ' — saved data', public: false,
+      files: (function () { var f = {}; f[FILE] = { content: bundle() }; return f; })()
+    }) }).then(function (res) {
+      if (!res.ok) throw new Error(explain(res));
+      return res.json();
+    }).then(function (g) {
+      state.gist = String(g.id || '');
+      state.at = new Date().toISOString();
+      save(); setBusy(false); renderSync();
+      PH.toast('Made a private gist and saved everything into it');
+    }).catch(function (err) {
+      setBusy(false);
+      $('#syncState').textContent = err.message || 'Could not reach GitHub.';
+    });
+  }
+
+  function bundle() {
+    return JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(), data: PH.exportable() }, null, 2);
+  }
+
+  function push() {
+    if (busy || !state.gist) return;
+    setBusy(true, 'Saving…');
+    var files = {}; files[FILE] = { content: bundle() };
+    fetch(API + '/gists/' + state.gist, { method: 'PATCH', headers: headers(), body: JSON.stringify({ files: files }) })
+      .then(function (res) {
+        if (!res.ok) throw new Error(explain(res));
+        state.at = new Date().toISOString();
+        save(); setBusy(false); renderSync();
+        PH.toast('Saved to your gist');
+      }).catch(function (err) { setBusy(false); $('#syncState').textContent = err.message || 'Could not reach GitHub.'; });
+  }
+
+  function pull() {
+    if (busy || !state.gist) return;
+    setBusy(true, 'Fetching…');
+    fetch(API + '/gists/' + state.gist, { method: 'GET', headers: headers() })
+      .then(function (res) {
+        if (!res.ok) throw new Error(explain(res));
+        return res.json();
+      }).then(function (g) {
+        var file = g.files && g.files[FILE];
+        if (!file) throw new Error('That gist has nothing from this hub in it yet.');
+        /* GitHub truncates a large file in the listing and gives a URL for the whole thing */
+        if (file.truncated && file.raw_url) return fetch(file.raw_url).then(function (r) { return r.text(); });
+        return file.content;
+      }).then(function (text) {
+        setBusy(false);
+        if (applyBundle(text, 'your gist')) { state.pulledAt = new Date().toISOString(); save(); renderSync(); }
+      }).catch(function (err) { setBusy(false); $('#syncState').textContent = err.message || 'Could not reach GitHub.'; });
+  }
+
+  function renderSync() {
+    var t = token(), host = $('#syncBody');
+    if (!t) {
+      host.innerHTML =
+        '<ol class="steps">' +
+          '<li>Open <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">GitHub → fine-grained tokens</a> and press <b>Generate new token</b>.</li>' +
+          '<li>Give it any name, set <b>Expiration</b> to whatever you are comfortable with, and under <b>Account permissions</b> set <b>Gists</b> to <b>Read and write</b>. Nothing else is needed.</li>' +
+          '<li>Generate it, copy it, and paste it below. It is kept on this device only — it is left out of every backup and is never written to the gist.</li>' +
+        '</ol>' +
+        '<div class="keyrow" style="margin-top:.9rem">' +
+          '<div class="field"><label for="tokenIn">GitHub token</label>' +
+            '<input class="input" id="tokenIn" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></div>' +
+          '<button class="btn btn-primary" id="tokenSave" type="button">Save token</button>' +
+        '</div>' +
+        '<p class="state" id="syncState"></p>';
+      $('#syncSub').textContent = 'Not set up';
+    } else if (!state.gist) {
+      host.innerHTML =
+        '<p>The token is saved. The next step makes one private gist for this hub to keep its copy in.</p>' +
+        '<div class="acts"><button class="btn btn-primary" id="makeStore" type="button">Make the private gist</button>' +
+        '<span class="grow"></span><button class="btn btn-ghost" id="forgetToken" type="button">Forget the token</button></div>' +
+        '<p class="state" id="syncState"></p>';
+      $('#syncSub').textContent = 'Token saved';
+    } else {
+      host.innerHTML =
+        '<div class="acts">' +
+          '<button class="btn btn-primary" id="pushBtn" type="button">⬆ Save to the gist</button>' +
+          '<button class="btn" id="pullBtn" type="button">⬇ Load from the gist</button>' +
+          '<span class="grow"></span>' +
+          '<a class="btn btn-sm btn-ghost" href="https://gist.github.com/' + esc(state.gist) + '" target="_blank" rel="noopener">Open it on GitHub</a>' +
+          '<button class="btn btn-sm btn-ghost" id="forgetToken" type="button">Forget the token</button>' +
+        '</div>' +
+        '<p class="state" id="syncState">' +
+          (state.at ? 'Last saved ' + esc(when(state.at)) + '.' : 'Nothing saved to it yet.') +
+          (state.pulledAt ? ' Last loaded ' + esc(when(state.pulledAt)) + '.' : '') +
+        '</p>' +
+        '<p class="small muted">On the other device, open this page, paste the same token, then press ' +
+          '<b>Load from the gist</b>. Loading replaces what that browser has, so save a copy there first if it has anything you want.</p>';
+      $('#syncSub').textContent = state.at ? 'Saved ' + when(state.at) : 'Connected';
+    }
+  }
+  $('#syncBody').addEventListener('click', function (e) {
+    if (e.target.closest('#tokenSave')) return saveToken();
+    if (e.target.closest('#makeStore')) return createStore();
+    if (e.target.closest('#pushBtn')) return push();
+    if (e.target.closest('#pullBtn')) return pull();
+    if (e.target.closest('#forgetToken')) {
+      if (!confirm('Forget the token on this device?\n\nThe gist and everything in it stays where it is.')) return;
+      setToken(''); renderSync(); PH.toast('Token forgotten');
+    }
+  });
+  $('#syncBody').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'tokenIn') { e.preventDefault(); saveToken(); }
+  });
+
+  renderYou(); renderThemes(); renderData(); renderSync();
+  window.PH_PROFILE = { state: function () { return state; }, renderSync: renderSync, renderData: renderData,
+    push: push, pull: pull, createStore: createStore, applyBundle: applyBundle, bundle: bundle, sizes: sizes };
+})();
+</script>
+</body></html>

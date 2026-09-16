@@ -739,11 +739,12 @@
     var items = ws.problems.map(function (p, i) {
       return '<li class="prob"><span class="num">' + (i + 1) + '</span><div class="body"><div class="t">' + safe(p.question) + '</div><div class="work"></div></div></li>';
     }).join('');
-    var foot = '<footer><span>Seed ' + esc(ws.seed) + ' · Priyaan’s Hub</span><span>Regenerate: <code>' + esc(cmd) + '</code></span></footer>';
+    var hub = esc(o.hub || 'Practice Hub');
+    var foot = '<footer><span>Seed ' + esc(ws.seed) + ' · ' + hub + '</span><span>Regenerate: <code>' + esc(cmd) + '</code></span></footer>';
     var key = showAnswers ? '<section class="key"><h2>Answer key — ' + esc(title) + ' (seed ' + esc(ws.seed) + ')</h2><ol>' +
       ws.problems.map(function (p, i) {
         return '<li><span class="n">' + (i + 1) + '</span><span class="a">' + safe(p.answer) + (p.work ? '<span class="w">' + safe(p.work) + '</span>' : '') + '</span></li>';
-      }).join('') + '</ol><footer><span>' + esc(title) + ' · answer key</span><span>Priyaan’s Hub</span></footer></section>' : '';
+      }).join('') + '</ol><footer><span>' + esc(title) + ' · answer key</span><span>' + hub + '</span></footer></section>' : '';
     return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>' + esc(title) + ' — seed ' + esc(ws.seed) + '</title>\n<style>' + css + '</style>\n</head>\n<body>\n<div class="page">\n' + head + '\n<ol class="problems">\n' + items + '\n</ol>\n' + foot + '\n' + key + '\n</div>\n</body>\n</html>\n';
   }
 

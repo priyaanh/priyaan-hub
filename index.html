@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Priyaan's Hub</title>
+<title>Practice Hub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 <link rel="stylesheet" href="shared.css">
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
@@ -32,6 +32,9 @@
   .today-head .spacer { flex: 1; }
   .next-up { font-size: .95rem; margin: .35rem 0 0; }
   .next-up b { color: var(--accent-text); }
+  .namerow { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; margin-top: .8rem; }
+  .namerow .field { flex: 1; min-width: 11rem; }
+  #renameBtn { margin-top: .35rem; }
   .tiles { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); margin-top: .8rem; }
   .tile { display: flex; flex-direction: column; gap: .15rem; padding: .6rem .7rem; border-radius: var(--radius-sm); background: var(--surface-2); border-left: 3px solid var(--tc, var(--accent)); text-decoration: none; color: inherit; }
   .tile:hover { text-decoration: none; background: color-mix(in srgb, var(--tc, var(--accent)) 12%, var(--surface-2)); }
@@ -93,7 +96,7 @@
 </head>
 <body data-app="hub">
 <header class="topbar"><div class="inner">
-  <div class="title"><span class="emoji">🚀</span><span class="name">Priyaan's Hub</span></div>
+  <div class="title"><span class="emoji">🚀</span><span class="name" data-ph="hub">Practice Hub</span></div>
   <div class="spacer"></div>
   <span class="muted small no-print" id="clock"></span>
 </div></header>
@@ -101,7 +104,8 @@
 <main class="container">
   <section class="hero">
     <div>
-      <h1 id="greet">Hi Priyaan 👋</h1>
+      <h1 id="greet">Hi 👋</h1>
+      <button class="btn btn-sm btn-ghost no-print" id="renameBtn" type="button">✏️ <span class="lbl">Change name</span></button>
       <div class="date" id="today"></div>
     <div class="search-wrap">
       <span class="mag" aria-hidden="true">🔍</span>
@@ -112,6 +116,19 @@
       <div class="results" id="results" hidden role="listbox" aria-label="Search results"></div>
     </div>
     </div>
+  </section>
+
+  <section class="card" id="nameCard" aria-labelledby="h-name" hidden>
+    <div class="card-head"><h2 id="h-name">What should we call you?</h2></div>
+    <p class="muted">Your name goes at the top of this page, on printed worksheets, and on the piano
+      practice log. It is saved in this browser only and is never sent anywhere.</p>
+    <form class="namerow" id="nameForm">
+      <div class="field"><label for="nameIn">Your name</label>
+        <input class="input" id="nameIn" autocomplete="given-name" maxlength="40" placeholder="Your name"
+          spellcheck="false" required></div>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn btn-ghost" type="button" id="nameSkip">Not now</button>
+    </form>
   </section>
 
   <section class="today-card" id="todayCard" aria-labelledby="h-today" hidden>
@@ -182,6 +199,12 @@
       <div class="summary none" id="progSummary"><span class="headline">Nothing logged yet</span><span class="sub">Use the apps and this fills in</span></div>
       <span class="open">Open →</span>
     </a>
+    <a class="app" data-app="profile" href="profile.html">
+      <div class="top"><span class="emoji">👤</span><h2>Profile</h2></div>
+      <p class="desc">Your name, the colours, and everything this hub has saved with its size and a way to forget any of it. Also how to keep the same hub on a second device.</p>
+      <div class="summary none" data-key="ph.sync.v1"><span class="headline">Saved in this browser only</span><span class="sub">Open to set your name or connect a copy</span></div>
+      <span class="open">Open →</span>
+    </a>
     <a class="app" data-app="review" href="review.html">
       <div class="top"><span class="emoji">🎯</span><h2>Review Mistakes</h2></div>
       <p class="desc">Every question you got wrong, from quizzes, worksheets, Python rounds and practice sets, asked again until you have it. Get one right and it comes off the list.</p>
@@ -191,7 +214,7 @@
   </section>
 
   <footer>
-    <span>Everything is saved in this browser only. Back up now and then — API keys are never included.<br><span id="backupAge" class="age"></span></span>
+    <span>Everything is saved in this browser only. Back up now and then — API keys are never included.<br><span id="backupAge" class="age"></span><br><a href="profile.html">Profile: your name, colours and everything saved →</a></span>
     <span class="spacer"></span>
     <a class="btn btn-sm" id="askGpt" href="https://chatgpt.com/" target="_blank" rel="noopener" title="Opens ChatGPT in a new browser tab">💬 ChatGPT</a>
     <button class="btn btn-sm" id="backup">⬇ Back up all data</button>
@@ -205,7 +228,42 @@
   const now = new Date();
   document.getElementById('today').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const h = now.getHours();
-  document.getElementById('greet').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + ', Priyaan 👋';
+  /* ---------------- whose hub this is ---------------- */
+  const ASKED = 'ph.meta.nameAsked';
+  const nameCard = document.getElementById('nameCard');
+  function renderGreeting() {
+    const p = PH.person(), hr = new Date().getHours();
+    document.getElementById('greet').textContent =
+      (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + (p ? ', ' + p : '') + ' 👋';
+    document.getElementById('renameBtn').hidden = !p;
+  }
+  function askName(force) {
+    let asked = false;
+    try { asked = !!localStorage.getItem(ASKED); } catch (e) {}
+    nameCard.hidden = !force && (!!PH.person() || asked);
+    if (!nameCard.hidden) document.getElementById('nameIn').value = PH.person();
+  }
+  document.getElementById('nameForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const set = PH.setPerson(document.getElementById('nameIn').value);
+    try { localStorage.setItem(ASKED, '1'); } catch (er) {}
+    nameCard.hidden = true;
+    renderGreeting();
+    PH.toast(set ? 'Hello, ' + set : 'Name cleared');
+  });
+  document.getElementById('nameSkip').addEventListener('click', () => {
+    try { localStorage.setItem(ASKED, '1'); } catch (er) {}
+    nameCard.hidden = true;
+  });
+  document.getElementById('renameBtn').addEventListener('click', () => {
+    askName(true);
+    document.getElementById('nameIn').focus();
+    document.getElementById('nameIn').select();
+  });
+  renderGreeting();
+  askName(false);
+
+
 
   /* ---------------- Today panel: computed from each app's own saved state ---------------- */
   const load = k => PH.load(k, null);
@@ -583,13 +641,9 @@
     el.className = 'age' + (days > 30 ? ' stale' : '');
   }
 
-  const SECRET = /^ph\.ai\.key/;                          // API keys stay on the device — never in a backup file
+  const SECRET = k => PH.isSecretKey(k);                  // API and sync keys stay on the device
   document.getElementById('backup').addEventListener('click', () => {
-    const out = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('ph.') && !SECRET.test(k)) out[k] = localStorage.getItem(k);
-    }
+    const out = PH.exportable();
     PH.download('priyaan-hub-backup-' + PH.todayISO() + '.json', JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(), data: out }, null, 2));
     try { localStorage.setItem(BACKUP_AT, PH.todayISO()); } catch (e) {}
     renderBackupAge();
@@ -599,7 +653,7 @@
     const text = await PH.pickFile('application/json'); if (!text) return;
     try {
       const obj = JSON.parse(text); const data = obj.data || obj; let n = 0;
-      for (const k of Object.keys(data)) { if (k.startsWith('ph.') && !SECRET.test(k)) { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } }
+      for (const k of Object.keys(data)) { if (k.startsWith('ph.') && !SECRET(k)) { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } }
       PH.toast('Restored ' + n + ' app' + (n === 1 ? '' : 's')); setTimeout(() => location.reload(), 600);
     } catch (e) { PH.toast('That file could not be read'); }
   });

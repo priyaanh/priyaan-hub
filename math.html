@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Math Worksheets · Priyaan's Hub</title>
+<title>Math Worksheets · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
 main > * + * { margin-top: 1rem; }
@@ -83,7 +83,7 @@ main > * + * { margin-top: 1rem; }
       <div class="field"><label for="seedIn">Seed</label>
         <div class="seedrow"><input class="input" id="seedIn" type="number" min="1" step="1" aria-label="Seed"><button class="btn btn-sm" id="newSeed" title="New random seed">🔀</button></div>
       </div>
-      <div class="field"><label for="nameIn">Name on the sheet</label><input class="input" id="nameIn" placeholder="Priyaan"></div>
+      <div class="field"><label for="nameIn">Name on the sheet</label><input class="input" id="nameIn" placeholder="Your name"></div>
     </div>
 
     <div class="mk-actions">
@@ -125,7 +125,7 @@ main > * + * { margin-top: 1rem; }
 
   /* ---------------- state ---------------- */
   function blank() {
-    return { version: 1, history: [], settings: { topics: ['linear', 'slope', 'systems'], count: 20, difficulty: 2, name: 'Priyaan' }, summary: { headline: '', sub: '' } };
+    return { version: 1, history: [], settings: { topics: ['linear', 'slope', 'systems'], count: 20, difficulty: 2, name: PH.person() }, summary: { headline: '', sub: '' } };
   }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
   /* 2026-02-30 parses as March 2 rather than failing, so check the date round-trips, not just its shape. */
@@ -155,6 +155,7 @@ main > * + * { margin-top: 1rem; }
     if (isFinite(st.count)) s.settings.count = Math.min(60, Math.max(1, Math.round(st.count)));
     if ([1, 2, 3].indexOf(st.difficulty) >= 0) s.settings.difficulty = st.difficulty;
     if (typeof st.name === 'string') s.settings.name = st.name.slice(0, 40);
+    if (!s.settings.name) s.settings.name = PH.person();
     if (Array.isArray(raw.history)) {
       s.history = raw.history.filter(isObj).map(h => ({
         id: typeof h.id === 'string' && h.id ? h.id : PH.uid(),
@@ -257,7 +258,7 @@ main > * + * { margin-top: 1rem; }
   }
   function sheetHTML(withAnswers) {
     return IM1.renderWorksheet(ws, { title: 'Integrated Math 1 · ' + ws.topics.map(id => (IM1.TOPICS.filter(t => t.id === id)[0] || {}).name || id).join(', '),
-      name: state.settings.name, showAnswers: withAnswers !== false });
+      name: state.settings.name, hub: PH.hubName(), showAnswers: withAnswers !== false });
   }
   function printSheet() {
     if (!ws && !makeWorksheet(opts())) return;

@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calendar &amp; Tasks · Priyaan's Hub</title>
+<title>Calendar &amp; Tasks · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
 main > * + * { margin-top: 1rem; }
@@ -78,6 +78,22 @@ details[open] summary { margin-bottom: .6rem; }
 </div></header>
 <main class="container">
 
+  <section class="card setup" id="setupCard" aria-labelledby="h-setup" hidden>
+    <div class="card-head"><h2 id="h-setup">Whose calendar should show here?</h2></div>
+    <p class="muted">Type the Google account whose calendar you want to see. It is saved in this browser
+      only — nothing is sent anywhere, and nobody else's account is set up for you.</p>
+    <form class="add-cal" id="setupForm">
+      <div class="field"><label for="setupSrc">Your Google account</label>
+        <input class="input" id="setupSrc" type="email" placeholder="you@gmail.com" spellcheck="false"
+          autocomplete="email" autocapitalize="off" required></div>
+      <div class="field"><label for="setupName">Label (optional)</label>
+        <input class="input" id="setupName" placeholder="Mine" autocomplete="off"></div>
+      <button class="btn btn-primary" type="submit">Show my calendar</button>
+    </form>
+    <p class="small muted" style="margin-top:.7rem">You will see it once this browser is signed in to
+      that account. More accounts can be added lower down, each with its own colour.</p>
+  </section>
+
   <section class="card" aria-labelledby="h-cal">
     <div class="card-head">
       <div class="cal-head">
@@ -137,7 +153,7 @@ details[open] summary { margin-bottom: .6rem; }
       <summary>One-time setup for “Sign in with Google” (parent)</summary>
       <p class="small muted">Reading events inside this page needs a free Google API client ID. About 5 minutes:</p>
       <ol class="steps">
-        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a>, signed in as the main calendar account, and create a project (any name, e.g. “Priyaan Hub”).</li>
+        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a>, signed in as the main calendar account, and create a project (any name, e.g. “Family calendar”).</li>
         <li><b>APIs &amp; Services → Library</b>: enable the <b>Google Calendar API</b> and the <b>Google Tasks API</b>.</li>
         <li><b>APIs &amp; Services → OAuth consent screen</b>: choose <b>External</b>, fill in the app name and your email, and add every family Google account under <b>Test users</b>.</li>
         <li><b>Credentials → Create credentials → OAuth client ID</b>, type <b>Web application</b>. Under <b>Authorized JavaScript origins</b> add <code>https://priyaanh.github.io</code>. Save and copy the <b>Client ID</b>.</li>
@@ -174,7 +190,7 @@ details[open] summary { margin-bottom: .6rem; }
 (function () {
   'use strict';
   const KEY = 'ph.calendar.v1';
-  const DEFAULT_CAL = 'priyaan.haldiya@gmail.com';
+  const EXAMPLE_CAL = 'you@gmail.com';   // only ever shown as an example, never saved
   const MODES = ['WEEK', 'MONTH', 'AGENDA'];
   const MAX_CALS = 8;
   const PALETTE = ['#d64292', '#4f6bed', '#0f9d9a', '#e0701f', '#7c5cff', '#2f8f4e', '#d64545', '#8d6e63'];
@@ -184,11 +200,11 @@ details[open] summary { margin-bottom: .6rem; }
   const localTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'; } catch (e) { return 'America/Los_Angeles'; } })();
 
   const QUICK = [
-    { em: '🎹', t: 'Piano practice', s: '30 min · 5:00 pm', h: 17, m: 0, d: 30, details: "Grade 4 pieces, exercises, scales. Log it in Priyaan's Hub → Piano." },
+    { em: '🎹', t: 'Piano practice', s: '30 min · 5:00 pm', h: 17, m: 0, d: 30, details: 'Grade 4 pieces, exercises, scales. Log it in ' + PH.hubName() + ' \u2192 Piano.' },
     { em: '💃', t: 'Dance class', s: '60 min · 6:00 pm', h: 18, m: 0, d: 60 },
     { em: '🏕️', t: 'Scouts meeting', s: '90 min · 7:00 pm', h: 19, m: 0, d: 90 },
-    { em: '🧮', t: 'Math homework', s: '45 min · 4:00 pm', h: 16, m: 0, d: 45, details: "CPM lesson + Priyaan's Hub → Math worksheets / Lesson quizzes" },
-    { em: '📖', t: 'Hindi review', s: '20 min · 7:30 pm', h: 19, m: 30, d: 20, details: "Priyaan's Hub → Hindi flashcards" },
+    { em: '🧮', t: 'Math homework', s: '45 min · 4:00 pm', h: 16, m: 0, d: 45, details: 'CPM lesson + ' + PH.hubName() + ' \u2192 Math worksheets / Lesson quizzes' },
+    { em: '📖', t: 'Hindi review', s: '20 min · 7:30 pm', h: 19, m: 30, d: 20, details: PH.hubName() + ' \u2192 Hindi flashcards' },
     { em: '🐍', t: 'Python', s: '45 min · 4:30 pm', h: 16, m: 30, d: 45 },
     { em: '🎖️', t: 'Merit badge work', s: '60 min · Sat 10:00 am', h: 10, m: 0, d: 60, weekday: 6 },
     { em: '➕', t: 'Anything else', s: 'Blank event', h: 17, m: 0, d: 60, blank: true }
@@ -200,7 +216,7 @@ details[open] summary { margin-bottom: .6rem; }
   }
   function labelFor(src) { const s = String(src); return s.includes('@') ? s.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Calendar'; }
   function blank() {
-    return { version: 2, settings: { calendars: [mkCal(DEFAULT_CAL, 'Priyaan', PALETTE[0], true)], mode: 'WEEK', tz: localTz, clientId: '', taskList: '' },
+    return { version: 2, settings: { calendars: [], mode: 'WEEK', tz: localTz, clientId: '', taskList: '' },
       tasksCache: null, eventsCache: null, summary: { headline: '', sub: '' } };
   }
   function normalize(raw) {
@@ -277,7 +293,7 @@ details[open] summary { margin-bottom: .6rem; }
   }
   function renderEmbed() {
     const list = shown(), f = $('#calFrame');
-    if (!list.length) { f.removeAttribute('src'); $('#who').textContent = 'No calendars shown'; }
+    if (!list.length) { f.removeAttribute('src'); $('#who').textContent = cals().length ? 'Every calendar is hidden' : 'No calendar added yet'; }
     else { const url = embedURL(); if (f.getAttribute('src') !== url) f.src = url; $('#who').textContent = list.map(c => c.name).join(' · '); }
     $('#tzName').textContent = state.settings.tz;
     document.querySelectorAll('#modeTabs .tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.mode === state.settings.mode)));
@@ -287,6 +303,8 @@ details[open] summary { margin-bottom: .6rem; }
   /* ---------------- accounts ---------------- */
   function renderCals() {
     const list = cals();
+    const setup = $('#setupCard');
+    if (setup) setup.hidden = list.length > 0;
     $('#calList').innerHTML = list.map(c =>
       '<div class="cal-row' + (c.on ? '' : ' off') + '" data-cal="' + esc(c.id) + '">' +
         '<span class="dot" style="--c:' + esc(c.color) + '" aria-hidden="true"></span>' +
@@ -297,9 +315,9 @@ details[open] summary { margin-bottom: .6rem; }
           '</span>' +
           '<button class="btn btn-sm" data-toggle="' + esc(c.id) + '" aria-pressed="' + c.on + '">' + (c.on ? 'Shown' : 'Hidden') + '</button>' +
           '<button class="btn btn-sm btn-ghost btn-danger" data-remove="' + esc(c.id) + '" aria-label="Remove ' + esc(c.name) + '">✕</button>' +
-        '</div></div>').join('') || '<div class="empty">No calendars yet — add one below.</div>';
+        '</div></div>').join('') || '<div class="empty">No calendars yet — add your Google account above.</div>';
     $('#calCount').textContent = list.length + ' calendar' + (list.length === 1 ? '' : 's') + (list.length ? ' · ' + shown().length + ' shown' : '');
-    $('#shareTo').textContent = (list[0] && list[0].src) || DEFAULT_CAL;
+    $('#shareTo').textContent = (list[0] && list[0].src) || EXAMPLE_CAL;
     const sel = $('#quickTarget'), prev = sel.value;
     const targets = shown().filter(c => c.src.includes('@'));
     sel.innerHTML = targets.map(c => '<option value="' + esc(c.src) + '">' + esc(c.name) + '</option>').join('') || '<option value="">Default calendar</option>';
@@ -517,6 +535,11 @@ details[open] summary { margin-bottom: .6rem; }
     if (rm) removeCal(rm.dataset.remove);
   });
   $('#addForm').addEventListener('submit', e => { e.preventDefault(); addCal($('#newSrc').value, $('#newName').value); $('#newSrc').value = ''; $('#newName').value = ''; $('#newSrc').focus(); });
+  $('#setupForm').addEventListener('submit', e => {
+    e.preventDefault();
+    addCal($('#setupSrc').value, $('#setupName').value);
+    $('#setupSrc').value = ''; $('#setupName').value = '';
+  });
   $('#quickTarget').addEventListener('change', renderQuick);
   $('#saveSettings').addEventListener('click', () => {
     state.settings.tz = $('#tz').value.trim() || localTz;

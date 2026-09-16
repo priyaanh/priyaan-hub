@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lesson Quizzes · Priyaan's Hub</title>
+<title>Lesson Quizzes · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
 /* ---- layout ---- */
@@ -283,9 +283,9 @@ main > * + * { margin-top: 1rem; }
       '<div class="meta">' + n + ' questions<br>seed ' + q.seed + '</div></header>' +
       '<div class="idline"><span>Name <i></i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
       '<ol class="problems">' + rows + '</ol>' +
-      '<footer><span>Chapter ' + esc(BANK.chapter || 1) + ' · ' + esc(BANK.title || '') + '</span><span>Priyaan\'s Hub</span></footer>' +
+      '<footer><span>Chapter ' + esc(BANK.chapter || 1) + ' · ' + esc(BANK.title || '') + '</span><span>' + esc(PH.hubName()) + '</span></footer>' +
       '<section class="key"><h2>Answer key — ' + esc(title) + '</h2><ol>' + key + '</ol>' +
-      '<footer><span>' + esc(title) + ' · answer key</span><span>Priyaan\'s Hub</span></footer></section></div></body></html>';
+      '<footer><span>' + esc(title) + ' · answer key</span><span>' + esc(PH.hubName()) + '</span></footer></section></div></body></html>';
   }
   function printQuiz(lessonId) {
     const q = buildQuiz({ lesson: lessonId, seed: (Math.random() * 1e9) >>> 0 });

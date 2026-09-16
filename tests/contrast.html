@@ -4,7 +4,7 @@
    4.5:1 for normal text, 3:1 for large text. Run twice by tests/run.sh — once light, once dark. */
 /* A theme is global, so what matters is covering the widest spread of components, not every page.
    The two the site is used in get all twelve; the rest get the pages with the most component variety. */
-const ALL = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python','progress','review'];
+const ALL = ['index','piano','badges','math','quizzes','hindi','schedule','calendar','ai','python','progress','review','profile'];
 const THEME = (location.search.match(/theme=([a-z]+)/) || [])[1] || '';
 const PAGES = (!THEME || THEME === 'light' || THEME === 'dark') ? ALL : ['index','review','progress','quizzes','hindi','badges'];
 /* file:// shares one localStorage, so the page under test reads whatever is set here. */

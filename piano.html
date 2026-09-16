@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Piano Practice · Priyaan's Hub</title>
+<title>Piano Practice · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
 /* ---- layout ---- */
@@ -947,7 +947,7 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
       'footer{margin-top:12px;border-top:1px solid #d5d9e0;padding-top:5px;font-size:8pt;color:#8b919c;display:flex;justify-content:space-between}'
     ].join('');
     return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Practice log</title><style>' + css + '</style></head><body><div class="page">' +
-      '<header><div><div class="kicker">Piano practice log</div><h1>' + 'Priyaan Haldiya' + '</h1></div><div class="meta">' +
+      '<header><div><div class="kicker">Piano practice log</div><h1>' + esc(PH.person()) + '</h1></div><div class="meta">' +
       esc(PH.fmtDate(start, { month: 'long', day: 'numeric' })) + ' – ' + esc(PH.fmtDate(end, { month: 'long', day: 'numeric', year: 'numeric' })) +
       '<br>' + total + ' minutes over ' + practised + ' days</div></header>' +
       '<table><thead><tr><th class="pc">Piece</th>' + head + '<th class="tot">Total</th></tr></thead><tbody>' +
@@ -955,7 +955,7 @@ button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
       '<div class="weeks">' + weekRow + '</div>' +
       (notes.length ? '<div class="notes"><b>Notes:</b> ' + notes.map(x => esc(PH.fmtDate(x.date, { month: 'short', day: 'numeric' })) + ' — ' + esc(x.note)).join(' · ') + '</div>' : '') +
       '<div class="sign"><span>Teacher <i></i></span><span>Parent <i></i></span><span>Date <i></i></span></div>' +
-      '<footer><span>Priyaan&rsquo;s Hub · piano practice</span><span>' + esc(PH.fmtDate(end, { month: 'short', day: 'numeric', year: 'numeric' })) + '</span></footer>' +
+      '<footer><span>' + esc(PH.hubName()) + ' · piano practice</span><span>' + esc(PH.fmtDate(end, { month: 'short', day: 'numeric', year: 'numeric' })) + '</span></footer>' +
       '</div></body></html>';
   }
   function printPracticeLog() {

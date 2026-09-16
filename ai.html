@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Make Practice · Priyaan's Hub</title>
+<title>Make Practice · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
 main > * + * { margin-top: 1rem; }
@@ -366,7 +366,8 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     required: ['title', 'source_summary', 'problems'], additionalProperties: false
   };
   function prompt(kind, count, focus, vary) {
-    return 'You are making practice for Priyaan, a 7th grader in California. The attached document is his class material.\n\n' +
+    var who = PH.person();
+    return 'You are making practice for ' + (who ? who + ', a 7th grader' : 'a 7th grader') + ' in California. The attached document is their class material.\n\n' +
       (vary ? 'This is a second set on the same material, so use different numbers, contexts and question order than an obvious first attempt.\n\n' : '') +
       'Write ' + count + ' NEW practice ' + (kind === 'quiz' ? 'quiz questions' : 'problems') + ' that test the same skills as the document. ' +
       'Do not copy its questions word for word: change the numbers, names and situations, and keep the same kind of thinking and the same level.\n\n' +
@@ -654,7 +655,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
         '<ol class="problems">' + sh.ws.problems.map(function (p, j) {
           return '<li class="prob"><span class="num">' + (j + 1) + '</span><div class="body"><div>' + p.question + '</div><div class="work"></div></div></li>';
         }).join('') + '</ol>' +
-        '<footer><span>' + esc(lvl.name) + " practice · Priyaan's Hub</span><span>" + esc(sh.day) + '</span></footer></div>';
+        '<footer><span>' + esc(lvl.name) + ' practice · ' + esc(PH.hubName()) + '</span><span>' + esc(sh.day) + '</span></footer></div>';
     }).join('');
     var key = '<div class="page key"><h2>Answer key — ' + esc(lvl.name) + " week's packet</h2>" +
       sheets.map(function (sh) {
@@ -662,7 +663,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
           return '<li><span class="n">' + (j + 1) + '</span><span>' + p.answer + '</span></li>';
         }).join('') + '</ol>';
       }).join('') +
-      "<footer><span>Answer key · Priyaan's Hub</span><span>seeds from " + base + '</span></footer></div>';
+      '<footer><span>Answer key · ' + esc(PH.hubName()) + '</span><span>seeds from ' + base + '</span></footer></div>';
     return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>' + esc(lvl.name) + " week's packet</title><style>" + css +
       '</style></head><body>' + pages + key + '</body></html>';
   }
@@ -760,9 +761,9 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       '<div class="meta">' + n + ' questions<br>' + esc(made) + '</div></header>' +
       '<div class="idline"><span>Name <i></i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
       '<ol class="problems">' + rows + '</ol>' +
-      '<footer><span>' + (cur.source && cur.source !== cur.by ? 'From ' + esc(cur.source) + (cur.by ? ' · ' : '') : '') + (cur.by ? 'questions by ' + esc(cur.by) : '') + '</span><span>Priyaan\'s Hub</span></footer>' +
+      '<footer><span>' + (cur.source && cur.source !== cur.by ? 'From ' + esc(cur.source) + (cur.by ? ' · ' : '') : '') + (cur.by ? 'questions by ' + esc(cur.by) : '') + '</span><span>' + esc(PH.hubName()) + '</span></footer>' +
       '<section class="key"><h2>Answer key</h2><ol>' + key + '</ol>' +
-      '<footer><span>' + esc(cur.title) + ' · answer key</span><span>Priyaan\'s Hub</span></footer></section>' +
+      '<footer><span>' + esc(cur.title) + ' · answer key</span><span>' + esc(PH.hubName()) + '</span></footer></section>' +
       '</div></body></html>';
   }
   function renderSaved() {

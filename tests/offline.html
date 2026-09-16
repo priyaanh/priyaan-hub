@@ -4,7 +4,7 @@
    the cache — which is what "works offline" means here. */
 const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 const SHELL = ['index.html','shared.css','shared.js','piano.html','badges.html','badges_catalog.js','schedule.html',
-               'math.html','im1.js','hindi.html','quizzes.html','cpm_int2_ch1.js','calendar.html','ai.html','python.html','pyquiz.js','progress.html','review.html',
+               'math.html','im1.js','hindi.html','quizzes.html','cpm_int2_ch1.js','calendar.html','ai.html','python.html','pyquiz.js','progress.html','review.html','profile.html',
                'manifest.webmanifest','icon-192.png'];
 (async () => {
   try {
@@ -31,7 +31,7 @@ const SHELL = ['index.html','shared.css','shared.js','piano.html','badges.html',
       ok(page + ' answers from the cache', !!hit && hit.status === 200);
     }
     const html = await (await cache.match('../index.html')).text();
-    ok('the cached hub is the real page', /Priyaan/.test(html) && /todayCard/.test(html));
+    ok('the cached hub is the real page', /Practice Hub/.test(html) && /todayCard/.test(html));
     // PDFs are deliberately left out: they are large and downloaded per device
     const pdfs = cached.filter(f => /\.pdf$/i.test(f));
     ok('workbook PDFs are not cached', pdfs.length === 0, pdfs.slice(0,3).join(', '));

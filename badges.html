@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Merit Badges · Priyaan's Hub</title>
+<title>Merit Badges · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
 /* ---- page layout ---- */
@@ -223,7 +223,7 @@ b. Option two
 (function () {
   'use strict';
   const KEY = 'ph.badges.v1';
-  const SCOUT = 'Priyaan Haldiya';
+  const SCOUT = PH.person();   /* whatever name is saved for this hub, or blank */
   /* Every merit badge (badges_catalog.js) + which workbook PDFs exist on this device (badges/pdf/manifest.js). */
   const CAT = (window.MB && Array.isArray(window.MB.CATALOG)) ? window.MB.CATALOG : [];
   const CAT_URL = window.MB || {};
@@ -513,8 +513,8 @@ b. Option two
     renderTabs(id);
     $('#overview').hidden = !!b;
     $('#badge').hidden = !b;
-    if (b) { renderBadge(b); document.title = b.name + " · Merit Badges · Priyaan's Hub"; }
-    else { renderOverview(); document.title = "Merit Badges · Priyaan's Hub"; }
+    if (b) { renderBadge(b); document.title = b.name + ' · Merit Badges · ' + PH.hubName(); }
+    else { renderOverview(); document.title = 'Merit Badges · ' + PH.hubName(); }
     if (fkey) { const el = document.querySelector('[data-fkey="' + fkey.replace(/"/g, '') + '"]'); if (el) el.focus(); }
   }
 

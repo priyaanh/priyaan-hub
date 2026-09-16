@@ -1,5 +1,5 @@
 {
-  "name": "Priyaan's Hub",
+  "name": "Practice Hub",
   "short_name": "Hub",
   "description": "Piano practice, merit badges, math worksheets, Hindi flashcards, lesson quizzes, and the weekly plan.",
   "start_url": "./index.html",
@@ -63,6 +63,12 @@
       "short_name": "Progress",
       "url": "./progress.html",
       "description": "Streaks, accuracy and practice time"
+    },
+    {
+      "name": "Profile",
+      "short_name": "Profile",
+      "url": "./profile.html",
+      "description": "Name, colours and saved data"
     }
   ]
 }

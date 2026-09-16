@@ -1,0 +1,142 @@
+<!doctype html><title>profile page</title><body style="margin:0"><script>
+/* The profile page is the one place that can wipe or replace everything, so the checks lean on what it
+   does with data: what it lists, what "Forget" removes, what a backup leaves out, and that the gist
+   plumbing sends the right request without a real token ever being used. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||300);i++){ if(cond()) return true; await tick(); } return cond();};
+const KEYS=['ph.name','ph.theme','ph.piano.v1','ph.quiz.v1','ph.hindi.v1','ph.sync.v1','ph.sync.token','ph.ai.key','ph.meta.backupAt'];
+const snap={}; KEYS.forEach(k=>{ snap[k]=localStorage.getItem(k); });
+
+localStorage.setItem('ph.name','Priyaan');
+localStorage.setItem('ph.theme','light');
+localStorage.setItem('ph.piano.v1', JSON.stringify({version:1,pieces:[{id:'p1',name:'Minuet'}],settings:{dailyGoal:30},
+  sessions:[{id:'s',date:'2026-09-14',pieceId:'p1',minutes:30,rating:4,note:''}]}));
+localStorage.setItem('ph.quiz.v1', JSON.stringify({version:1,settings:{},summary:{},
+  attempts:[{id:'q',date:'2026-09-13',ts:1,lesson:'1.1.1',right:8,total:10,kind:'full',seconds:90,seed:1,missed:[2]}]}));
+localStorage.setItem('ph.ai.key','sk-ant-SHOULD-NEVER-LEAVE');
+localStorage.removeItem('ph.sync.v1'); localStorage.removeItem('ph.sync.token');
+
+const f=document.createElement('iframe'); f.style.cssText='width:1100px;height:1400px;border:0'; document.body.appendChild(f);
+f.src='../profile.html';
+f.addEventListener('load', async () => {
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const txt = s => ($(s) ? $(s).textContent : '');
+  try {
+    await waitFor(() => w.PH_PROFILE && $('#dtable').textContent.length > 20, 300);
+    ok('the page exposes what it is doing', !!w.PH_PROFILE);
+
+    /* ---- you ---- */
+    ok('it shows the saved name', $('#nameIn').value === 'Priyaan', $('#nameIn').value);
+    ok('and says whose hub it is', /Priyaan’s Hub/.test(txt('#youSub')), txt('#youSub'));
+    $('#nameIn').value = 'Asha';
+    $('#nameForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+    await tick();
+    ok('changing the name saves it', localStorage.getItem('ph.name') === 'Asha', String(localStorage.getItem('ph.name')));
+    ok('and the tab title follows', /Asha’s Hub/.test(d.title), d.title);
+    $('#clearName').click(); await tick();
+    ok('clearing it falls back to a neutral name', !localStorage.getItem('ph.name') && /Practice Hub/.test(d.title), d.title);
+    w.PH.setPerson('Priyaan'); await tick();
+
+    /* ---- colours ---- */
+    const cards = $$('.themecard');
+    ok('every theme is offered here too', cards.length === 6, cards.length + ' shown');
+    ok('the current one is marked', $$('.themecard[aria-pressed="true"]').length === 1);
+    cards.filter(c => c.getAttribute('data-theme-id') === 'paper')[0].click(); await tick();
+    ok('picking one applies it', d.documentElement.getAttribute('data-theme') === 'paper',
+      d.documentElement.getAttribute('data-theme'));
+    ok('and it is the one now marked', $('.themecard[aria-pressed="true"]').getAttribute('data-theme-id') === 'paper');
+    w.PH.setTheme('light'); await tick();
+
+    /* ---- what is saved ---- */
+    const rows = $$('#dtable tbody tr:not(.total)');
+    ok('it lists what each app has saved', rows.length >= 4, rows.length + ' rows');
+    ok('and says in words what each one holds', rows.every(r => r.querySelector('.what').textContent.trim().length > 12));
+    ok('the API key is listed rather than hidden', /never backed up/i.test(txt('#dtable')), 'the key should be shown but flagged');
+    ok('a total is shown', /All together/.test(txt('#dtable')));
+    ok('sizes add up to what the heading says', /B in this browser/.test(txt('#dataSub')), txt('#dataSub'));
+
+    /* a backup must never carry the key */
+    let captured = null;
+    const realDownload = w.PH.download;
+    w.PH.download = (name, text) => { captured = { name, text }; };
+    $('#backupBtn').click(); await tick();
+    w.PH.download = realDownload;
+    ok('a copy can be saved', !!captured && /practice-hub-backup-/.test(captured.name), captured ? captured.name : 'nothing');
+    ok('and it carries the practice data', /ph\.piano\.v1/.test(captured.text) && /ph\.quiz\.v1/.test(captured.text));
+    ok('but never the API key', !/SHOULD-NEVER-LEAVE/.test(captured.text) && !/ph\.ai\.key/.test(captured.text));
+
+    /* ---- sync: no token yet ---- */
+    ok('with no token it explains how to get one', /Read and write/.test(txt('#syncBody')) && !!$('#tokenIn'));
+    ok('and the token box hides what is typed', $('#tokenIn').type === 'password');
+    $('#tokenIn').value = 'github_pat_TESTTOKEN';
+    $('#tokenSave').click(); await tick();
+    ok('saving the token moves on to making the store', !!$('#makeStore'), txt('#syncSub'));
+    ok('the token is kept out of a backup', w.PH.isSecretKey('ph.sync.token'));
+
+    /* ---- sync: making the gist, with GitHub stubbed ---- */
+    const calls = [];
+    w.fetch = (url, opts) => {
+      calls.push({ url: String(url), opts: opts || {} });
+      return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ id: 'abc123def456' }) });
+    };
+    $('#makeStore').click();
+    await waitFor(() => !!$('#pushBtn'), 400);
+    ok('it asks GitHub to make a gist', calls.length === 1 && /api\.github\.com\/gists$/.test(calls[0].url) && calls[0].opts.method === 'POST',
+      calls.length ? calls[0].opts.method + ' ' + calls[0].url : 'no call');
+    ok('the gist is private', JSON.parse(calls[0].opts.body).public === false);
+    ok('the token travels in the header, never in the body', /Bearer github_pat_TESTTOKEN/.test(calls[0].opts.headers.Authorization)
+      && !/github_pat_/.test(calls[0].opts.body));
+    const sent = JSON.parse(JSON.parse(calls[0].opts.body).files['practice-hub.json'].content);
+    ok('what it sends is the same bundle a backup makes', !!sent.data['ph.piano.v1'] && !sent.data['ph.ai.key']);
+    ok('the gist id is remembered', w.PH_PROFILE.state().gist === 'abc123def456', w.PH_PROFILE.state().gist);
+
+    /* ---- sync: saving again ---- */
+    calls.length = 0;
+    $('#pushBtn').click();
+    await waitFor(() => calls.length === 1, 400);
+    ok('saving again updates that gist', /\/gists\/abc123def456$/.test(calls[0].url) && calls[0].opts.method === 'PATCH',
+      calls[0].opts.method + ' ' + calls[0].url);
+
+    /* ---- sync: loading back ---- */
+    calls.length = 0;
+    const cloud = JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(),
+      data: { 'ph.name': 'FromTheGist', 'ph.hindi.v1': JSON.stringify({ version: 1, days: { '2026-09-01': 3 }, progress: {}, quizzes: [], custom: [], settings: {} }) } });
+    w.fetch = (url, opts) => {
+      calls.push({ url: String(url), opts: opts || {} });
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ files: { 'practice-hub.json': { content: cloud } } }) });
+    };
+    w.confirm = () => true;
+    $('#pullBtn').click();
+    await waitFor(() => localStorage.getItem('ph.name') === 'FromTheGist', 400);
+    ok('loading brings the data back', localStorage.getItem('ph.name') === 'FromTheGist');
+    ok('and it fetched that gist', /\/gists\/abc123def456$/.test(calls[0].url) && (calls[0].opts.method || 'GET') === 'GET');
+    ok('and the key on this device survives it', localStorage.getItem('ph.ai.key') === 'sk-ant-SHOULD-NEVER-LEAVE');
+
+    /* ---- what happens when GitHub says no ---- */
+    w.fetch = () => Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) });
+    $('#pushBtn').click();
+    await waitFor(() => /did not accept/.test(txt('#syncState')), 400);
+    ok('a rejected token is explained in words', /did not accept that token/.test(txt('#syncState')), txt('#syncState'));
+    w.fetch = () => Promise.reject(new Error('offline'));
+    $('#pushBtn').click();
+    await waitFor(() => /offline|could not reach/i.test(txt('#syncState')), 400);
+    ok('being offline is explained too', txt('#syncState').length > 4, txt('#syncState'));
+    ok('and the buttons work again afterwards', !$('#pushBtn').disabled);
+
+    /* ---- forgetting one app ---- */
+    w.confirm = () => true;
+    const forget = $$('#dtable [data-forget]').filter(b => b.getAttribute('data-forget') === 'ph.piano.v1')[0];
+    ok('every row offers to forget it', !!forget);
+    forget.click(); await tick();
+    ok('forgetting one app removes only that one', !localStorage.getItem('ph.piano.v1') && !!localStorage.getItem('ph.quiz.v1'));
+    w.confirm = () => false;
+    const other = $$('#dtable [data-forget]')[0];
+    const beforeKey = other.getAttribute('data-forget'), beforeVal = localStorage.getItem(beforeKey);
+    other.click(); await tick();
+    ok('saying no to the warning keeps it', localStorage.getItem(beforeKey) === beforeVal);
+  } catch (e) { ok('suite ran without throwing', false, e.message); }
+  KEYS.forEach(k => { if (snap[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, snap[k]); });
+  console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+});
+</script></body>

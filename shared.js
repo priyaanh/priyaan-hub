@@ -93,6 +93,54 @@ window.PH = (function () {
     setTimeout(function () { a.remove(); }, 0);
     return a.href;
   }
+  /* Secrets stay on the device they were typed on: never in a backup file, never synced.
+     One list, so every page that copies data agrees about what must not be copied. */
+  var SECRET_KEY = /^ph\.(ai\.key|sync\.token)/;
+  function isSecretKey(k) { return SECRET_KEY.test(String(k || '')); }
+  /** Everything this hub has saved, minus the secrets. */
+  function exportable() {
+    var out = {};
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('ph.') === 0 && !isSecretKey(k)) out[k] = localStorage.getItem(k);
+      }
+    } catch (e) {}
+    return out;
+  }
+
+  /* ---- whose hub this is ------------------------------------------------------------------------
+     Nobody's name is baked into the pages. They carry a neutral "Practice Hub", and whatever name is
+     saved here replaces it everywhere: titles, the hub heading, and the footer of anything printed. */
+  var NAME_KEY = 'ph.name';
+  function person() {
+    try { var v = localStorage.getItem(NAME_KEY); return typeof v === 'string' ? v.trim().slice(0, 40) : ''; }
+    catch (e) { return ''; }
+  }
+  function setPerson(v) {
+    var name = String(v == null ? '' : v).trim().slice(0, 40);
+    try { name ? localStorage.setItem(NAME_KEY, name) : localStorage.removeItem(NAME_KEY); } catch (e) {}
+    applyName();
+    document.dispatchEvent(new CustomEvent('ph:name', { detail: { name: name } }));
+    return name;
+  }
+  var GENERIC_HUB = 'Practice Hub';
+  function hubName() { var p = person(); return p ? p + '\u2019s Hub' : GENERIC_HUB; }
+  /** Put the name wherever the page marked a slot for it, and into the tab title. */
+  function applyName() {
+    var hub = hubName(), who = person();
+    if (document.title.indexOf(GENERIC_HUB) >= 0 || document.title.indexOf('\u2019s Hub') >= 0)
+      document.title = document.title.replace(/[^·]*\u2019s Hub|Practice Hub/, hub);
+    var slots = document.querySelectorAll('[data-ph]');
+    for (var i = 0; i < slots.length; i++) {
+      var k = slots[i].getAttribute('data-ph');
+      if (k === 'hub') slots[i].textContent = hub;
+      else if (k === 'name') slots[i].textContent = who;
+      /* "Priyaan\u2019s " or nothing, so a heading reads right either way */
+      else if (k === 'possessive') slots[i].textContent = who ? who + '\u2019s ' : '';
+    }
+  }
+
   /* ---- themes ----------------------------------------------------------------------------------
      One stored choice for the whole site. "system" follows the device and keeps following it, so a
      phone that dims at sunset dims the hub too. Everything else is resolved once and pinned. */
@@ -124,6 +172,7 @@ window.PH = (function () {
     document.dispatchEvent(new CustomEvent('ph:theme', { detail: { choice: choice } }));
   }
   applyTheme(themeChoice());
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyName); else applyName();
   /* keep following the device while the choice is "system" */
   try {
     var mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -131,10 +180,15 @@ window.PH = (function () {
     if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
   } catch (e) { /* older browser: the page is still themed, it just will not follow along */ }
   /* another tab changed it */
-  window.addEventListener('storage', function (e) { if (e.key === THEME_KEY) applyTheme(themeChoice()); });
+  window.addEventListener('storage', function (e) {
+    if (e.key === THEME_KEY) applyTheme(themeChoice());
+    if (e.key === NAME_KEY) applyName();
+  });
 
   return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, safeHTML, plainText, uid, toast, download, pickFile, rng, openChatGPT, chatGPTUrl,
-    THEMES: THEMES, themeChoice: themeChoice, setTheme: setTheme };
+    THEMES: THEMES, themeChoice: themeChoice, setTheme: setTheme,
+    person: person, setPerson: setPerson, hubName: hubName, applyName: applyName,
+    isSecretKey: isSecretKey, exportable: exportable };
 })();
 
 /* A palette button in every page's top bar. Built here rather than in each page so all twelve get it,
