@@ -544,6 +544,152 @@ const verify = {
       return near(val(a), Number(m[2]) / Number(m[1]), 1e-6);
     return null;
   },
+  /* ---------------- Integrated Math 3 ---------------- */
+  poly3(q, a) {
+    const p = plain(q); let m;
+    if ((m = /^What is the degree of .*?x\^(\d+)/.exec(p))) return near(val(a), Number(m[1]));
+    if ((m = /^At most how many roots can a polynomial of degree (\d+) have\?$/.exec(p))) return near(val(a), Number(m[1]));
+    if ((m = /^Find the roots: (.+) = 0$/.exec(p))) {
+      const roots = (m[1].match(/\(x ([+-]) (\d+)\)/g) || []).map(t => {
+        const g = /\(x ([+-]) (\d+)\)/.exec(t); return (g[1] === '-' ? 1 : -1) * Number(g[2]);
+      });
+      const got = (plain(a).match(/-?\d+/g) || []).map(Number).sort((x, y) => x - y);
+      return roots.length === got.length && roots.slice().sort((x, y) => x - y).join(',') === got.join(',');
+    }
+    if ((m = /^If f\(x\) = (-?\d*)x\^2 ([+-]) (\d+), what is f\((-?\d+)\)\?$/.exec(p))) {
+      const c = m[1] === '' ? 1 : m[1] === '-' ? -1 : Number(m[1]);
+      const k = (m[2] === '-' ? -1 : 1) * Number(m[3]), x = Number(m[4]);
+      return near(val(a), c * x * x + k);
+    }
+    if (/what does .* do\?$/.test(p)) {
+      const lead = /^As x grows large and positive, what does (-?\d*)x\^\d+ do\?$/.exec(p);
+      if (!lead) return null;
+      const c = lead[1] === '' ? 1 : lead[1] === '-' ? -1 : Number(lead[1]);
+      return plain(a).trim() === (c > 0 ? 'goes up' : 'goes down');
+    }
+    return null;
+  },
+  transform3(q, a) {
+    const p = plain(q); let m;
+    if ((m = /y = \(x ([+-]) (\d+)\)\^2 ([+-]) (\d+)\. Where is the vertex\?$/.exec(p))) {
+      const h = (m[1] === '-' ? 1 : -1) * Number(m[2]);      /* (x - h) means the vertex is at +h */
+      const k = (m[3] === '-' ? -1 : 1) * Number(m[4]);
+      return plain(a).replace(/\s/g, '') === '(' + h + ',' + k + ')';
+    }
+    if ((m = /^y = f\(x ([+-]) (\d+)\) moves/.exec(p))) {
+      const h = (m[1] === '-' ? 1 : -1) * Number(m[2]);
+      return plain(a).trim() === Math.abs(h) + ' ' + (h > 0 ? 'right' : 'left');
+    }
+    return null;
+  },
+  log3(q, a) {
+    const p = plain(q).replace(/[\u2080-\u2089]/g, c => String('\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089'.indexOf(c)));
+    let m;
+    if ((m = /^Work out: log(\d+)\((\d+)\)$/.exec(p))) return near(val(a), Math.log(Number(m[2])) / Math.log(Number(m[1])), 1e-9);
+    if ((m = /^Solve for x: (\d+)\^x = (\d+)$/.exec(p))) return near(val(a), Math.log(Number(m[2])) / Math.log(Number(m[1])), 1e-9);
+    if ((m = /^log\(a\) = (\d+) and log\(b\) = (\d+)\. What is log\(ab\)\?$/.exec(p))) return near(val(a), Number(m[1]) + Number(m[2]));
+    if ((m = /^log\(a\) = (\d+) and log\(b\) = (\d+)\. What is log\(a\/b\)\?$/.exec(p))) return near(val(a), Number(m[1]) - Number(m[2]));
+    return null;
+  },
+  expo3(q, a) {
+    const p = plain(q); let m;
+    if ((m = /^Solve for x: (\d+)\^x = (\d+)$/.exec(p))) return near(val(a), Math.log(Number(m[2])) / Math.log(Number(m[1])), 1e-9);
+    if ((m = /sample of (\d+) g halves every (\d+) years.*after (\d+) years/.exec(p))) {
+      const halvings = Number(m[3]) / Number(m[2]);
+      return near(val(a), Number(m[1]) / Math.pow(2, halvings), 1e-9);
+    }
+    if ((m = /population of (\d+) doubles every (\d+) hours.*after (\d+) hours/.exec(p))) {
+      const doublings = Number(m[3]) / Number(m[2]);
+      return near(val(a), Number(m[1]) * Math.pow(2, doublings), 1e-9);
+    }
+    return null;
+  },
+  trig3(q, a) {
+    const p = plain(q); let m;
+    const EXACT = {
+      'sin0': '0', 'sin30': '1/2', 'sin45': '\u221a2/2', 'sin60': '\u221a3/2', 'sin90': '1', 'sin180': '0',
+      'cos0': '1', 'cos30': '\u221a3/2', 'cos45': '\u221a2/2', 'cos60': '1/2', 'cos90': '0', 'cos180': '-1'
+    };
+    if ((m = /^What is (sin|cos)\((\d+)\)\?$/.exec(p.replace('\u00b0', '')))) {
+      const want = EXACT[m[1] + m[2]];
+      return want != null && plain(a).replace(/[\u2212\u2013]/g, '-').trim() === want;
+    }
+    if ((m = /^What is the amplitude of y = (\d+) sin/.exec(p))) return near(val(a), Number(m[1]));
+    if ((m = /^What is the period of y = \d+ sin\((\d*)x\), in degrees\?$/.exec(p)))
+      return near(val(a), 360 / (m[1] === '' ? 1 : Number(m[1])));
+    return null;
+  },
+  rational3(q, a) {
+    const p = plain(q); let m;
+    if ((m = /excluded from \d+ \/ \(x ([+-]) (\d+)\)\?$/.exec(p)))
+      return near(val(a), (m[1] === '-' ? 1 : -1) * Number(m[2]));
+    if ((m = /^Simplify: \(x ([+-]) (\d+)\)\(x ([+-]) (\d+)\) \/ \(x ([+-]) (\d+)\)$/.exec(p))) {
+      /* whichever bracket matches the bottom cancels; the other one is the answer */
+      const top = [[m[1], m[2]], [m[3], m[4]]], bot = [m[5], m[6]];
+      const left = top.filter(t => !(t[0] === bot[0] && t[1] === bot[1]));
+      if (left.length !== 1) return null;
+      return plain(a).replace(/\s/g, '') === ('x' + left[0][0] + left[0][1]);
+    }
+    if ((m = /^Solve for x: (\d+) \/ x = (\d+) \/ (-?\d+)$/.exec(p)))
+      return Number(m[1]) === Number(m[2]) && near(val(a), Number(m[3]));
+    return null;
+  },
+  series3(q, a) {
+    const p = plain(q); let m;
+    if ((m = /starts at (\d+) and goes up by (\d+) each time\. What is the (\d+)th term\?$/.exec(p)))
+      return near(val(a), Number(m[1]) + (Number(m[3]) - 1) * Number(m[2]));
+    if ((m = /Add up the first (\d+) terms of the sequence starting at (\d+) and going up by (\d+)/.exec(p))) {
+      const n = Number(m[1]), a1 = Number(m[2]), dd = Number(m[3]);
+      return near(val(a), n * (2 * a1 + (n - 1) * dd) / 2);
+    }
+    if ((m = /starts at (\d+) and multiplies by (\d+) each time\. What is the (\d+)th term\?$/.exec(p)))
+      return near(val(a), Number(m[1]) * Math.pow(Number(m[2]), Number(m[3]) - 1));
+    if ((m = /Add up the first (\d+) terms of a geometric sequence starting at (\d+) with multiplier (\d+)/.exec(p))) {
+      const n = Number(m[1]), g = Number(m[2]), rr = Number(m[3]);
+      return near(val(a), g * (Math.pow(rr, n) - 1) / (rr - 1));
+    }
+    return null;
+  },
+  stats3(q, a) {
+    const p = plain(q); let m;
+    if ((m = /within (\d) standard deviations? of the mean\?$/.exec(p)))
+      return near(val(a), { 1: 68, 2: 95, 3: 99.7 }[m[1]], 1e-9);
+    if ((m = /mean (\d+) and standard deviation (\d+)\. What value is (\d) standard deviations? above the mean\?$/.exec(p)))
+      return near(val(a), Number(m[1]) + Number(m[3]) * Number(m[2]));
+    if ((m = /mean (\d+) and standard deviation (\d+)\. What is the z-score of (-?\d+)\?$/.exec(p)))
+      return near(val(a), (Number(m[3]) - Number(m[1])) / Number(m[2]), 1e-9);
+    if (/what percent of the data is above the mean\?$/.test(p)) return near(val(a), 50);
+    return null;
+  },
+  circle3(q, a) {
+    const p = plain(q); let m;
+    if ((m = /\(x ([+-]) (\d+)\)\^2 \+ \(y ([+-]) (\d+)\)\^2 = (\d+)\. What is its centre\?$/.exec(p))) {
+      const h = (m[1] === '-' ? 1 : -1) * Number(m[2]), k = (m[3] === '-' ? 1 : -1) * Number(m[4]);
+      return plain(a).replace(/\s/g, '') === '(' + h + ',' + k + ')';
+    }
+    if ((m = /= (\d+)\. What is its radius\?$/.exec(p))) return near(val(a), Math.sqrt(Number(m[1])), 1e-9);
+    if ((m = /centre \((-?\d+), (-?\d+)\) and radius (\d+)\.$/.exec(p))) {
+      const h = Number(m[1]), k = Number(m[2]), rr = Number(m[3]);
+      const want = '(x' + (h < 0 ? '+' + Math.abs(h) : '-' + h) + ')^2+(y' + (k < 0 ? '+' + Math.abs(k) : '-' + k) + ')^2=' + (rr * rr);
+      return plain(a).replace(/\s/g, '') === want;
+    }
+    return null;
+  },
+  count3(q, a) {
+    const fact = n => { let v = 1; for (let i = 2; i <= n; i++) v *= i; return v; };
+    const p = plain(q); let m;
+    if ((m = /In how many orders can (\d+) different books/.exec(p))) return near(val(a), fact(Number(m[1])));
+    if ((m = /How many ways can (\d+) people be chosen from (\d+), when the order does not matter\?$/.exec(p)))
+      return near(val(a), fact(Number(m[2])) / (fact(Number(m[1])) * fact(Number(m[2]) - Number(m[1]))));
+    if ((m = /How many ways can (\d+) people be chosen from (\d+) and put in order\?$/.exec(p)))
+      return near(val(a), fact(Number(m[2])) / fact(Number(m[2]) - Number(m[1])));
+    if ((m = /(coin is tossed|die is rolled) (\d+) times/.exec(p))) {
+      const sides = m[1].indexOf('coin') >= 0 ? 2 : 6;
+      return near(val(a), 1 / Math.pow(sides, Number(m[2])), 1e-9);
+    }
+    return null;
+  },
+
   expo2(q, a) {
     const p = plain(q); let m;
     if ((m = /^A quantity (grows|falls) by (\d+)% each year\. What is the multiplier\?$/.exec(p)))

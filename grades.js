@@ -37,6 +37,10 @@
     return d === 1 ? num(s * n) : (s < 0 ? MINUS : '') + n + '/' + d;
   }
   function coef(a) { return a === 1 ? '' : a === -1 ? MINUS : num(a); }   // 1x prints as x
+  var SUBS = { '0': '\u2080', '1': '\u2081', '2': '\u2082', '3': '\u2083', '4': '\u2084', '5': '\u2085',
+    '6': '\u2086', '7': '\u2087', '8': '\u2088', '9': '\u2089' };
+  /* log\u2082(8): written with subscript characters, because a printed worksheet only allows <sup> and <br> */
+  function sub(n) { return String(n).split('').map(function (c) { return SUBS[c] || c; }).join(''); }
   function term(a, v) { return coef(a) + v; }
   function plus(n) { return n < 0 ? ' ' + MINUS + ' ' + Math.abs(n) : ' + ' + n; }
   /* " + 3x", " − x": a coefficient of one is written by leaving it out, never as "1x" */
@@ -883,6 +887,221 @@
       } }
   ];
 
+  /* ======================================================= INTEGRATED MATH 3 (CPM Core Connections) ======================================================= */
+  /* Same rule as Integrated 2: every answer has to be exact and typeable. Logarithms use bases that
+     divide out, trigonometry sticks to the angles with exact values, and a normal distribution is only
+     ever asked about at one, two or three standard deviations. */
+  var INT3 = [
+    { id: 'poly3', name: 'Polynomials', description: 'Degree, roots, end behaviour, and evaluating a polynomial.',
+      gen: function (r, d) {
+        var k = ri(r, 1, d === 1 ? 3 : 5);
+        var a = rnz(r, -6, 6), b = rnz(r, -6, 6), c = rnz(r, -6, 6);
+        if (k === 1) {
+          var deg = ri(r, 2, 5), lead = rnz(r, -4, 4);
+          return P('What is the degree of ' + coef(lead) + 'x' + sup(deg) + plusTerm(a, 'x') + plus(b) + '?', String(deg), [],
+            'the degree is the highest power of x');
+        }
+        if (k === 2) {
+          return P('Find the roots: (x' + plus(-a) + ')(x' + plus(-b) + ')(x' + plus(-c) + ') = 0',
+            [a, b, c].sort(function (x, y) { return x - y; }).map(num).join(', '),
+            [[a, b, c].sort(function (x, y) { return x - y; }).map(num).join(',')],
+            'a product is zero when one of its parts is');
+        }
+        if (k === 3) {
+          var p1 = rnz(r, -3, 3), q1 = rnz(r, -4, 4), at = rnz(r, -3, 3);
+          var val = p1 * at * at + q1;
+          return P('If f(x) = ' + coef(p1) + 'x' + sup(2) + plus(q1) + ', what is f(' + num(at) + ')?', num(val), [],
+            coef(p1) + '(' + num(at) + ')' + sup(2) + plus(q1));
+        }
+        if (k === 4) {
+          var deg2 = pick(r, [2, 3, 4, 5]), lead2 = rnz(r, -3, 3);
+          var up = (deg2 % 2 === 0) ? (lead2 > 0) : (lead2 > 0);
+          return P('As x grows large and positive, what does ' + coef(lead2) + 'x' + sup(deg2) + ' do?',
+            up ? 'goes up' : 'goes down', [up ? 'up' : 'down', up ? '+infinity' : '-infinity'],
+            'the leading term decides it, and its coefficient is ' + (lead2 > 0 ? 'positive' : 'negative'));
+        }
+        var n = ri(r, 2, 6);
+        return P('At most how many roots can a polynomial of degree ' + n + ' have?', String(n), [],
+          'a polynomial has at most as many roots as its degree');
+      } },
+    { id: 'transform3', name: 'Transforming functions', description: 'What f(x − h) + k does to a graph, and where the vertex lands.',
+      gen: function (r, d) {
+        var h = rnz(r, -6, 6), k2 = rnz(r, -6, 6);
+        var which = ri(r, 1, d === 1 ? 2 : 4);
+        if (which === 1) {
+          return P('The graph of y = x' + sup(2) + ' is moved to y = (x' + plus(-h) + ')' + sup(2) + plus(k2) +
+            '. Where is the vertex?', '(' + num(h) + ', ' + num(k2) + ')', [num(h) + ',' + num(k2)],
+            'the graph moves ' + Math.abs(h) + ' ' + (h > 0 ? 'right' : 'left') + ' and ' + Math.abs(k2) + ' ' + (k2 > 0 ? 'up' : 'down'));
+        }
+        if (which === 2) {
+          return P('y = f(x' + plus(-h) + ') moves the graph of y = f(x) which way, and how far?',
+            Math.abs(h) + ' ' + (h > 0 ? 'right' : 'left'), [(h > 0 ? 'right ' : 'left ') + Math.abs(h)],
+            'inside the bracket, the sign is the other way round to what it looks like');
+        }
+        if (which === 3) {
+          var s = ri(r, 2, 5);
+          return P('y = ' + s + 'f(x) does what to the graph of y = f(x)?', 'stretches it vertically by ' + s,
+            ['stretch by ' + s, 'vertical stretch ' + s, s + ' times taller'], 'every y value is multiplied by ' + s);
+        }
+        return P('y = ' + MINUS + 'f(x) does what to the graph of y = f(x)?', 'reflects it in the x-axis',
+          ['reflection in the x-axis', 'flips it over the x-axis'], 'every y value changes sign');
+      } },
+    { id: 'log3', name: 'Logarithms', description: 'Reading a logarithm as a power, and the rules for adding and subtracting them.',
+      gen: function (r, d) {
+        var base = pick(r, [2, 3, 5, 10]);
+        var e = ri(r, 1, base === 2 ? 6 : base === 3 ? 4 : 3);
+        var k = ri(r, 1, d === 1 ? 2 : 4);
+        if (k === 1) return P('Work out: log' + sub(base) + '(' + Math.pow(base, e) + ')', String(e), [],
+          base + sup(e) + ' = ' + Math.pow(base, e));
+        if (k === 2) return P('Solve for x: ' + base + sup('x') + ' = ' + Math.pow(base, e), String(e), ['x = ' + e],
+          'ask what power of ' + base + ' gives ' + Math.pow(base, e));
+        if (k === 3) {
+          var e2 = ri(r, 1, 3);
+          return P('log(a) = ' + e + ' and log(b) = ' + e2 + '. What is log(ab)?', String(e + e2), [],
+            'multiplying inside a log adds the logs');
+        }
+        var e3 = ri(r, 1, 3), e4 = ri(r, 1, 3);
+        return P('log(a) = ' + (e3 + e4) + ' and log(b) = ' + e4 + '. What is log(a/b)?', String(e3), [],
+          'dividing inside a log subtracts the logs');
+      } },
+    { id: 'expo3', name: 'Exponential equations', description: 'Solving for the exponent, and halving or doubling over time.',
+      gen: function (r, d) {
+        var base = pick(r, [2, 3, 5]);
+        var e = ri(r, 2, base === 2 ? 7 : 4);
+        var k = ri(r, 1, d === 1 ? 2 : 3);
+        if (k === 1) return P('Solve for x: ' + base + sup('x') + ' = ' + Math.pow(base, e), String(e), ['x = ' + e], '');
+        if (k === 2) {
+          var half = pick(r, [2, 4, 5, 10]), n = ri(r, 2, 5);
+          var start = Math.pow(2, n) * pick(r, [1, 3, 5]);
+          return P('A sample of ' + start + ' g halves every ' + half + ' years. How much is left after ' + (half * n) + ' years, in grams?',
+            String(start / Math.pow(2, n)), [], n + ' halvings: ' + start + ' ÷ 2' + sup(n));
+        }
+        var d2 = pick(r, [2, 3, 4, 5]), m = ri(r, 2, 4), s2 = pick(r, [1, 2, 3]);
+        return P('A population of ' + s2 + ' doubles every ' + d2 + ' hours. What is it after ' + (d2 * m) + ' hours?',
+          String(s2 * Math.pow(2, m)), [], m + ' doublings: ' + s2 + ' × 2' + sup(m));
+      } },
+    { id: 'trig3', name: 'Trigonometric functions', description: 'Exact values on the unit circle, and the amplitude and period of a wave.',
+      gen: function (r, d) {
+        var k = ri(r, 1, 4);
+        var EXACT = [
+          { ang: 0, sin: '0', cos: '1', tan: '0' },
+          { ang: 30, sin: '1/2', cos: '√3/2', tan: '√3/3' },
+          { ang: 45, sin: '√2/2', cos: '√2/2', tan: '1' },
+          { ang: 60, sin: '√3/2', cos: '1/2', tan: '√3' },
+          { ang: 90, sin: '1', cos: '0', tan: 'undefined' },
+          { ang: 180, sin: '0', cos: MINUS + '1', tan: '0' }
+        ];
+        if (k === 1) {
+          var e = pick(r, EXACT.filter(function (x) { return x.sin === '0' || x.sin === '1' || x.sin === '1/2'; }));
+          return P('What is sin(' + e.ang + '°)?', e.sin, [], 'read it off the unit circle');
+        }
+        if (k === 2) {
+          var e2 = pick(r, EXACT.filter(function (x) { return x.cos === '0' || x.cos === '1' || x.cos === '1/2'; }));
+          return P('What is cos(' + e2.ang + '°)?', e2.cos, [], '');
+        }
+        if (k === 3) {
+          var amp = ri(r, 2, d === 1 ? 12 : 9), b = pick(r, [1, 2, 3, 4, 6]);
+          return P('What is the amplitude of y = ' + amp + ' sin(' + (b === 1 ? '' : b) + 'x)?', String(amp), [],
+            'the amplitude is the number in front');
+        }
+        var amp2 = ri(r, 2, d === 1 ? 12 : 6), b2 = pick(r, [1, 2, 3, 4, 5, 6, 8, 9, 10, 12]);
+        return P('What is the period of y = ' + amp2 + ' sin(' + (b2 === 1 ? '' : b2) + 'x), in degrees?',
+          String(360 / b2), [], '360 ÷ ' + b2);
+      } },
+    { id: 'rational3', name: 'Rational expressions', description: 'Simplifying a fraction of polynomials, and what makes one undefined.',
+      gen: function (r, d) {
+        var a = rnz(r, -8, 8), b = rnz(r, -8, 8);
+        var k = ri(r, 1, d === 1 ? 2 : 3);
+        if (k === 1) {
+          /* "excluded value" is the CPM wording, and it keeps the word "undefined" out of a question,
+             where the test cannot tell a real one from a stray JavaScript value */
+          return P('Which value of x has to be excluded from ' + (ri(r, 1, 9)) + ' / (x' + plus(-a) + ')?', num(a), ['x = ' + num(a)],
+            'the bottom cannot be zero, and it is zero when x = ' + num(a));
+        }
+        if (k === 2) {
+          while (b === a) b = rnz(r, -8, 8);
+          return P('Simplify: (x' + plus(-a) + ')(x' + plus(-b) + ') / (x' + plus(-a) + ')',
+            'x' + plus(-b), ['x' + plus(-b) + '', num(-b) === '0' ? 'x' : ''].filter(Boolean),
+            'the (x' + plus(-a) + ') on the top and the bottom cancel');
+        }
+        var c = rnz(r, -6, 6), mlt = ri(r, 2, 6);
+        return P('Solve for x: ' + mlt + ' / x = ' + mlt * 1 + ' / ' + num(c), num(c), ['x = ' + num(c)],
+          'the tops are the same, so the bottoms must be too');
+      } },
+    { id: 'series3', name: 'Sequences & series', description: 'A term far along a sequence, and the sum of the first n terms.',
+      gen: function (r, d) {
+        var a1 = ri(r, 1, 9), diff = ri(r, 2, 9), n = ri(r, 5, d === 1 ? 12 : 30);
+        var k = ri(r, 1, d === 1 ? 2 : 4);
+        if (k === 1) return P('An arithmetic sequence starts at ' + a1 + ' and goes up by ' + diff + ' each time. What is the ' + n + 'th term?',
+          String(a1 + (n - 1) * diff), [], a1 + ' + (' + n + ' − 1) × ' + diff);
+        if (k === 2) return P('Add up the first ' + n + ' terms of the sequence starting at ' + a1 + ' and going up by ' + diff + ' each time.',
+          String(n * (2 * a1 + (n - 1) * diff) / 2), [],
+          'the sum is n(first + last) ÷ 2 = ' + n + ' × (' + a1 + ' + ' + (a1 + (n - 1) * diff) + ') ÷ 2');
+        var ratio = pick(r, [2, 3]), m = ri(r, 3, 7), g1 = ri(r, 1, 5);
+        if (k === 3) return P('A geometric sequence starts at ' + g1 + ' and multiplies by ' + ratio + ' each time. What is the ' + m + 'th term?',
+          String(g1 * Math.pow(ratio, m - 1)), [], g1 + ' × ' + ratio + sup(m - 1));
+        return P('Add up the first ' + m + ' terms of a geometric sequence starting at ' + g1 + ' with multiplier ' + ratio + '.',
+          String(g1 * (Math.pow(ratio, m) - 1) / (ratio - 1)), [],
+          'the sum is a(r' + sup('n') + ' − 1) ÷ (r − 1)');
+      } },
+    { id: 'stats3', name: 'Normal distribution', description: 'The 68–95–99.7 rule, and reading a z-score.',
+      gen: function (r, d) {
+        var mean = ri(r, 2, 20) * 5, sd = ri(r, 2, 10);
+        var k = ri(r, 1, d === 1 ? 2 : 4);
+        if (k === 1) {
+          var sds = pick(r, [1, 2, 3]), pct = { 1: 68, 2: 95, 3: 99.7 }[sds];
+          return P('In a normal distribution, about what percent of the data is within ' + sds +
+            ' standard deviation' + (sds === 1 ? '' : 's') + ' of the mean?', pct + '%', [String(pct)], 'the 68–95–99.7 rule');
+        }
+        if (k === 2) {
+          var sds2 = pick(r, [1, 2, 3]);
+          return P('A set has mean ' + mean + ' and standard deviation ' + sd + '. What value is ' + sds2 +
+            ' standard deviation' + (sds2 === 1 ? '' : 's') + ' above the mean?', String(mean + sds2 * sd), [],
+            mean + ' + ' + sds2 + ' × ' + sd);
+        }
+        if (k === 3) {
+          var z = pick(r, [1, 2, 3, -1, -2, -3]);
+          var x = mean + z * sd;
+          return P('A set has mean ' + mean + ' and standard deviation ' + sd + '. What is the z-score of ' + x + '?',
+            num(z), [], '(' + x + ' − ' + mean + ') ÷ ' + sd);
+        }
+        return P('In a normal distribution, about what percent of the data is above the mean?', '50%', ['50'],
+          'a normal curve is symmetrical about its mean');
+      } },
+    { id: 'circle3', name: 'Equations of circles', description: 'Centre and radius from the equation, and the equation from the centre and radius.',
+      gen: function (r, d) {
+        var h = rnz(r, -8, 8), k2 = rnz(r, -8, 8), rad = ri(r, 2, 12);
+        if (r() < 0.5) {
+          return P('A circle has equation (x' + plus(-h) + ')' + sup(2) + ' + (y' + plus(-k2) + ')' + sup(2) + ' = ' + (rad * rad) +
+            '. What is its centre?', '(' + num(h) + ', ' + num(k2) + ')', [num(h) + ',' + num(k2)],
+            'the signs inside the brackets flip');
+        }
+        if (r() < 0.5) {
+          return P('A circle has equation (x' + plus(-h) + ')' + sup(2) + ' + (y' + plus(-k2) + ')' + sup(2) + ' = ' + (rad * rad) +
+            '. What is its radius?', String(rad), [], 'the right-hand side is the radius squared: √' + (rad * rad) + ' = ' + rad);
+        }
+        return P('Write the equation of the circle with centre (' + num(h) + ', ' + num(k2) + ') and radius ' + rad + '.',
+          '(x' + plus(-h) + ')' + sup(2) + ' + (y' + plus(-k2) + ')' + sup(2) + ' = ' + (rad * rad),
+          [], '(x − h)² + (y − k)² = r²');
+      } },
+    { id: 'count3', name: 'Counting & probability', description: 'How many ways, in order or not, and the chance of a run of events.',
+      gen: function (r, d) {
+        function fact(n) { var v = 1; for (var i = 2; i <= n; i++) v *= i; return v; }
+        var n = ri(r, 4, d === 1 ? 8 : 9), k = ri(r, 2, d === 1 ? 3 : 4);
+        var which = ri(r, 1, d === 1 ? 3 : 4);
+        if (which === 1) return P('In how many orders can ' + n + ' different books be put on a shelf?', String(fact(n)), [],
+          n + '! = ' + fact(n));
+        if (which === 2) return P('How many ways can ' + k + ' people be chosen from ' + n + ', when the order does not matter?',
+          String(fact(n) / (fact(k) * fact(n - k))), [], n + '! ÷ (' + k + '! × ' + (n - k) + '!)');
+        if (which === 3) return P('How many ways can ' + k + ' people be chosen from ' + n + ' and put in order?',
+          String(fact(n) / fact(n - k)), [], n + '! ÷ ' + (n - k) + '!');
+        var sides = pick(r, [2, 6]), times = ri(r, 2, 3);
+        return P('A fair ' + (sides === 2 ? 'coin is tossed' : 'die is rolled') + ' ' + times +
+          ' times. What is the chance of the same result every time' + (sides === 2 ? ' (all heads)' : ' (all sixes)') + '?',
+          frac(1, Math.pow(sides, times)), [], '(1/' + sides + ')' + sup(times));
+      } }
+  ];
+
   /* Grades 6 to 8 follow the CPM Core Connections courses, which is what the school teaches from, so the
      topics and the words match the book rather than a generic scheme. Grades 4 and 5 come before CPM
      starts, so those are named by strand. */
@@ -892,7 +1111,8 @@
     { id: '6', name: 'Grade 6', sub: 'CPM Core Connections Course 1 · ratios, fractions, decimals, early algebra', topics: G6 },
     { id: '7', name: 'Grade 7', sub: 'CPM Core Connections Course 2 · rationals, proportions, percents, geometry, probability', topics: G7 },
     { id: '8', name: 'Grade 8', sub: 'CPM Core Connections Course 3 · exponents, linear equations, Pythagoras, functions', topics: G8 },
-    { id: 'int2', name: 'Integrated Math 2', sub: 'CPM Core Connections Integrated II · quadratics, similarity, trigonometry, circles, probability', topics: INT2 }
+    { id: 'int2', name: 'Integrated Math 2', sub: 'CPM Core Connections Integrated II · quadratics, similarity, trigonometry, circles, probability', topics: INT2 },
+    { id: 'int3', name: 'Integrated Math 3', sub: 'CPM Core Connections Integrated III · polynomials, logarithms, trigonometric functions, series, distributions', topics: INT3 }
   ];
   var BY_ID = {}; LEVELS.forEach(function (g) { BY_ID[g.id] = g; });
 
