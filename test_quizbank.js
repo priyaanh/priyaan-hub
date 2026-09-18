@@ -10,6 +10,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'cpm_int2_ch1.js'), 'utf8'), ctx, { filename: 'cpm_int2_ch1.js' });
+vm.runInContext(fs.readFileSync(path.join(__dirname, 'cpm_int2_ch2.js'), 'utf8'), ctx, { filename: 'cpm_int2_ch2.js' });
 const BANK = ctx.window.CPM_QUIZZES;
 
 function rng(seed) {

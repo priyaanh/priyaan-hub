@@ -139,7 +139,7 @@ main > * + * { margin-top: 1rem; }
   var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
 
   var SOURCES = {
-    quiz:   { name: 'Lesson quizzes',  emoji: '📝', href: 'quizzes.html', script: 'cpm_int2_ch1.js', global: 'CPM_QUIZZES' },
+    quiz:   { name: 'Lesson quizzes',  emoji: '📝', href: 'quizzes.html', script: ['cpm_int2_ch1.js', 'cpm_int2_ch2.js'], global: 'CPM_QUIZZES' },
     math:   { name: 'Math worksheets', emoji: '🧮', href: 'math.html',    script: 'im1.js',          global: 'IM1' },
     python: { name: 'Python',          emoji: '🐍', href: 'python.html',  script: 'pyquiz.js',       global: 'PY' },
     spanish:{ name: 'Spanish',         emoji: '💬', href: 'spanish.html', script: 'spanish.js',      global: 'ES' },
@@ -288,22 +288,27 @@ main > * + * { margin-top: 1rem; }
     return !src || !src.script || !!src.optional || !!window[src.global];
   }
   var loading = {};
+  /** One file, in order. A source may name several: a question bank split across chapters needs the
+      first file to set the global up and the later ones to add to it, so they cannot race. */
+  function loadFile(file) {
+    if (loading[file]) return loading[file];
+    loading[file] = new Promise(function (done) {
+      var sc = document.createElement('script');
+      sc.src = file;
+      sc.onload = function () { done(true); };
+      sc.onerror = function () { done(false); };
+      document.head.appendChild(sc);
+    });
+    return loading[file];
+  }
   function need(srcKey) {
     var src = SOURCES[srcKey];
-    return new Promise(function (resolve) {
-      if (!src || !src.script) return resolve(true);
-      if (window[src.global]) return resolve(true);
-      /* an optional helper only sharpens the marking; without it the source still works */
-      if (loading[src.script]) return loading[src.script].then(resolve);
-      loading[src.script] = new Promise(function (done) {
-        var sc = document.createElement('script');
-        sc.src = src.script;
-        sc.onload = function () { done(!!window[src.global]); };
-        sc.onerror = function () { done(false); };
-        document.head.appendChild(sc);
-      });
-      loading[src.script].then(resolve);
-    });
+    if (!src || !src.script) return Promise.resolve(true);
+    if (window[src.global]) return Promise.resolve(true);
+    var files = Array.isArray(src.script) ? src.script : [src.script];
+    return files.reduce(function (chain, f) {
+      return chain.then(function () { return loadFile(f); });
+    }, Promise.resolve()).then(function () { return !!window[src.global]; });
   }
   function needAll(keys) {
     return Promise.all(keys.filter(function (k, i) { return keys.indexOf(k) === i; }).map(need));

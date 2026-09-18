@@ -1,10 +1,15 @@
 <!doctype html><title>quiz print test</title><body style="margin:0"><script>
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../quizzes.html'; document.body.appendChild(f);
-const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);};
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
   try {
-    ok('every lesson row has a print button', $$('[data-printq]').length === 10);
+    /* one per lesson, however many chapters the bank holds */
+    ok('every lesson row has a print button', $$('[data-printq]').length === w.CPM_QUIZZES.lessons.length
+       && $$('[data-printq]').length >= 21);
+    const heads = $$('.sect-head').map(e => e.textContent).join(' | ');
+    ok('both chapters are listed', /Section 1\.1/.test(heads) && /Section 2\.1/.test(heads), heads);
+    ok('and each section says which chapter it belongs to', /Justification and Similarity/.test(heads), heads);
     const q = w.PHQuizDebug.buildQuiz({ lesson: '1.3.2', seed: 12345 });
     const html = w.PHQuizDebug.quizSheetHTML(q);
     ok('complete document', /^<!DOCTYPE html>/.test(html) && /<\/html>$/.test(html));

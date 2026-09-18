@@ -7,11 +7,15 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = __dirname;
 
-function loadBrowserScript(file, globals) {
+/* Runs one or more browser-only scripts in a shared context, in order: a question bank can be split
+   across files, with the later ones adding to what the first one set up. */
+function loadBrowserScript(file, more) {
+  const files = [file].concat(Array.isArray(more) ? more : (typeof more === 'string' ? [more] : []));
+  const globals = (more && typeof more === 'object' && !Array.isArray(more)) ? more : null;
   const ctx = Object.assign({ window: {}, screen: {}, document: { querySelector: () => null } }, globals || {});
   ctx.window = ctx.window || {};
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), ctx, { filename: file });
+  files.forEach(f => vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f }));
   return ctx;
 }
 
@@ -58,7 +62,7 @@ const chapterById = {};
 });
 
 /* CPM lessons */
-const cpm = loadBrowserScript('cpm_int2_ch1.js');
+const cpm = loadBrowserScript('cpm_int2_ch1.js', 'cpm_int2_ch2.js');
 ((cpm.window.CPM_QUIZZES || {}).lessons || []).forEach(l => {
   add('📝', l.id + ' · ' + l.title, 'CPM lesson · ' + (l.focus || []).slice(0, 2).join(' · '),
     'quizzes.html#' + l.id, l.id + ' ' + l.title + ' ' + (l.focus || []).join(' ') + ' quiz cpm');

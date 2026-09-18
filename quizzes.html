@@ -123,7 +123,7 @@ main > * + * { margin-top: 1rem; }
 
 </main>
 <script src="shared.js"></script>
-<script src="cpm_int2_ch1.js"></script>
+<script src="cpm_int2_ch1.js"></script><script src="cpm_int2_ch2.js"></script>
 <script>
 (function () {
   'use strict';
@@ -208,6 +208,13 @@ main > * + * { margin-top: 1rem; }
 
   /* ===================== Building a quiz ===================== */
   function refsOf(lesson) { return lesson.questions.map((def, idx) => ({ lesson, idx, def })); }
+  /** Which chapter a quiz belongs to, taken from the lesson rather than from the bank as a whole. */
+  function chapterOf(lessonId) {
+    const l = byId[lessonId];
+    if (l && l.chapter) return { chapter: l.chapter, title: l.chapterTitle || '' };
+    const n = Number(String(lessonId).split('.')[0]) || BANK.chapter || 1;
+    return { chapter: n, title: n === (BANK.chapter || 1) ? (BANK.title || '') : '' };
+  }
   function pickMixed(rnd, ids, n) {
     const lists = shuffle(rnd, ids.map(id => byId[id]).filter(Boolean)).map(l => shuffle(rnd, refsOf(l)));
     const out = []; let k = 0;
@@ -284,7 +291,7 @@ main > * + * { margin-top: 1rem; }
       '<div class="meta">' + n + ' questions<br>seed ' + q.seed + '</div></header>' +
       '<div class="idline"><span>Name <i>' + esc(PH.person()) + (PH.personEmail() ? '<em>' + esc(PH.personEmail()) + '</em>' : '') + '</i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
       '<ol class="problems">' + rows + '</ol>' +
-      '<footer><span>Chapter ' + esc(BANK.chapter || 1) + ' · ' + esc(BANK.title || '') + '</span><span>' + esc(PH.hubName()) + '</span></footer>' +
+      '<footer><span>Chapter ' + esc(chapterOf(q.lesson).chapter) + ' · ' + esc(chapterOf(q.lesson).title) + '</span><span>' + esc(PH.hubName()) + '</span></footer>' +
       '<section class="key"><h2>Answer key — ' + esc(title) + '</h2><ol>' + key + '</ol>' +
       '<footer><span>' + esc(title) + ' · answer key</span><span>' + esc(PH.hubName()) + '</span></footer></section></div></body></html>';
   }
@@ -326,15 +333,25 @@ main > * + * { margin-top: 1rem; }
     $('#s-avg').textContent = avg == null ? '–' : avg + '%';
     $('#s-mastered').textContent = LESSONS.filter(l => isMastered(l.id)).length + (LESSONS.length ? '/' + LESSONS.length : '');
     $('#s-streak').textContent = currentStreak();
-    $('#bank-title').textContent = BANK.title ? (BANK.book || '') + ' · Ch. ' + (BANK.chapter || '') : '';
+    /* the bank holds more than one chapter now, so say which ones rather than naming just the first */
+    var chNums = [];
+    LESSONS.forEach(function (l) { var c = Number(String(l.id).split('.')[0]); if (c && chNums.indexOf(c) < 0) chNums.push(c); });
+    chNums.sort(function (a, b) { return a - b; });
+    $('#bank-title').textContent = LESSONS.length
+      ? (BANK.book || '') + ' · ' + (chNums.length > 1 ? 'Ch. ' + chNums[0] + '–' + chNums[chNums.length - 1] : 'Ch. ' + chNums[0])
+      : '';
   }
 
+  function chapterTitleFor(sec) {
+    const first = LESSONS.filter(l => l.id.indexOf(sec + '.') === 0)[0];
+    return first ? (first.chapterTitle || (Number(String(sec).split('.')[0]) === (BANK.chapter || 1) ? BANK.title : '') || '') : '';
+  }
   function renderPicker() {
     const host = $('#lesson-list');
-    if (!LESSONS.length) { host.innerHTML = '<div class="empty">The question bank (cpm_int2_ch1.js) did not load, so there are no quizzes to show.</div>'; $('#btn-mix').disabled = true; return; }
+    if (!LESSONS.length) { host.innerHTML = '<div class="empty">The question bank did not load, so there are no quizzes to show.</div>'; $('#btn-mix').disabled = true; return; }
     const groups = {}, order = [];
     LESSONS.forEach(l => { const sec = l.id.split('.').slice(0, 2).join('.'); if (!groups[sec]) { groups[sec] = []; order.push(sec); } groups[sec].push(l); });
-    host.innerHTML = order.map(sec => '<div class="sect-head">Section ' + esc(sec) + '</div>' + groups[sec].map(l => {
+    host.innerHTML = order.map(sec => '<div class="sect-head">Section ' + esc(sec) + (chapterTitleFor(sec) ? ' · ' + esc(chapterTitleFor(sec)) : '') + '</div>' + groups[sec].map(l => {
       const best = bestOf(l.id), n = state.attempts.filter(a => a.lesson === l.id).length;
       const ratio = best ? best.right / best.total : 0;
       const pill = best ? '<span class="pill ' + (ratio >= .9 ? 'ok' : ratio >= .6 ? 'warn' : 'neutral') + '" title="Best score">' + (ratio >= .9 ? '★ ' : '') + best.right + '/' + best.total + '</span>' : '<span class="pill neutral">New</span>';
