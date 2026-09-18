@@ -142,10 +142,11 @@ main > * + * { margin-top: 1rem; }
     quiz:   { name: 'Lesson quizzes',  emoji: '📝', href: 'quizzes.html', script: ['cpm_int2_ch1.js', 'cpm_int2_ch2.js'], global: 'CPM_QUIZZES' },
     math:   { name: 'Math worksheets', emoji: '🧮', href: 'math.html',    script: 'im1.js',          global: 'IM1' },
     python: { name: 'Python',          emoji: '🐍', href: 'python.html',  script: 'pyquiz.js',       global: 'PY' },
+    science:{ name: 'Science',         emoji: '🔬', href: 'ask.html#science', script: 'science.js',      global: 'SCI' },
     spanish:{ name: 'Spanish',         emoji: '💬', href: 'spanish.html', script: 'spanish.js',      global: 'ES' },
     ai:     { name: 'Make Practice',   emoji: '✏️', href: 'ai.html',      script: 'grades.js',       global: 'GRADES' }
   };
-  var ORDER = ['quiz', 'math', 'spanish', 'python', 'ai'];
+  var ORDER = ['quiz', 'math', 'spanish', 'science', 'python', 'ai'];
 
   /* ===================== State (ours is tiny: what has since been got right) ===================== */
   function blank() { return { version: 1, cleared: {}, settings: { sources: {}, howMany: 10 }, summary: { headline: '', sub: '' } }; }
@@ -224,7 +225,7 @@ main > * + * { margin-top: 1rem; }
     /* Questions asked in the thread on ask.html belong to the subject they came from, not to a source
        of their own: a maths question missed there is a maths question missed. Each generator is asked
        with the same {topics, count, difficulty, seed}, so the same index is the same question. */
-    var GEN_SRC = { math: 'math', spanish: 'spanish', python: 'python', grade: 'ai', lesson: 'quiz' };
+    var GEN_SRC = { math: 'math', spanish: 'spanish', science: 'science', python: 'python', grade: 'ai', lesson: 'quiz' };
     var ak = PH.load('ph.ask.v1', null);
     if (isObj(ak)) arr(ak.history).forEach(function (h) {
       if (!isObj(h) || !arr(h.missed).length || !GEN_SRC[h.gen]) return;
@@ -365,6 +366,21 @@ main > * + * { margin-top: 1rem; }
           from: gp.topicName || 'Grade practice', topic: gp.topic || 'grade', qtext: gp.question, svg: '', code: '',
           choices: null, answerText: String(gp.answer), explain: gp.work || '',
           ok: function (pick, typed) { return GRADES.checkAnswer(gp, typed); }
+        };
+      }
+      if (g.kind === 'science') {
+        if (!window.SCI) return null;
+        var sci = SCI.generate({ topics: g.topics, count: g.count, difficulty: g.difficulty, seed: g.seed });
+        var sq = sci && sci.problems && sci.problems[g.idx];
+        if (!sq) return null;
+        return {
+          from: sq.topicName || 'Science', topic: sq.topic || 'science', qtext: sq.question, svg: '', code: '',
+          choices: (sq.choices && sq.choices.length) ? sq.choices.slice() : null,
+          answerText: String(sq.answer), explain: sq.work || '',
+          ok: function (pick, typed) {
+            if (sq.choices && pick != null) return String(sq.choices[pick]) === String(sq.answer);
+            return SCI.checkAnswer(sq, typed);
+          }
         };
       }
       if (g.kind === 'python') {
@@ -700,7 +716,7 @@ main > * + * { margin-top: 1rem; }
   }
   window.PH_REVIEW = { collect: collect, build: build, refresh: refresh, start: start, check: check, next: next,
     state: function () { return state; }, open: function () { return open_; }, run: function () { return run; },
-    ready: function () { return !!(window.CPM_QUIZZES || window.IM1 || window.PY || window.ES); } };
+    ready: function () { return !!(window.CPM_QUIZZES || window.IM1 || window.PY || window.ES || window.SCI); } };
 })();
 </script>
 </body></html>
