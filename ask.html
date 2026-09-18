@@ -311,11 +311,21 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
 
     const gm = low.match(/\bgrade\s*(\d{1,2})\b/) || low.match(/\b(\d{1,2})(?:st|nd|rd|th)\s+grade\b/);
     if (gm) out.grade = gm[1];
+    /* "integrated math 2", "int 3", "integrated iii" all name a course in grades.js */
+    const course = low.match(/\b(?:integrated|int)\s*(?:math\s*)?(1|2|3|i{1,3})\b/);
+    if (course) {
+      const roman = { i: '1', ii: '2', iii: '3' };
+      const nth = roman[course[1]] || course[1];
+      if (nth === '1') { out.source = 'math'; }        /* Integrated I has a generator of its own */
+      else { out.grade = 'int' + nth; out.source = 'grade'; }
+    }
     ['sixth', 'seventh', 'eighth'].forEach((w, i) => { if (low.indexOf(w) >= 0) out.grade = String(6 + i); });
 
     /* how many: any small number that is not part of a lesson id or a grade */
     let scrubbed = low.replace(/\d+\.\d+\.\d+/g, ' ').replace(/grade\s*\d{1,2}/g, ' ').replace(/\b\d{1,2}(?:st|nd|rd|th)\s+grade/g, ' ')
-      .replace(/integrated\s*(1|2|3|i|ii|iii)\b/g, ' ').replace(/\blevel\s*[123]\b/g, ' ');
+      /* "integrated math 2" and "int 3" name a course; the number in them is not how many to ask */
+      .replace(/\b(integrated|int)\s*(math\s*)?(1|2|3|i{1,3})\b/g, ' ')
+      .replace(/\blevel\s*[123]\b/g, ' ');
     const cm = scrubbed.match(/\b(\d{1,2})\b/);
     if (cm) out.count = Math.min(50, Math.max(1, Number(cm[1])));
 
@@ -348,7 +358,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
       out.lesson = null; out.source = null;
     }
     if (out.grade) {
-      const lvl = (window.GRADES ? GRADES.LEVELS : []).filter(l => String(l.id) === out.grade)[0];
+      const lvl = (window.GRADES ? GRADES.LEVELS : []).filter(l => String(l.id) === String(out.grade))[0];
       if (lvl) { out.source = 'grade'; }
       else out.unclear.push('There is no Grade ' + out.grade + ' set yet.');
     }
@@ -356,7 +366,13 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
     Object.keys(scores).forEach(k => { if (best === null || scores[k] > scores[best]) best = k; });
     if (!out.source && best && scores[best] > 0) out.source = best;
     if (out.source && hits[out.source] && hits[out.source].length) {
-      const top = hits[out.source].slice().sort((a, b) => b.n - a.n);
+      /* once the grade is known, a topic from another grade is not a match, however well it scores */
+      let scored = hits[out.source];
+      if (out.source === 'grade' && out.grade) {
+        const mine = scored.filter(t => String(t.grade) === String(out.grade));
+        if (mine.length) scored = mine;
+      }
+      const top = scored.slice().sort((a, b) => b.n - a.n);
       const keep = top.filter(t => t.n === top[0].n).slice(0, 4);
       out.topics = keep.map(t => t.id);
       if (out.source === 'grade' && !out.grade && keep[0] && keep[0].grade) out.grade = keep[0].grade;

@@ -45,6 +45,17 @@ f.addEventListener('load', async () => {
     ok('"hard" means level 3', read('hard exponents').difficulty === 3);
     ok('"level 2" is taken literally', read('exponents level 2').difficulty === 2);
     ok('a count is capped at something sensible', read('900 questions on slope').count <= 50, String(read('900 questions on slope').count));
+
+    /* naming a course must not be read as a count, and a named grade must not drag in another one */
+    ok('"integrated math 2" names the course', read('integrated math 2').grade === 'int2', JSON.stringify(read('integrated math 2')));
+    ok('and its 2 is not how many to ask', read('integrated math 2').count === null, String(read('integrated math 2').count));
+    ok('"int 3" names that course too', read('int 3 logarithms').grade === 'int3', JSON.stringify(read('int 3 logarithms')));
+    ok('"integrated 1" goes to the Integrated I generator', read('integrated 1 slope').source === 'math', read('integrated 1 slope').source);
+    ok('a topic is only taken from the grade that was asked for',
+       read('grade 5 volume').topics.every(t => /5$/.test(t)), read('grade 5 volume').topics.join());
+    ok('grade 4 fractions stays in grade 4', read('grade 4 fractions').topics.every(t => /4$/.test(t)),
+       read('grade 4 fractions').topics.join());
+    ok('a topic from the newer courses is found', read('normal distribution').grade === 'int3', JSON.stringify(read('normal distribution')));
     ok('nonsense is not guessed at', read('banana wombat').source === null, String(read('banana wombat').source));
     ok('a lesson that does not exist is said so', read('lesson 9.9.9').unclear.length > 0, read('lesson 9.9.9').unclear.join());
 
