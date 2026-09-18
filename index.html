@@ -448,6 +448,20 @@
       colour: '#b91c1c', cls: total ? 'done' : 'due' });
   });
 
+  // asked in the thread today, whatever subject it was about
+  safe(() => {
+    const d = load('ph.ask.v1'); if (!d || !Array.isArray(d.history) || !d.history.length) return;
+    const today = d.history.filter(h => h && h.date === T && h.score);
+    const right = today.reduce((n, h) => n + h.score.right, 0), total = today.reduce((n, h) => n + h.score.total, 0);
+    const NAMES = { math: 'maths', spanish: 'Spanish', python: 'Python', science: 'science', grade: 'grade practice', lesson: 'lesson quizzes' };
+    const subjects = [];
+    today.forEach(h => { const n = NAMES[h.gen]; if (n && subjects.indexOf(n) < 0) subjects.push(n); });
+    tile({ id: 'ask', href: 'ask.html', emoji: '\u{1F5E8}\uFE0F', label: 'Asked today',
+      value: total ? right + ' / ' + total : 'Not yet',
+      sub: total ? subjects.slice(0, 2).join(' and ') + (subjects.length > 2 ? ' and more' : '') : 'ask for anything',
+      colour: '#4f46e5', cls: total ? 'done' : 'due' });
+  });
+
   // merit badges: requirements signed off in the last week
   safe(() => {
     const d = load('ph.badges.v1'); if (!d || !d.done) return;
