@@ -11,7 +11,13 @@
   .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: .5rem 0 1.5rem; }
   .hero h1 { font-size: 2rem; }
   .hero .date { color: var(--muted); }
-  .apps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .apps { display: grid; gap: 2.1rem; margin-top: 1.6rem; }
+  /* Sixteen cards in one list is a wall. Grouped, the page can be read rather than scanned. */
+  .group-head { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; margin: 0 0 .7rem;
+    padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+  .group-head h2 { margin: 0; font-size: 1.12rem; letter-spacing: .005em; }
+  .group-head .sub { font-size: .82rem; color: var(--muted); }
+  .group-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
   .app {
     position: relative; display: flex; flex-direction: column; gap: .6rem; padding: 1.2rem 1.25rem 1.1rem;
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
@@ -143,102 +149,132 @@
   </section>
 
   <section class="apps" id="apps">
-    <a class="app" data-app="piano" href="piano.html">
-      <div class="top"><span class="emoji">🎹</span><h2>Piano Practice</h2></div>
-      <p class="desc">Log daily practice by piece, track minutes, and keep the streak alive. Grade 4 Trinity pieces are preloaded.</p>
-      <div class="summary none" data-key="ph.piano.v1"><span class="headline">No practice logged yet</span><span class="sub">Open to start your first session</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="badges" href="badges.html">
-      <div class="top"><span class="emoji">🏕️</span><h2>Merit Badges</h2></div>
-      <p class="desc">Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting. See what is signed off and what is left.</p>
-      <div class="summary none" data-key="ph.badges.v1"><span class="headline">Nothing checked off yet</span><span class="sub">Open to see all requirements</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="math" href="math.html">
-      <div class="top"><span class="emoji">🧮</span><h2>Math Worksheets</h2></div>
-      <p class="desc">Print Integrated Math 1 practice sheets with answer keys: equations, systems, exponents, and more.</p>
-      <div class="summary none" data-key="ph.math.v1"><span class="headline">No worksheets made yet</span><span class="sub">Pick topics and print</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="ask" href="ask.html">
-      <div class="top"><span class="emoji">🗨️</span><h2>Ask for Practice</h2></div>
-      <p class="desc">Say what you want to practise in your own words. It asks you multiple choice questions one at a time, says whether you were right, and explains why. Maths, lesson quizzes, grade practice, Spanish and Python.</p>
-      <div class="summary none" data-key="ph.ask.v1"><span class="headline">Nothing asked yet</span><span class="sub">Try “10 questions on slope”</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="science" href="ask.html#science">
-      <div class="top"><span class="emoji">🔬</span><h2>Science</h2></div>
-      <p class="desc">Moon phases, the solar system, seasons, states of matter, the water cycle, energy, forces, cells, food chains, atoms, light and sound, rocks. Asked as multiple choice, with the reason for the answer.</p>
-      <div class="summary none" data-key="ph.ask.v1"><span class="headline">Grades 4 to 8</span><span class="sub">Twelve topics, asked in the thread</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="spanish" href="spanish.html">
-      <div class="top"><span class="emoji">💬</span><h2>Spanish Practice</h2></div>
-      <p class="desc">Endless Spanish questions, asked and marked right here: verbs, ser and estar, agreement, numbers, telling time and vocabulary. A set to print if you want one.</p>
-      <div class="summary none" data-key="ph.spanish.v1"><span class="headline">No rounds yet</span><span class="sub">Pick topics and start</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="quiz" href="quizzes.html">
-      <div class="top"><span class="emoji">📝</span><h2>Lesson Quizzes</h2></div>
-      <p class="desc">One quiz per CPM lesson: polygons, angle pairs, transversals, triangles, tile patterns, area models, and describing graphs.</p>
-      <div class="summary none" data-key="ph.quiz.v1"><span class="headline">No quizzes taken yet</span><span class="sub">Open to start with 1.1.1</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="hindi" href="hindi.html">
-      <div class="top"><span class="emoji">📖</span><h2>Hindi Flashcards</h2></div>
-      <p class="desc">Vocabulary from the Malhar Class 6 and Class 7 chapters, in Devanagari with English meanings. Flip cards or take a quiz.</p>
-      <div class="summary none" data-key="ph.hindi.v1"><span class="headline">No words reviewed yet</span><span class="sub">Open to start</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="schedule" href="schedule.html">
-      <div class="top"><span class="emoji">📅</span><h2>Weekly Plan</h2></div>
-      <p class="desc">One week, every activity: piano, dance, Scouts, math, and Hindi, with checkboxes for each day.</p>
-      <div class="summary none" data-key="ph.schedule.v1"><span class="headline">This week is empty</span><span class="sub">Open to plan the week</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="python" href="python.html">
-      <div class="top"><span class="emoji">🐍</span><h2>Python Practice</h2></div>
-      <p class="desc">Short rounds on types, strings, lists, loops, if/else, functions, dictionaries and errors. Read the code, say what it prints.</p>
-      <div class="summary none" data-key="ph.python.v1"><span class="headline">No rounds yet</span><span class="sub">Pick topics and start</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="ai" href="ai.html">
-      <div class="top"><span class="emoji">✏️</span><h2>Make Practice</h2></div>
-      <p class="desc">Pick a grade and get a printable worksheet straight away, or turn a chapter or study guide into one. No API key needed either way.</p>
-      <div class="summary none" data-key="ph.ai.v1"><span class="headline">No sets yet</span><span class="sub">Pick a grade or drop a PDF</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="calendar" href="calendar.html">
-      <div class="top"><span class="emoji">🗓️</span><h2>Calendar &amp; Tasks</h2></div>
-      <p class="desc">Google Calendar for every family account in one place, one-tap buttons to add piano, dance, Scouts, math and Hindi time, and Google Tasks you can tick off here.</p>
-      <div class="summary none" data-key="ph.calendar.v1"><span class="headline">Google Calendar</span><span class="sub">Open to see this week</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="books" href="books.html">
-      <div class="top"><span class="emoji">📚</span><h2>Books &amp; Help</h2></div>
-      <p class="desc">The CPM Integrated I, II and III books: homework help for every problem, and the chapter guides. All of it opens on cpm.org, where CPM publishes it.</p>
-      <div class="summary none" data-key="ph.books.none"><span class="headline">Integrated I, II and III</span><span class="sub">Homework help and chapter guides</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="progress" href="progress.html">
-      <div class="top"><span class="emoji">📈</span><h2>Progress</h2></div>
-      <p class="desc">Every app's history in one picture: the days you did something, how the answers went, piano minutes by week, Hindi words you know, and badges earned.</p>
-      <div class="summary none" id="progSummary"><span class="headline">Nothing logged yet</span><span class="sub">Use the apps and this fills in</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="profile" href="profile.html">
-      <div class="top"><span class="emoji">👤</span><h2>Profile</h2></div>
-      <p class="desc">Your name, the colours, and everything this hub has saved with its size and a way to forget any of it. Also how to keep the same hub on a second device.</p>
-      <div class="summary none" data-key="ph.sync.v1"><span class="headline">Saved in this browser only</span><span class="sub">Open to set your name or connect a copy</span></div>
-      <span class="open">Open →</span>
-    </a>
-    <a class="app" data-app="review" href="review.html">
-      <div class="top"><span class="emoji">🎯</span><h2>Review Mistakes</h2></div>
-      <p class="desc">Every question you got wrong, from quizzes, worksheets, Python rounds and practice sets, asked again until you have it. Get one right and it comes off the list.</p>
-      <div class="summary none" id="revSummary"><span class="headline">Nothing to review</span><span class="sub">Miss a question and it turns up here</span></div>
-      <span class="open">Open →</span>
-    </a>
+    <div class="group">
+      <div class="group-head"><h2>Maths</h2><span class="sub">Ask, practise, print, and the books themselves</span></div>
+      <div class="group-grid">
+        <a class="app" data-app="ask" href="ask.html">
+          <div class="top"><span class="emoji">🗨️</span><h2>Ask for Practice</h2></div>
+          <p class="desc">Say what you want to practise in your own words. It asks you multiple choice questions one at a time, says whether you were right, and explains why. Maths, lesson quizzes, grade practice, Spanish and Python.</p>
+          <div class="summary none" data-key="ph.ask.v1"><span class="headline">Nothing asked yet</span><span class="sub">Try “10 questions on slope”</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="math" href="math.html">
+          <div class="top"><span class="emoji">🧮</span><h2>Math Worksheets</h2></div>
+          <p class="desc">Print Integrated Math 1 practice sheets with answer keys: equations, systems, exponents, and more.</p>
+          <div class="summary none" data-key="ph.math.v1"><span class="headline">No worksheets made yet</span><span class="sub">Pick topics and print</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="quiz" href="quizzes.html">
+          <div class="top"><span class="emoji">📝</span><h2>Lesson Quizzes</h2></div>
+          <p class="desc">One quiz per CPM lesson: polygons, angle pairs, transversals, triangles, tile patterns, area models, and describing graphs.</p>
+          <div class="summary none" data-key="ph.quiz.v1"><span class="headline">No quizzes taken yet</span><span class="sub">Open to start with 1.1.1</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="ai" href="ai.html">
+          <div class="top"><span class="emoji">✏️</span><h2>Make Practice</h2></div>
+          <p class="desc">Pick a grade and get a printable worksheet straight away, or turn a chapter or study guide into one. No API key needed either way.</p>
+          <div class="summary none" data-key="ph.ai.v1"><span class="headline">No sets yet</span><span class="sub">Pick a grade or drop a PDF</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="books" href="books.html">
+          <div class="top"><span class="emoji">📚</span><h2>Books &amp; Help</h2></div>
+          <p class="desc">The CPM Integrated I, II and III books: homework help for every problem, and the chapter guides. All of it opens on cpm.org, where CPM publishes it.</p>
+          <div class="summary none" data-key="ph.books.none"><span class="headline">Integrated I, II and III</span><span class="sub">Homework help and chapter guides</span></div>
+          <span class="open">Open →</span>
+        </a>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-head"><h2>Science and code</h2><span class="sub">Twelve science topics and eleven Python ones</span></div>
+      <div class="group-grid">
+        <a class="app" data-app="science" href="ask.html#science">
+          <div class="top"><span class="emoji">🔬</span><h2>Science</h2></div>
+          <p class="desc">Moon phases, the solar system, seasons, states of matter, the water cycle, energy, forces, cells, food chains, atoms, light and sound, rocks. Asked as multiple choice, with the reason for the answer.</p>
+          <div class="summary none" data-key="ph.ask.v1"><span class="headline">Grades 4 to 8</span><span class="sub">Twelve topics, asked in the thread</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="python" href="python.html">
+          <div class="top"><span class="emoji">🐍</span><h2>Python Practice</h2></div>
+          <p class="desc">Short rounds on types, strings, lists, loops, if/else, functions, dictionaries and errors. Read the code, say what it prints.</p>
+          <div class="summary none" data-key="ph.python.v1"><span class="headline">No rounds yet</span><span class="sub">Pick topics and start</span></div>
+          <span class="open">Open →</span>
+        </a>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-head"><h2>Languages</h2><span class="sub">Spanish and Hindi</span></div>
+      <div class="group-grid">
+        <a class="app" data-app="spanish" href="spanish.html">
+          <div class="top"><span class="emoji">💬</span><h2>Spanish Practice</h2></div>
+          <p class="desc">Endless Spanish questions, asked and marked right here: verbs, ser and estar, agreement, numbers, telling time and vocabulary. A set to print if you want one.</p>
+          <div class="summary none" data-key="ph.spanish.v1"><span class="headline">No rounds yet</span><span class="sub">Pick topics and start</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="hindi" href="hindi.html">
+          <div class="top"><span class="emoji">📖</span><h2>Hindi Flashcards</h2></div>
+          <p class="desc">Vocabulary from the Malhar Class 6 and Class 7 chapters, in Devanagari with English meanings. Flip cards or take a quiz.</p>
+          <div class="summary none" data-key="ph.hindi.v1"><span class="headline">No words reviewed yet</span><span class="sub">Open to start</span></div>
+          <span class="open">Open →</span>
+        </a>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-head"><h2>Music and Scouts</h2><span class="sub">Practice logs and requirement checklists</span></div>
+      <div class="group-grid">
+        <a class="app" data-app="piano" href="piano.html">
+          <div class="top"><span class="emoji">🎹</span><h2>Piano Practice</h2></div>
+          <p class="desc">Log daily practice by piece, track minutes, and keep the streak alive. Grade 4 Trinity pieces are preloaded.</p>
+          <div class="summary none" data-key="ph.piano.v1"><span class="headline">No practice logged yet</span><span class="sub">Open to start your first session</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="badges" href="badges.html">
+          <div class="top"><span class="emoji">🏕️</span><h2>Merit Badges</h2></div>
+          <p class="desc">Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting. See what is signed off and what is left.</p>
+          <div class="summary none" data-key="ph.badges.v1"><span class="headline">Nothing checked off yet</span><span class="sub">Open to see all requirements</span></div>
+          <span class="open">Open →</span>
+        </a>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-head"><h2>The week</h2><span class="sub">What is on, and what has to be done</span></div>
+      <div class="group-grid">
+        <a class="app" data-app="schedule" href="schedule.html">
+          <div class="top"><span class="emoji">📅</span><h2>Weekly Plan</h2></div>
+          <p class="desc">One week, every activity: piano, dance, Scouts, math, and Hindi, with checkboxes for each day.</p>
+          <div class="summary none" data-key="ph.schedule.v1"><span class="headline">This week is empty</span><span class="sub">Open to plan the week</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="calendar" href="calendar.html">
+          <div class="top"><span class="emoji">🗓️</span><h2>Calendar &amp; Tasks</h2></div>
+          <p class="desc">Google Calendar for every family account in one place, one-tap buttons to add piano, dance, Scouts, math and Hindi time, and Google Tasks you can tick off here.</p>
+          <div class="summary none" data-key="ph.calendar.v1"><span class="headline">Google Calendar</span><span class="sub">Open to see this week</span></div>
+          <span class="open">Open →</span>
+        </a>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-head"><h2>How it is going</h2><span class="sub">What was missed, what was learned, and everything saved</span></div>
+      <div class="group-grid">
+        <a class="app" data-app="review" href="review.html">
+          <div class="top"><span class="emoji">🎯</span><h2>Review Mistakes</h2></div>
+          <p class="desc">Every question you got wrong, from quizzes, worksheets, Python rounds and practice sets, asked again until you have it. Get one right and it comes off the list.</p>
+          <div class="summary none" id="revSummary"><span class="headline">Nothing to review</span><span class="sub">Miss a question and it turns up here</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="progress" href="progress.html">
+          <div class="top"><span class="emoji">📈</span><h2>Progress</h2></div>
+          <p class="desc">Every app's history in one picture: the days you did something, how the answers went, piano minutes by week, Hindi words you know, and badges earned.</p>
+          <div class="summary none" id="progSummary"><span class="headline">Nothing logged yet</span><span class="sub">Use the apps and this fills in</span></div>
+          <span class="open">Open →</span>
+        </a>
+        <a class="app" data-app="profile" href="profile.html">
+          <div class="top"><span class="emoji">👤</span><h2>Profile</h2></div>
+          <p class="desc">Your name, the colours, and everything this hub has saved with its size and a way to forget any of it. Also how to keep the same hub on a second device.</p>
+          <div class="summary none" data-key="ph.sync.v1"><span class="headline">Saved in this browser only</span><span class="sub">Open to set your name or connect a copy</span></div>
+          <span class="open">Open →</span>
+        </a>
+      </div>
+    </div>
   </section>
 
   <footer>
