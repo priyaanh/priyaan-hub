@@ -79,7 +79,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
 </main>
 <script src="shared.js"></script>
 <script src="im1.js"></script><script src="spanish.js"></script><script src="pyquiz.js"></script>
-<script src="grades.js"></script><script src="science.js"></script><script src="cpm_int2_ch1.js"></script><script src="cpm_int2_ch2.js"></script>
+<script src="choices.js"></script><script src="grades.js"></script><script src="science.js"></script><script src="cpm_int2_ch1.js"></script><script src="cpm_int2_ch2.js"></script>
 <script>
 /* Ask for practice in your own words and get asked it, one question at a time, in a thread.
    Nothing is sent anywhere: the request is read here, on the device, and the questions come from the
@@ -108,7 +108,11 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
       ready: () => !!window.ES,
       topics: () => (window.ES ? ES.TOPICS : []).map(t => ({ id: t.id, name: t.name, words: t.name + ' ' + t.description })),
       make: o => ES.generate(o),
-      items: ws => ws.problems.map(p => ({ from: p.topicName, q: p.question, answer: String(p.answer), explain: p.work || '', check: t => ES.checkAnswer(p, t), accents: true }))
+      items: ws => ws.problems.map(p => ({ from: p.topicName,
+        /* grouped finer than it is labelled: a word asked into English and one asked into Spanish are
+           the same topic but not the same kind of answer */
+        group: p.topic + (/Say it in English/.test(p.question) ? ':en' : /Say it in Spanish/.test(p.question) ? ':es' : ''),
+        q: p.question, answer: String(p.answer), explain: p.work || '', check: t => ES.checkAnswer(p, t), accents: true }))
     },
     python: {
       name: 'Python', short: 'Python', emoji: '🐍', words: 'python code coding program print output',
@@ -168,129 +172,18 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
   const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   /* ===================== turning anything into a multiple choice ===================== */
-  /* Every question here is pick-one, whatever generator it came from. The wrong options are real
-     answers to other questions of the same topic, generated from a seed of their own: that makes them
-     the right kind of thing -- other verb forms beside a verb form, other numbers beside a number --
-     without a hand-written list of wrong answers per topic. */
-  function answerKey(s) { return String(s == null ? '' : s).replace(/<[^>]+>/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
-  const MINUS = /[\u2212\u2013\u2014]/g;
-  /* What KIND of answer this is. Wrong options have to be the same kind as the right one, or the
-     question answers itself: a number beside three equations is not a choice, it is a giveaway. */
-  function shapeOf(a) {
-    const t = answerKey(a).replace(MINUS, '-');
-    if (/^-?\d+(\.\d+)?$/.test(t)) return 'num';
-    if (/^-?\d+\/\d+$/.test(t)) return 'frac';
-    if (/^-?\$/.test(t)) return 'money';
-    if (/%$/.test(t)) return 'percent';
-    if (/^\(.*,.*\)$/.test(t)) return 'point';
-    if (/^\{.*\}$/.test(t)) return 'set';
-    const eq = t.match(/^([a-z][a-z0-9()]*)\s*(=|<=|>=|<|>)/);
-    if (eq) return 'eq:' + eq[1] + eq[2];
-    return 'text:' + Math.min(4, t.split(' ').length);
-  }
-  /* Coarser than the shape: words with words, numbers with numbers. Used only when nothing of the exact
-     same shape turned up, so that a lone answer still gets three plausible neighbours rather than none. */
-  function classOf(shape) {
-    if (shape === 'num' || shape === 'frac' || shape === 'money' || shape === 'percent') return 'num';
-    return shape.indexOf('text:') === 0 ? 'text' : shape;
-  }
-  function numOf(a) {
-    const t = answerKey(a).replace(MINUS, '-').replace(/[$,%]/g, '');
-    const fr = t.match(/^(-?\d+)\/(\d+)$/);
-    if (fr) return Number(fr[1]) / Number(fr[2]);
-    return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
-  }
-  function distractorPool(srcKey, o) {
-    const src = SOURCES[srcKey];
-    const pool = {};
-    try {
-      /* a second, bigger draw with a seed of its own: the asked questions keep their own order, so the
-         indices review.html stores still point at the same questions */
-      const big = src.make(Object.assign({}, o, { count: 40, seed: (o.seed + 7919) % 4294967296 }));
-      src.items(big).forEach(it => {
-        const shape = shapeOf(it.answer);
-        [shape + '|' + (it.from || ''), shape + '|*', classOf(shape) + '|~'].forEach(k => {
-          (pool[k] = pool[k] || []).push(String(it.answer));
-        });
-      });
-    } catch (e) { /* no pool is survivable: the fallbacks below still give four options */ }
-    return pool;
-  }
-  /* last resort, in the same shape as the answer it is standing beside. Rebuilt from the number rather
-     than patched into the text, so "−$3.00" becomes "−$5.00" and never "−$−5". */
-  function reformat(sample, value) {
-    const src = String(sample);
-    const minus = src.indexOf('\u2212') >= 0 ? '\u2212' : '-';
-    const dec = (src.match(/\d+\.(\d+)/) || ['', ''])[1].length;
-    const abs = Math.abs(value);
-    let body = dec ? abs.toFixed(dec) : String(Math.round(abs * 1000) / 1000);
-    if (/\$/.test(src)) body = '$' + body;
-    if (/%$/.test(src)) body = body + '%';
-    return (value < 0 ? minus : '') + body;
-  }
-  function nudge(ans, n) {
-    const deltas = [1, -1, 2, -2, 3, -3, 10, -10];
-    const d = deltas[n % deltas.length];
-    const fr = answerKey(ans).replace(MINUS, '-').match(/^(-?\d+)\/(\d+)$/);
-    if (fr) {
-      const top = Number(fr[1]) + d;
-      return (top < 0 ? (String(ans).indexOf('\u2212') >= 0 ? '\u2212' : '-') : '') + Math.abs(top) + '/' + fr[2];
-    }
-    const v = numOf(ans);
-    if (v !== null) return reformat(ans, Number.isInteger(v) ? v + d : Math.round((v + d) * 100) / 100);
-    return String(ans) + ['s', 'es', 'n', 'o'][n % 4];
-  }
-  /* Some generators write the options into the question itself and expect the letter back --
-     "(a) ... <br>(b) ...". Those are already multiple choice; lift them out so they are shown as
-     buttons rather than asking for a letter that would clash with the A/B/C/D beside it. */
-  function liftLettered(it) {
-    if (it.choices || !/^[a-e]$/i.test(answerKey(it.answer))) return null;
-    const parts = String(it.q).split(/<br\s*\/?>/i);
-    const opts = [], labels = [];
-    let stem = [];
-    parts.forEach(seg => {
-      const m = seg.match(/^\s*\(([a-e])\)\s*([\s\S]+)$/i);
-      if (m) { labels.push(m[1].toLowerCase()); opts.push(m[2].trim()); }
-      else if (!opts.length) stem.push(seg);
-    });
-    if (opts.length < 2) return null;
-    const at = labels.indexOf(answerKey(it.answer));
-    if (at < 0) return null;
-    return Object.assign({}, it, { q: stem.join('<br>').trim(), choices: opts, correct: at,
-      answer: opts[at], check: (typed, pick) => pick === at });
-  }
+  /* The building of the options lives in choices.js, because the Spanish page needs the same thing.
+     What belongs here is where the wrong answers come from: a second, larger draw of the very same
+     generator with a seed of its own. The asked questions keep their own order, so the indices
+     review.html stores still point at the same questions. */
   function toChoices(items, srcKey, o) {
-    const pool = distractorPool(srcKey, o);
-    return items.map((it0, idx) => {
-      const lifted = liftLettered(it0);
-      const it = lifted || it0;
-      if (it.choices && it.choices.length >= 2) return it;
-      const rnd = PH.rng((o.seed + idx * 131) % 4294967296);
-      const right = answerKey(it.answer), shape = shapeOf(it.answer), target = numOf(it.answer);
-      const seen = {}; seen[right] = 1;
-      const opts = [];
-      const take = list => {
-        let cands = (list || []).filter(c => { const k = answerKey(c); return k && !seen[k]; });
-        /* for numbers, near misses make a real question; anything else is a giveaway */
-        if (target !== null) cands.sort((a, b) => Math.abs((numOf(a) == null ? 1e9 : numOf(a)) - target) - Math.abs((numOf(b) == null ? 1e9 : numOf(b)) - target));
-        else for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = cands[i]; cands[i] = cands[j]; cands[j] = t; }
-        cands.forEach(c => { const k = answerKey(c); if (opts.length < 3 && !seen[k]) { seen[k] = 1; opts.push(String(c)); } });
-      };
-      take(pool[shape + '|' + (it.from || '')]);
-      if (opts.length < 3) take(pool[shape + '|*']);
-      if (!opts.length) take(pool[classOf(shape) + '|~']);
-      /* Made-up options are only honest for numbers, where a near miss is a real wrong answer. Inventing
-         a word ("weak negatives") would be a giveaway, so a short question gets three options, or two. */
-      if (target !== null || shape === 'frac') {
-        let n = 0;
-        while (opts.length < 3 && n < 16) { const c = nudge(it.answer, n++); const k = answerKey(c); if (!seen[k]) { seen[k] = 1; opts.push(c); } }
-      }
-      if (!opts.length) return it;                 /* nothing plausible to offer: ask for it typed */
-      const choices = opts.concat([String(it.answer)]);
-      for (let i = choices.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = choices[i]; choices[i] = choices[j]; choices[j] = t; }
-      const at = choices.map(answerKey).indexOf(right);
-      return Object.assign({}, it, { choices: choices, correct: at, check: (typed, pick) => pick === at });
-    });
+    const src = SOURCES[srcKey];
+    let pool = [];
+    try {
+      const big = src.make(Object.assign({}, o, { count: 40, seed: (o.seed + 7919) % 4294967296 }));
+      pool = src.items(big).map(it => ({ from: it.from, group: it.group, answer: it.answer }));
+    } catch (e) { /* no pool is survivable: choices.js still offers what it can */ }
+    return PH_CHOICES.build(items, pool, o.seed);
   }
 
   /* ===================== reading what was asked ===================== */

@@ -5,7 +5,7 @@ const VERSION = 'ph-v15';
 const SHELL = [
   './', 'index.html', 'shared.css', 'shared.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
   'piano.html', 'badges.html', 'badges_catalog.js', 'badges/pdf/manifest.js', 'schedule.html',
-  'math.html', 'im1.js', 'spanish.html', 'spanish.js', 'ask.html', 'science.js', 'hindi.html', 'hindi_data.js', 'quizzes.html', 'cpm_int2_ch1.js', 'cpm_int2_ch2.js', 'calendar.html', 'ai.html', 'grades.js', 'python.html', 'pyquiz.js', 'progress.html', 'review.html', 'profile.html', 'books.html', 'search_index.js'
+  'math.html', 'im1.js', 'spanish.html', 'spanish.js', 'ask.html', 'science.js', 'choices.js', 'hindi.html', 'hindi_data.js', 'quizzes.html', 'cpm_int2_ch1.js', 'cpm_int2_ch2.js', 'calendar.html', 'ai.html', 'grades.js', 'python.html', 'pyquiz.js', 'progress.html', 'review.html', 'profile.html', 'books.html', 'search_index.js'
 ];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(VERSION).then(cache =>

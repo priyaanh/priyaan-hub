@@ -22,6 +22,21 @@ main > * + * { margin-top: 1rem; }
 .why b { color: var(--text); }
 .acc { margin-top: .6rem; font-size: .8rem; color: var(--muted); }
 /* the little accent keys, for a keyboard that has none */
+.choices { display: grid; gap: .6rem; margin-top: 1rem; }
+@media (min-width: 620px) { .choices { grid-template-columns: 1fr 1fr; } }
+.pick { display: flex; align-items: center; gap: .85rem; text-align: left; padding: .9rem 1rem; font: inherit;
+  font-size: 1.04rem; font-weight: 600; border: 2px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: inherit; cursor: pointer; transition: background .12s, border-color .12s, transform .08s; }
+.pick:hover { border-color: var(--accent-text); background: var(--surface-2); }
+.pick:active { transform: translateY(1px); }
+.pick:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pick[disabled] { cursor: default; }
+.pick .k { flex: none; width: 1.9rem; height: 1.9rem; display: grid; place-items: center; border-radius: 7px;
+  background: var(--surface-2); font-weight: 800; font-size: .9rem; color: var(--muted); }
+.pick.is-right { border-color: var(--ok); background: var(--ok-soft); }
+.pick.is-right .k { background: var(--ok); color: #fff; }
+.pick.is-wrong { border-color: var(--danger); background: var(--danger-soft); }
+.pick.is-wrong .k { background: var(--danger); color: #fff; }
 .keys { display: flex; gap: .25rem; flex-wrap: wrap; margin-top: .5rem; }
 .keys button { font: inherit; font-size: .95rem; line-height: 1; padding: .3rem .5rem; border: 1px solid var(--border); background: var(--surface); color: inherit; border-radius: 6px; cursor: pointer; }
 .keys button:hover { border-color: var(--accent-text); background: var(--surface-2); }
@@ -86,6 +101,10 @@ main > * + * { margin-top: 1rem; }
         <button class="btn btn-primary" id="checkBtn">Check</button>
         <button class="btn" id="nextBtn" hidden>Next →</button>
       </div>
+      <div class="choices" id="choices" role="radiogroup" aria-label="Choose an answer" hidden></div>
+      <div class="row no-print" id="pickRow" style="gap:.5rem;margin-top:.8rem">
+        <button class="btn" id="nextBtn2" hidden>Next →</button>
+      </div>
       <div class="keys no-print" id="keys" hidden aria-label="Accented letters"></div>
       <div class="verdict" id="verdict" hidden></div>
       <div class="why" id="why" hidden></div>
@@ -118,6 +137,11 @@ main > * + * { margin-top: 1rem; }
           <button class="tab" data-diff="1">1 · Warm-up</button><button class="tab" data-diff="2">2 · Standard</button><button class="tab" data-diff="3">3 · Challenge</button>
         </div>
       </div>
+      <div class="field"><label>How to answer</label>
+        <div class="tabs" id="modeTabs" role="group" aria-label="How to answer">
+          <button class="tab" data-mode="type">⌨️ Type it</button><button class="tab" data-mode="pick">🔘 Pick it</button>
+        </div>
+      </div>
       <div class="field"><span class="muted small" id="pickNote"></span></div>
     </div>
   </section>
@@ -143,7 +167,7 @@ main > * + * { margin-top: 1rem; }
   </section>
 </main>
 <iframe id="printFrame" title="Printable worksheet" aria-hidden="true"></iframe>
-<script src="shared.js"></script><script src="spanish.js"></script><script>
+<script src="shared.js"></script><script src="spanish.js"></script><script src="choices.js"></script><script>
 (function () {
   'use strict';
   const KEY = 'ph.spanish.v1';
@@ -152,7 +176,7 @@ main > * + * { margin-top: 1rem; }
 
   /* ---------------- state ---------------- */
   function blank() {
-    return { version: 1, history: [], settings: { topics: ['present', 'serestar', 'vocab'], count: 10, difficulty: 2 }, summary: { headline: '', sub: '' } };
+    return { version: 1, history: [], settings: { topics: ['present', 'serestar', 'vocab'], count: 10, difficulty: 2, mode: 'type' }, summary: { headline: '', sub: '' } };
   }
   const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
   /* 2026-02-30 parses as March 2 rather than failing, so check the date round-trips, not just its shape. */
@@ -180,6 +204,7 @@ main > * + * { margin-top: 1rem; }
     if (t.length) s.settings.topics = t;
     if (isFinite(st.count)) s.settings.count = Math.min(60, Math.max(1, Math.round(st.count)));
     if ([1, 2, 3].indexOf(st.difficulty) >= 0) s.settings.difficulty = st.difficulty;
+    if (st.mode === 'pick' || st.mode === 'type') s.settings.mode = st.mode;
     if (Array.isArray(raw.history)) {
       s.history = raw.history.filter(isObj).map(h => {
         const count = isFinite(h.count) ? Math.min(60, Math.max(1, Math.round(h.count))) : 10;
@@ -230,16 +255,35 @@ main > * + * { margin-top: 1rem; }
      one starts with a new seed, which is what makes it endless -- and because each round is still
      {seed, topics, difficulty, count}, review.html can rebuild any question from four numbers. */
   const ROUND_KEYS = ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'];
+  const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
   let round = null, marked = null, revealed = false, histId = null;
   const randSeed = () => Math.floor(Math.random() * 999999) + 1;
-  const current = () => (round && round.ws.problems[round.i]) || null;
+  const current = () => (round && round.items[round.i]) || null;
 
   function startRound(seed) {
     if (!state.settings.topics.length) { PH.toast('Pick at least one topic first'); return false; }
     let ws;
     try { ws = ES.generate({ topics: state.settings.topics, count: state.settings.count, difficulty: state.settings.difficulty, seed: seed || randSeed() }); }
     catch (e) { PH.toast(e.message); return false; }
-    round = { ws: ws, i: 0, marks: {} };
+    var items = ws.problems;
+    if (state.settings.mode === 'pick' && window.PH_CHOICES) {
+      /* the wrong options are answers to other questions of the same topics, from a draw of its own */
+      var pool = [];
+      try {
+        var big = ES.generate({ topics: ws.topics, count: 40, difficulty: ws.difficulty, seed: (ws.seed + 7919) % 4294967296 });
+        pool = big.problems.map(function (p) {
+          return { from: p.topicName, answer: p.answer,
+            group: p.topic + (/Say it in English/.test(p.question) ? ':en' : /Say it in Spanish/.test(p.question) ? ':es' : '') };
+        });
+      } catch (e) { /* without a pool the builder still offers what it can */ }
+      items = PH_CHOICES.build(ws.problems.map(function (p) {
+        /* `from` is what the builder groups by, so the wrong options come from the same topic */
+        return { id: p.id, topic: p.topic, topicName: p.topicName, from: p.topicName,
+          group: p.topic + (/Say it in English/.test(p.question) ? ':en' : /Say it in Spanish/.test(p.question) ? ':es' : ''),
+          q: p.question, answer: p.answer, work: p.work, accept: p.accept };
+      }), pool, ws.seed);
+    }
+    round = { ws: ws, items: items, i: 0, marks: {} };
     const h = { id: PH.uid(), date: PH.todayISO(), topics: ws.topics.slice(), count: ws.problems.length,
       difficulty: ws.difficulty, seed: ws.seed, score: null, missed: [] };
     state.history.unshift(h); state.history = state.history.slice(0, 200); histId = h.id;
@@ -284,10 +328,10 @@ main > * + * { margin-top: 1rem; }
       return;
     }
     $('#qTopic').textContent = p.topicName;
-    $('#qNum').textContent = 'Question ' + (round.i + 1) + ' of ' + round.ws.problems.length;
+    $('#qNum').textContent = 'Question ' + (round.i + 1) + ' of ' + round.items.length;
     $('#roundLbl').textContent = 'Round seed ' + round.ws.seed + ' · level ' + round.ws.difficulty;
-    $('#qText').innerHTML = ES.safeHTML(p.question);
-    $('#progressBar').style.width = Math.round(round.i / round.ws.problems.length * 100) + '%';
+    $('#qText').innerHTML = ES.safeHTML(p.q == null ? p.question : p.q);
+    $('#progressBar').style.width = Math.round(round.i / round.items.length * 100) + '%';
     const v = $('#verdict'), w = $('#why');
     if (marked) {
       v.hidden = false;
@@ -299,13 +343,31 @@ main > * + * { margin-top: 1rem; }
       v.innerHTML = '<span class="was">The answer is <b>' + ES.safeHTML(p.answer) + '</b></span>';
       if (p.work) { w.hidden = false; w.innerHTML = ES.safeHTML(p.work); } else w.hidden = true;
     } else { v.hidden = true; w.hidden = true; }
-    $('#checkBtn').hidden = !!marked;
-    $('#nextBtn').hidden = !marked && !revealed;
-    const inp = $('#ansIn');
-    inp.disabled = !!marked;
-    if (!marked) { inp.value = ''; }
-    if (!$('#keys').innerHTML) $('#keys').innerHTML = ROUND_KEYS.map(k => '<button type="button" data-key="' + k + '">' + k + '</button>').join('');
-    (marked || revealed ? $('#nextBtn') : inp).focus();
+    const picking = !!(p.choices && p.choices.length);
+    $('#choices').hidden = !picking;
+    $('#answerRow').hidden = picking;
+    $('#keys').hidden = picking;
+    $('#accNote').hidden = picking;
+    if (picking) {
+      const right = p.correct == null ? -1 : p.correct;
+      $('#choices').innerHTML = p.choices.map((c, i) => {
+        let cls = '';
+        if (marked || revealed) { if (i === right) cls = ' is-right'; else if (marked && marked.pick === i) cls = ' is-wrong'; }
+        return '<button type="button" class="pick' + cls + '" role="radio" aria-checked="' + (marked && marked.pick === i) + '"' +
+          ' data-choice="' + i + '"' + (marked || revealed ? ' disabled' : '') + '>' +
+          '<span class="k">' + LETTERS[i] + '</span><span>' + ES.safeHTML(String(c)) + '</span></button>';
+      }).join('');
+      $('#nextBtn2').hidden = !marked && !revealed;
+      if (marked || revealed) $('#nextBtn2').focus();
+    } else {
+      $('#checkBtn').hidden = !!marked;
+      $('#nextBtn').hidden = !marked && !revealed;
+      const inp = $('#ansIn');
+      inp.disabled = !!marked;
+      if (!marked) { inp.value = ''; }
+      if (!$('#keys').innerHTML) $('#keys').innerHTML = ROUND_KEYS.map(k => '<button type="button" data-key="' + k + '">' + k + '</button>').join('');
+      (marked || revealed ? $('#nextBtn') : inp).focus();
+    }
   }
   function checkNow() {
     const p = current();
@@ -316,11 +378,18 @@ main > * + * { margin-top: 1rem; }
     round.marks[p.id] = marked;
     renderQuestion(); renderStats();
   }
+  function pickNow(i) {
+    const p = current();
+    if (!p || marked || !p.choices) return;
+    marked = { typed: String(p.choices[i]), pick: i, ok: !!p.check('', i) };
+    round.marks[p.id] = marked;
+    renderQuestion(); renderStats();
+  }
   function nextQuestion() {
     if (!round) return;
     round.i++;
     marked = null; revealed = false;
-    if (round.i >= round.ws.problems.length) { finishRound(); startRound(); return; }
+    if (round.i >= round.items.length) { finishRound(); startRound(); return; }
     renderQuestion();
   }
 
@@ -364,6 +433,7 @@ main > * + * { margin-top: 1rem; }
     }).join('');
     $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
     $$('#diffTabs .tab').forEach(b => { const on = Number(b.dataset.diff) === state.settings.difficulty; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    $$('#modeTabs .tab').forEach(b => { const on = b.dataset.mode === state.settings.mode; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
     const n = state.settings.topics.length;
     $('#pickNote').textContent = n ? n + ' topic' + (n === 1 ? '' : 's') + ' · ' + state.settings.count + ' questions a round' : 'Pick at least one topic';
     $('#startBtn').disabled = !n;
@@ -412,6 +482,12 @@ main > * + * { margin-top: 1rem; }
     if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderTopics(); return; }
     const db = e.target.closest('[data-diff]');
     if (db) { state.settings.difficulty = Number(db.dataset.diff); save(); renderTopics(); return; }
+    const mb = e.target.closest('[data-mode]');
+    if (mb) { state.settings.mode = mb.dataset.mode; save(); renderTopics();
+      if (round) { PH.toast('That starts on the next round'); } return; }
+    const pk = e.target.closest('[data-choice]');
+    if (pk) { pickNow(Number(pk.dataset.choice)); return; }
+    if (e.target.closest('#nextBtn2')) { nextQuestion(); return; }
     const k = e.target.closest('[data-key]');
     if (k) { const inp = $('#ansIn'); const at = inp.selectionStart == null ? inp.value.length : inp.selectionStart;
       inp.value = inp.value.slice(0, at) + k.dataset.key + inp.value.slice(inp.selectionEnd == null ? at : inp.selectionEnd);
@@ -473,7 +549,8 @@ main > * + * { margin-top: 1rem; }
   renderAll();
   if (stored) save();
   /* so the tests can drive a round without clicking through it */
-  window.PH_ES = { state: () => state, round: () => round, start: startRound, check: checkNow, next: nextQuestion, stop: stopRound };
+  window.PH_ES = { state: () => state, round: () => round, start: startRound, check: checkNow, pick: pickNow,
+    next: nextQuestion, stop: stopRound };
 })();
 </script>
 </body></html>

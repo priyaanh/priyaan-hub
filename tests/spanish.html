@@ -107,6 +107,36 @@ f.addEventListener('load', async () => {
     ok('stopping puts the question away', $('#answerRow').hidden && !$('#startBtn').hidden);
     ok('an untouched round is not saved as practice', w.PH_ES.state().history.length === 1, String(w.PH_ES.state().history.length));
 
+    /* ---- picking an answer instead of typing it ---- */
+    d.querySelector('#modeTabs [data-mode="pick"]').click(); await tick();
+    ok('there is a way to pick rather than type', w.PH_ES.state().settings.mode === 'pick');
+    $('#startBtn').click(); await tick();
+    const pr = w.PH_ES.round();
+    ok('a picking round is built', !!pr && pr.items.length === 3);
+    ok('every question has options', pr.items.every(i => i.choices && i.choices.length >= 2),
+       pr.items.filter(i => !i.choices).length + ' without options');
+    ok('exactly one option is right', pr.items.every(i => i.choices.filter((c, n) => i.check('', n)).length === 1));
+    ok('no option is offered twice', pr.items.every(i => new Set(i.choices.map(c => String(c).toLowerCase().trim())).size === i.choices.length));
+    ok('the options are shown as buttons', $$('#choices [data-choice]').length >= 2, String($$('#choices [data-choice]').length));
+    ok('and the typing box is put away', $('#answerRow').hidden && $('#keys').hidden);
+    /* an option button must not be mistaken for the "All / None" topic links, which use data-pick */
+    const beforeTopics = w.PH_ES.state().settings.topics.slice();
+    const rightIdx = pr.items[0].choices.map((c, n) => n).filter(n => pr.items[0].check('', n))[0];
+    $$('#choices [data-choice]')[rightIdx].click(); await tick();
+    ok('picking the right one is marked right', /Correct/.test(txt('#verdict')), txt('#verdict'));
+    ok('and it does not disturb the topics', w.PH_ES.state().settings.topics.join() === beforeTopics.join());
+    ok('the right option is shown in green', $$('#choices .is-right').length === 1);
+    ok('answered options cannot be picked again', $$('#choices [data-choice][disabled]').length >= 2);
+    $('#nextBtn2').click(); await tick();
+    ok('it moves on', /Question 2 of 3/.test(txt('#qNum')), txt('#qNum'));
+    const wrongIdx = w.PH_ES.round().items[1].choices.map((c, n) => n).filter(n => !w.PH_ES.round().items[1].check('', n))[0];
+    $$('#choices [data-choice]:not([disabled])')[wrongIdx].click(); await tick();
+    ok('picking a wrong one is marked wrong', /Not quite/.test(txt('#verdict')), txt('#verdict'));
+    ok('and the right one is still shown', $$('#choices .is-right').length === 1 && $$('#choices .is-wrong').length === 1);
+    $('#stopBtn').click(); await tick();
+    d.querySelector('#modeTabs [data-mode="type"]').click(); await tick();
+    ok('and it can be switched back to typing', w.PH_ES.state().settings.mode === 'type');
+
     /* ---- a set to write on ---- */
     $('#sheetBtn').click(); await tick();
     ok('a printable set is shown on the page', $$('#wsList .prob').length === 3, String($$('#wsList .prob').length));
