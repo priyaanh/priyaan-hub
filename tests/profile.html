@@ -82,6 +82,19 @@ f.addEventListener('load', async () => {
     ok('but never the API key', !/SHOULD-NEVER-LEAVE/.test(captured.text) && !/ph\.ai\.key/.test(captured.text));
 
     /* ---- sync: no token yet ---- */
+    /* ---- getting it onto another device without an account ---- */
+    ok('the file route is offered first, with its own buttons', !!$('#backupBtn2') && !!$('#restoreBtn2'));
+    ok('and it is described in steps', $$('.steps li').length >= 3, String($$('.steps li').length));
+    ok('it says no account is needed', /No account needed/.test(txt('body')));
+    ok('the gist is presented as the optional extra', /Optional, and only worth it/.test(txt('body')));
+    let grabbed = null;
+    const realDl2 = w.PH.download;
+    w.PH.download = (name, text) => { grabbed = { name, text }; };
+    $('#backupBtn2').click(); await tick();
+    w.PH.download = realDl2;
+    ok('the second Save a copy really saves one', !!grabbed && /practice-hub-backup-/.test(grabbed.name),
+       grabbed ? grabbed.name : 'nothing');
+
     ok('with no token it explains how to get one', /Read and write/.test(txt('#syncBody')) && !!$('#tokenIn'));
     ok('and the token box hides what is typed', $('#tokenIn').type === 'password');
     $('#tokenIn').value = 'github_pat_TESTTOKEN';

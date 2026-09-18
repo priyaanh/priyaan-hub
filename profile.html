@@ -83,11 +83,31 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     </div>
   </section>
 
-  <section class="card" aria-labelledby="h-sync">
-    <div class="card-head"><h2 id="h-sync">The same hub on another device</h2><span class="small" id="syncSub"></span></div>
+  <section class="card" aria-labelledby="h-move">
+    <div class="card-head"><h2 id="h-move">The same hub on another device</h2><span class="small">No account needed</span></div>
     <p class="muted">Everything here lives in this browser, so a second device starts empty and a cleared
-      browser starts over. Connecting a private GitHub gist gives the hub somewhere of its own to keep a
-      copy: still yours, still private, and free.</p>
+      browser starts over. The quickest answer is a file, and it takes about half a minute:</p>
+    <ol class="steps">
+      <li>Press <b>Save a copy</b> above. A single file lands in Downloads.</li>
+      <li>Get it to the other device however you already send things — AirDrop, email it to yourself, a
+        shared folder, a USB stick.</li>
+      <li>Open this page there and press <b>Load a copy</b>.</li>
+    </ol>
+    <p class="small muted">Nothing is signed into and nothing is uploaded. The file holds everything the
+      table above lists, except the parts that never leave a device: an API key and your email address.
+      Do it again whenever you want the other device caught up.</p>
+    <div class="acts" style="margin-top:.8rem">
+      <button class="btn btn-primary" id="backupBtn2">⬇ Save a copy</button>
+      <button class="btn" id="restoreBtn2">⬆ Load a copy</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-sync">
+    <div class="card-head"><h2 id="h-sync">Keep it in step by itself</h2><span class="small" id="syncSub"></span></div>
+    <p class="muted">Optional, and only worth it if carrying a file about gets tiresome. Connecting a
+      private GitHub gist gives the hub somewhere of its own to keep the copy, so each device can push and
+      pull instead. It needs a GitHub account and a token, which takes a few minutes the first time — the
+      steps are below. Everything works perfectly well without it.</p>
     <div id="syncBody"></div>
   </section>
 
@@ -262,6 +282,11 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     try { at = localStorage.getItem(BACKUP_AT); } catch (e) {}
     $('#backupAge').textContent = at ? 'Last copy saved ' + PH.fmtDate(at, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No copy saved yet';
   }
+  /* the same two actions, offered again where someone is being told to use them */
+  ['#backupBtn2', '#restoreBtn2'].forEach(function (sel) {
+    var b = $(sel);
+    if (b) b.addEventListener('click', function () { $(sel.replace('2', '')).click(); });
+  });
   $('#dtable').addEventListener('click', function (e) {
     var b = e.target.closest('[data-forget]');
     if (!b) return;
