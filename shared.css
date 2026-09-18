@@ -18,11 +18,15 @@
   --warn-soft: rgba(217,140,0,.16);
   --danger: #d64545;
   --danger-soft: rgba(214,69,69,.14);
-  --radius: 14px;
-  --radius-sm: 9px;
+  --radius: 12px;
+  --radius-sm: 8px;
   --shadow: 0 1px 2px rgba(16,24,40,.05), 0 8px 24px -10px rgba(16,24,40,.14);
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Noto Sans Devanagari", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Headings in a serif the device already has. It reads as more considered than the interface face,
+     and because every one of these ships with the operating system, nothing is downloaded and the
+     site still looks like itself offline. */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
   color-scheme: light;
 
   /* Coloured text needs more contrast than a coloured fill, so each role is mixed toward the page's
@@ -39,7 +43,8 @@
 
 /* ---- themes ------------------------------------------------------------------------------------
    shared.js resolves the stored choice (including "system") to one of these before the first paint. */
-:root[data-theme="dark"], :root[data-theme="midnight"] { color-scheme: dark; }
+:root[data-theme="dark"], :root[data-theme="midnight"],
+:root[data-theme="forest"], :root[data-theme="ink"], :root[data-theme="dusk"] { color-scheme: dark; }
 :root[data-theme="dark"] {
   --bg: #0f1117; --surface: #171a23; --surface-2: #1f232e;
   --text: #e8eaf0; --muted: #98a2b3; --border: #2a2f3c;
@@ -62,6 +67,37 @@
   --shadow: 0 1px 2px rgba(80,60,20,.06), 0 8px 24px -10px rgba(80,60,20,.18);
   --mix-to: #000;
   --p-accent-text: 66%; --p-accent-fill: 77%; --p-ok: 69%; --p-warn: 60%; --p-danger: 79%;
+}
+:root[data-theme="slate"] {
+  --bg: #eef1f6; --surface: #ffffff; --surface-2: #e2e8f1;
+  --text: #16202c; --muted: #54617a; --border: #d3dce8;
+  --shadow: 0 1px 2px rgba(22,32,44,.06), 0 8px 24px -10px rgba(22,32,44,.16);
+  --mix-to: #000;
+  --p-accent-text: 72%; --p-accent-fill: 78%; --p-ok: 76%; --p-warn: 66%; --p-danger: 84%;
+}
+:root[data-theme="forest"] {
+  --bg: #0a1310; --surface: #111f19; --surface-2: #1a2e24;
+  --text: #e3efe7; --muted: #9ab5a6; --border: #234030;
+  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 12px 30px -14px rgba(0,0,0,.8);
+  --accent-ink: #0a1310;
+  --mix-to: #fff;
+  --p-accent-text: 62%; --p-accent-fill: 80%; --p-ok: 70%; --p-warn: 78%; --p-danger: 76%;
+}
+:root[data-theme="ink"] {
+  --bg: #121212; --surface: #1b1b1b; --surface-2: #262626;
+  --text: #ededed; --muted: #a2a2a2; --border: #343434;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 30px -14px rgba(0,0,0,.8);
+  --accent-ink: #121212;
+  --mix-to: #fff;
+  --p-accent-text: 62%; --p-accent-fill: 80%; --p-ok: 70%; --p-warn: 78%; --p-danger: 76%;
+}
+:root[data-theme="dusk"] {
+  --bg: #141019; --surface: #1d1826; --surface-2: #272033;
+  --text: #ece7f4; --muted: #a79eba; --border: #362d45;
+  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 12px 32px -14px rgba(0,0,0,.8);
+  --accent-ink: #141019;
+  --mix-to: #fff;
+  --p-accent-text: 70%; --p-accent-fill: 80%; --p-ok: 70%; --p-warn: 78%; --p-danger: 76%;
 }
 :root[data-theme="contrast"] {
   --bg: #ffffff; --surface: #ffffff; --surface-2: #f0f0f0;
@@ -137,6 +173,10 @@ body[data-app="ask"]      { --accent:#4f46e5; --accent-soft:rgba(79,70,229,.15);
 .sw[data-swatch="midnight"] { background-image: linear-gradient(135deg, #18203a 0 50%, #080b14 50% 100%); }
 .sw[data-swatch="paper"]    { background-image: linear-gradient(135deg, #fffaf1 0 50%, #eae1d1 50% 100%); }
 .sw[data-swatch="contrast"] { background-image: linear-gradient(135deg, #ffffff 0 50%, #000000 50% 100%); }
+.sw[data-swatch="slate"]    { background-image: linear-gradient(135deg, #ffffff 0 50%, #e2e8f1 50% 100%); }
+.sw[data-swatch="forest"]   { background-image: linear-gradient(135deg, #1a2e24 0 50%, #0a1310 50% 100%); }
+.sw[data-swatch="ink"]      { background-image: linear-gradient(135deg, #262626 0 50%, #121212 50% 100%); }
+.sw[data-swatch="dusk"]     { background-image: linear-gradient(135deg, #272033 0 50%, #141019 50% 100%); }
 /* ---- the name button in the top bar: set your name from any page ---- */
 .who-wrap { position: relative; display: inline-flex; flex: none; }
 #whoBtn { display: inline-flex; align-items: center; gap: .35rem; max-width: 9.5rem; }
@@ -172,8 +212,8 @@ body {
 }
 a { color: var(--accent-text); text-decoration: none; }
 a:hover { text-decoration: underline; }
-h1, h2, h3 { margin: 0 0 .35em; line-height: 1.2; letter-spacing: -.01em; }
-h1 { font-size: 1.7rem; } h2 { font-size: 1.2rem; } h3 { font-size: 1rem; }
+h1, h2, h3 { margin: 0 0 .35em; line-height: 1.22; letter-spacing: -.012em; font-family: var(--font-display); font-weight: 600; }
+h1 { font-size: 1.75rem; } h2 { font-size: 1.22rem; } h3 { font-size: 1rem; }
 p { margin: 0 0 .75em; }
 .muted { color: var(--muted); }
 .small { font-size: .875rem; }
@@ -199,7 +239,7 @@ p { margin: 0 0 .75em; }
 }
 .topbar .back:hover { color: var(--text); text-decoration: none; border-color: var(--accent); }
 .topbar .title { display: flex; align-items: center; gap: .55rem; font-weight: 700; font-size: 1.1rem; }
-.topbar h1.title { margin: 0; letter-spacing: normal; }   /* the page title is the topbar name; keep h1's semantics, not its size */
+.topbar h1.title { margin: 0; letter-spacing: normal; font-family: var(--font); font-weight: 700; }   /* the page title is the topbar name; keep h1's semantics, not its size */
 .topbar .title .emoji { font-size: 1.35rem; }
 .topbar .spacer { flex: 1; }
 .container { max-width: 1040px; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
@@ -222,7 +262,7 @@ p { margin: 0 0 .75em; }
 /* Stat tiles */
 .stats { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: .8rem .9rem; }
-.stat .num { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; color: var(--accent-text); }
+.stat .num { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; color: var(--accent-text); font-variant-numeric: tabular-nums; }
 .stat .lbl { font-size: .8rem; color: var(--muted); margin-top: .15rem; }
 
 /* Buttons */

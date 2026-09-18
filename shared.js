@@ -185,12 +185,16 @@ window.PH = (function () {
      One stored choice for the whole site. "system" follows the device and keeps following it, so a
      phone that dims at sunset dims the hub too. Everything else is resolved once and pinned. */
   var THEMES = [
-    { id: 'system',   name: 'Match my device', emoji: '🌗' },
-    { id: 'light',    name: 'Light',           emoji: '☀️' },
-    { id: 'dark',     name: 'Dark',            emoji: '🌙' },
-    { id: 'midnight', name: 'Midnight',        emoji: '🌌' },
-    { id: 'paper',    name: 'Paper',           emoji: '📜' },
-    { id: 'contrast', name: 'High contrast',   emoji: '◐' }
+    { id: 'system',   name: 'Match my device', emoji: '\u{1F317}' },
+    { id: 'light',    name: 'Light',           emoji: '\u2600\ufe0f' },
+    { id: 'slate',    name: 'Slate',           emoji: '\u{1FAA8}' },
+    { id: 'paper',    name: 'Paper',           emoji: '\u{1F4DC}' },
+    { id: 'dark',     name: 'Dark',            emoji: '\u{1F319}' },
+    { id: 'ink',      name: 'Ink',             emoji: '\u{1F58B}\ufe0f' },
+    { id: 'midnight', name: 'Midnight',        emoji: '\u{1F30C}' },
+    { id: 'dusk',     name: 'Dusk',            emoji: '\u{1F311}' },
+    { id: 'forest',   name: 'Forest',          emoji: '\u{1F332}' },
+    { id: 'contrast', name: 'High contrast',   emoji: '\u25D0' }
   ];
   var THEME_KEY = 'ph.theme';
   function themeChoice() {

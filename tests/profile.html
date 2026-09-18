@@ -55,7 +55,7 @@ f.addEventListener('load', async () => {
 
     /* ---- colours ---- */
     const cards = $$('.themecard');
-    ok('every theme is offered here too', cards.length === 6, cards.length + ' shown');
+    ok('every theme is offered here too', cards.length === w.PH.THEMES.length && cards.length === 10, cards.length + ' shown');
     ok('the current one is marked', $$('.themecard[aria-pressed="true"]').length === 1);
     cards.filter(c => c.getAttribute('data-theme-id') === 'paper')[0].click(); await tick();
     ok('picking one applies it', d.documentElement.getAttribute('data-theme') === 'paper',

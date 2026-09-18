@@ -46,7 +46,7 @@ async function go(page) {
     ok('clicking opens the menu', !d.querySelector('#themeMenu').hidden
       && d.querySelector('#themeBtn').getAttribute('aria-expanded') === 'true');
     const opts = Array.from(d.querySelectorAll('.theme-opt'));
-    ok('every theme is offered', opts.length === w.PH.THEMES.length && opts.length === 6, opts.length + ' options');
+    ok('every theme is offered', opts.length === w.PH.THEMES.length && opts.length === 10, opts.length + ' options');
     ok('each one is named', opts.every(o => o.textContent.trim().length > 2));
     ok('the current one is marked', d.querySelectorAll('.theme-opt[aria-checked="true"]').length === 1);
 
