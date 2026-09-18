@@ -81,8 +81,8 @@ details[open] summary { margin-bottom: .6rem; }
 
   <section class="card setup" id="setupCard" aria-labelledby="h-setup" hidden>
     <div class="card-head"><h2 id="h-setup">Whose calendar should show here?</h2></div>
-    <p class="muted">Type the Google account whose calendar you want to see. It is saved in this browser
-      only — nothing is sent anywhere, and nobody else's account is set up for you.</p>
+    <p class="muted">Type your own Google account. It is saved in this browser only — nothing is sent
+      anywhere, and no account is ever set up for you.</p>
     <form class="add-cal" id="setupForm">
       <div class="field"><label for="setupSrc">Your Google account</label>
         <input class="input" id="setupSrc" type="email" placeholder="you@gmail.com" spellcheck="false"
@@ -112,12 +112,17 @@ details[open] summary { margin-bottom: .6rem; }
   </section>
 
   <section class="card" aria-labelledby="h-accounts">
-    <div class="card-head"><h2 id="h-accounts">Google accounts</h2><span class="muted small" id="calCount"></span></div>
+    <div class="card-head"><h2 id="h-accounts">Your Google accounts</h2>
+      <span class="muted small" id="calCount"></span>
+      <button class="btn btn-sm btn-ghost btn-danger" id="forgetAll" hidden>Forget them all</button></div>
+    <p class="muted small">These are accounts <b>you</b> are signed in to. A calendar only appears if the account
+      this browser is signed in as is allowed to see it, so adding someone else's address shows you nothing.
+      Removing one here forgets it in this browser straight away.</p>
     <div class="cals" id="calList"></div>
 
     <form class="add-cal" id="addForm">
-      <div class="field"><label for="newSrc">Add another Google account or calendar</label>
-        <input class="input" id="newSrc" type="email" placeholder="someone@gmail.com" spellcheck="false" autocomplete="off" required></div>
+      <div class="field"><label for="newSrc">Add another account of your own</label>
+        <input class="input" id="newSrc" type="email" placeholder="your.other.account@gmail.com" spellcheck="false" autocomplete="off" required></div>
       <div class="field"><label for="newName">Label (optional)</label>
         <input class="input" id="newName" placeholder="Mom, School, Scouts…" autocomplete="off"></div>
       <button class="btn btn-primary" type="submit">+ Add calendar</button>
@@ -306,6 +311,7 @@ details[open] summary { margin-bottom: .6rem; }
     const list = cals();
     const setup = $('#setupCard');
     if (setup) setup.hidden = list.length > 0;
+    $('#forgetAll').hidden = !list.length;
     $('#calList').innerHTML = list.map(c =>
       '<div class="cal-row' + (c.on ? '' : ' off') + '" data-cal="' + esc(c.id) + '">' +
         '<span class="dot" style="--c:' + esc(c.color) + '" aria-hidden="true"></span>' +
@@ -549,6 +555,15 @@ details[open] summary { margin-bottom: .6rem; }
 
   /* ---------------- settings & wiring ---------------- */
   function renderSettings() { $('#tz').value = state.settings.tz; $('#clientId').value = state.settings.clientId; }
+  function forgetAllCalendars() {
+    const n = cals().length;
+    if (!n) return;
+    if (!confirm('Forget ' + n + ' saved ' + (n === 1 ? 'account' : 'accounts') + '? This only clears them from this browser.')) return;
+    state.settings.calendars = [];
+    events = null;
+    save(); renderAll();
+    PH.toast(n === 1 ? 'Account forgotten' : 'All ' + n + ' accounts forgotten');
+  }
   function renderAll() { renderCals(); renderEmbed(); renderQuick(); renderSettings(); renderTasks(); }
 
   $('#modeTabs').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; state.settings.mode = b.dataset.mode; save(); renderEmbed(); });
@@ -574,6 +589,7 @@ details[open] summary { margin-bottom: .6rem; }
   });
   $('#taskRefresh').addEventListener('click', loadTasks);
   $('#taskBox').addEventListener('change', e => { const c = e.target.closest('[data-task]'); if (c) toggleTask(c.dataset.task, c.checked); });
+  $('#forgetAll').addEventListener('click', forgetAllCalendars);
   $('#taskBox').addEventListener('click', e => { const d = e.target.closest('[data-deltask]'); if (d) deleteTask(d.dataset.deltask); });
   $('#taskLists').addEventListener('click', e => { const b = e.target.closest('[data-list]'); if (b) { curList = b.dataset.list; state.settings.taskList = curList; save(); loadTasks(); } });
   $('#addTask').addEventListener('submit', e => { e.preventDefault(); const t = $('#newTask').value.trim(); if (!t) return;

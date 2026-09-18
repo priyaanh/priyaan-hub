@@ -188,6 +188,12 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
     if (eq) return 'eq:' + eq[1] + eq[2];
     return 'text:' + Math.min(4, t.split(' ').length);
   }
+  /* Coarser than the shape: words with words, numbers with numbers. Used only when nothing of the exact
+     same shape turned up, so that a lone answer still gets three plausible neighbours rather than none. */
+  function classOf(shape) {
+    if (shape === 'num' || shape === 'frac' || shape === 'money' || shape === 'percent') return 'num';
+    return shape.indexOf('text:') === 0 ? 'text' : shape;
+  }
   function numOf(a) {
     const t = answerKey(a).replace(MINUS, '-').replace(/[$,%]/g, '');
     const fr = t.match(/^(-?\d+)\/(\d+)$/);
@@ -202,10 +208,10 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
          indices review.html stores still point at the same questions */
       const big = src.make(Object.assign({}, o, { count: 40, seed: (o.seed + 7919) % 4294967296 }));
       src.items(big).forEach(it => {
-        const k = shapeOf(it.answer) + '|' + (it.from || '');
-        (pool[k] = pool[k] || []).push(String(it.answer));
-        const any = shapeOf(it.answer) + '|*';
-        (pool[any] = pool[any] || []).push(String(it.answer));
+        const shape = shapeOf(it.answer);
+        [shape + '|' + (it.from || ''), shape + '|*', classOf(shape) + '|~'].forEach(k => {
+          (pool[k] = pool[k] || []).push(String(it.answer));
+        });
       });
     } catch (e) { /* no pool is survivable: the fallbacks below still give four options */ }
     return pool;
@@ -272,6 +278,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
       };
       take(pool[shape + '|' + (it.from || '')]);
       if (opts.length < 3) take(pool[shape + '|*']);
+      if (!opts.length) take(pool[classOf(shape) + '|~']);
       /* Made-up options are only honest for numbers, where a near miss is a real wrong answer. Inventing
          a word ("weak negatives") would be a giveaway, so a short question gets three options, or two. */
       if (target !== null || shape === 'frac') {
@@ -442,12 +449,14 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
   }
 
   /* ===================== a run ===================== */
-  let run = null;
+  let run = null, nextSeed = null;
   function startRun(req) {
     const src = SOURCES[req.source];
     const count = req.count || 10;
     const difficulty = req.difficulty || 2;
-    const seed = Math.floor(Math.random() * 999999) + 1;
+    /* a round picks its own seed; a test can pin one so the same questions come back every run */
+    const seed = nextSeed || (Math.floor(Math.random() * 999999) + 1);
+    nextSeed = null;
     const o = { topics: req.topics.slice(), count: count, difficulty: difficulty, seed: seed };
     if (req.source === 'grade') o.grade = req.grade || '7';
     let set, items;
@@ -671,7 +680,8 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
   fromHash();
   window.addEventListener('hashchange', fromHash);
   /* so the tests can drive a conversation without typing into it */
-  window.PH_ASK = { handle: handle, read: readRequest, run: () => run, state: () => state, sources: SOURCES };
+  window.PH_ASK = { handle: handle, read: readRequest, run: () => run, state: () => state, sources: SOURCES,
+    setSeed: n => { nextSeed = Number(n) || null; } };
 })();
 </script>
 </body></html>

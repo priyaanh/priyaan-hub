@@ -22,7 +22,7 @@ f.addEventListener('load', async () => {
   try {
     await waitFor(() => w.PH_ASK && w.IM1 && w.ES && w.PY && w.GRADES && w.SCI && w.CPM_QUIZZES, 500);
     const A = w.PH_ASK;
-    ok('the page is driveable from a test', !!A);
+    ok('the page is driveable from a test', !!A && typeof A.setSeed === 'function');
     ok('every generator it offers is loaded', !!(w.IM1 && w.ES && w.PY && w.GRADES && w.SCI && w.CPM_QUIZZES));
     ok('it opens with something to say', msgs().length >= 1 && /practise/i.test(body()), body().slice(0,100));
     ok('and suggests things to ask for', $$('[data-chip]').length >= 4, String($$('[data-chip]').length));
@@ -54,7 +54,7 @@ f.addEventListener('load', async () => {
     ok('with the subjects offered as chips', $$('[data-chip]').length >= 4);
 
     /* ---- a real round ---- */
-    A.handle('6 questions on slope'); await tick();
+    A.setSeed(24680); A.handle('6 questions on slope'); await tick();
     const run = A.run();
     ok('a round starts', !!run && run.items.length === 6, run ? String(run.items.length) : 'none');
     ok('it says what it understood', /6 questions/i.test(body()) && /level 2/i.test(body()));
@@ -116,14 +116,14 @@ f.addEventListener('load', async () => {
     ok('the hub summary says how it went', /\d\/6/.test(st.summary.headline || ''), st.summary.headline);
 
     /* ---- asking for another ---- */
-    A.handle('another round'); await tick();
+    A.setSeed(13579); A.handle('another round'); await tick();
     ok('"another round" repeats the last request', !!A.run() && A.run().items.length === 6);
     A.handle('stop'); await tick();
 
     /* ---- the other generators all answer ---- */
     const tried = [];
     for (const ask of ['4 questions on spanish gustar', '4 python questions', 'lesson 1.1.1', '4 grade 7 percents', '6 questions on moon phases']) {
-      A.handle(ask); await tick();
+      A.setSeed(4242); A.handle(ask); await tick();
       const r = A.run();
       tried.push(ask + ':' + (r ? r.items.length : 0) + (r && r.items.every(i => i.choices) ? ' mc' : ' TYPED'));
       if (r) { A.handle('stop'); await tick(); }
@@ -132,12 +132,26 @@ f.addEventListener('load', async () => {
        tried.every(t => / mc$/.test(t) && !/:0/.test(t)), tried.join(' | '));
 
     /* ---- a science round carries its own options, and explains ---- */
-    A.handle('6 questions on moon phases'); await tick();
+    A.setSeed(909); A.handle('6 questions on moon phases'); await tick();
     const sr = A.run();
     ok('a science round is asked', !!sr && sr.items.length === 6, sr ? String(sr.items.length) : 'none');
     ok('its options come from the topic itself', sr.items.every(i => i.choices && i.choices.length >= 2));
     ok('and exactly one of them is right', sr.items.every(i => i.choices.filter((c, n) => i.check('', n)).length === 1));
     A.handle('stop'); await tick();
+
+    /* ---- every question is pick-one, whatever the seed ---- */
+    let typed = 0, asked = 0;
+    for (const ask of ['8 questions on slope', '8 spanish questions', '8 python questions', '8 questions on data', '8 science questions']) {
+      for (const seed of [11, 222, 3333]) {
+        A.setSeed(seed); A.handle(ask); await tick();
+        const rr = A.run();
+        if (!rr) continue;
+        rr.items.forEach(i => { asked++; if (!i.choices) typed++; });
+        A.handle('stop'); await tick();
+      }
+    }
+    ok('no question anywhere falls back to a typed answer', typed === 0 && asked > 100,
+       typed + ' typed of ' + asked);
 
     /* ---- nothing goes anywhere ---- */
     ok('the page says nothing is sent away', /leaves this device|nothing.*sent/i.test(body()));

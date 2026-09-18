@@ -7,12 +7,14 @@ f.addEventListener('load', async () => {
   if (phase === 0) {
     phase = 1;
     // seed a v1 (old format: plain strings) state, then reload to check migration
-    w.localStorage.setItem('ph.calendar.v1', JSON.stringify({ version:1, settings:{ calendars:['priyaan.haldiya@gmail.com','mom@example.com'], mode:'MONTH', tz:'America/Los_Angeles', clientId:'' }, summary:{} }));
+    w.localStorage.setItem('ph.calendar.v1', JSON.stringify({ version:1, settings:{ calendars:['student@example.com','parent@example.com'], mode:'MONTH', tz:'America/Los_Angeles', clientId:'' }, summary:{} }));
     w.location.reload(); return;
   }
   try {
     ok('v1 strings migrated to 2 rows', $$('.cal-row').length === 2);
-    ok('migrated names are labels', $$('.cal-row .nm')[0].textContent.trim().startsWith('Priyaan'));
+    /* the label is made from the part before the @, capitalised */
+    ok('migrated names are labels', $$('.cal-row .nm')[0].textContent.trim().startsWith('Student'),
+       $$('.cal-row .nm')[0].textContent);
     ok('migrated calendars get different colours', $$('.cal-row .dot')[0].style.getPropertyValue('--c') !== $$('.cal-row .dot')[1].style.getPropertyValue('--c'));
     ok('mode MONTH kept', $('[data-mode="MONTH"]').getAttribute('aria-selected') === 'true');
     // add a third
@@ -49,6 +51,15 @@ f.addEventListener('load', async () => {
     ok('hub summary mentions calendars', /calendar/i.test(saved.summary.sub) || saved.summary.headline === 'Google Calendar');
     // share-help shows the first address
     ok('share help names first account', $('#shareTo').textContent.includes('@'));
+
+    /* forgetting the lot, for when a saved account should not be on the device any more */
+    ok('there is a way to forget every account at once', !!$('#forgetAll') && !$('#forgetAll').hidden);
+    w.confirm = () => true;
+    $('#forgetAll').click(); await sleep(80);
+    ok('forgetting them all clears the list', $$('.cal-row').length === 0, $$('.cal-row').length + ' left');
+    ok('and nothing is left in storage', (JSON.parse(w.localStorage.getItem('ph.calendar.v1')).settings.calendars || []).length === 0);
+    ok('and it asks whose calendar to show again', !$('#setupCard').hidden);
+    ok('the button goes away once there is nothing to forget', $('#forgetAll').hidden);
   } catch (e) { R.push('FAIL threw: ' + e.message); }
   try { w.localStorage.removeItem('ph.calendar.v1'); } catch(e){}
   console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);

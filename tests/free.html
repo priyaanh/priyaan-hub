@@ -73,8 +73,11 @@ f.addEventListener('load', async () => {
     ok('answers appear only in the key', (html.match(/x = 5/g) || []).length === 1);
     // bad paste
     $('#pasteIn').value = 'nope';
-    $('#buildBtn').click(); await tick();
-    ok('bad paste explained, nothing saved', /⚠️/.test($('#buildNote').textContent) && JSON.parse(w.localStorage.getItem('ph.ai.v1')).sets.length === 1);
+    $('#buildBtn').click();
+    /* the note is written after the paste is parsed, which is not always within one tick */
+    await waitFor(() => /⚠️/.test($('#buildNote').textContent), 120);
+    ok('bad paste explained, nothing saved', /⚠️/.test($('#buildNote').textContent) && JSON.parse(w.localStorage.getItem('ph.ai.v1')).sets.length === 1,
+       $('#buildNote').textContent.slice(0, 60));
     // switching to a paid provider restores that UI
     $('[data-prov="claude"]').click(); await tick();
     ok('switching to Claude shows the key box again', $('#manualCard').hidden && !$$('#setupCard .key-row')[0].hidden && !$('#genBtn').hidden);
