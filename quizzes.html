@@ -30,21 +30,31 @@ main > * + * { margin-top: 1rem; }
 }
 
 /* ---- quiz ---- */
-.q-meta { display: flex; justify-content: space-between; gap: 1rem; font-size: .85rem; color: var(--muted); font-weight: 600; margin-bottom: .4rem; }
-.q-svg { display: flex; justify-content: center; margin: 1rem auto .25rem; }
+.q-meta { display: flex; justify-content: space-between; gap: 1rem; font-size: .76rem; color: var(--muted);
+  font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: .5rem; }
+.q-svg { display: flex; justify-content: center; margin: 1.1rem auto .25rem; }
 .q-svg svg { max-width: 100%; }
-.q-text { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 .9rem; line-height: 1.45; }
+/* The question is the thing on the page; everything else can be quiet. */
+.q-text { font-size: 1.5rem; font-weight: 700; margin: 1.25rem 0 1.1rem; line-height: 1.32; letter-spacing: -.012em; }
+@media (max-width: 560px) { .q-text { font-size: 1.22rem; } }
 .q-text .pill { vertical-align: middle; margin-right: .25rem; }
-.choices { display: grid; gap: .5rem; grid-template-columns: 1fr; }
+.choices { display: grid; gap: .6rem; grid-template-columns: 1fr; }
 @media (min-width: 640px) { .choices { grid-template-columns: 1fr 1fr; } }
-.choice { display: flex; align-items: center; gap: .7rem; text-align: left; padding: .7rem .85rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; line-height: 1.35; cursor: pointer; transition: background .12s, border-color .12s; }
+.choice { display: flex; align-items: center; gap: .85rem; text-align: left; padding: 1rem 1.05rem;
+  border: 2px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
+  font: inherit; font-size: 1.06rem; font-weight: 600; line-height: 1.35; cursor: pointer;
+  transition: background .12s, border-color .12s, transform .08s; }
 .choice:hover { border-color: var(--accent-text); background: var(--surface-2); }
-.choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.choice[aria-checked="true"] { border-color: var(--accent-text); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-.choice .key { flex: none; width: 1.6rem; height: 1.6rem; display: grid; place-items: center; border-radius: 6px; background: var(--surface-2); font-size: .78rem; font-weight: 700; color: var(--muted); font-family: var(--mono); }
+.choice:active { transform: translateY(1px); }
+.choice:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.choice[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.choice .key { flex: none; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 8px;
+  background: var(--surface-2); font-size: .92rem; font-weight: 800; color: var(--muted); font-family: var(--font); }
 .choice[aria-checked="true"] .key { background: var(--accent-fill); color: var(--accent-ink); }
-.choice.correct, .choice.correct:hover { border-color: var(--ok); background: var(--ok-soft); box-shadow: inset 0 0 0 1px var(--ok); }
-.choice.wrong, .choice.wrong:hover { border-color: var(--danger); background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger); }
+.choice.correct, .choice.correct:hover { border-color: var(--ok); background: var(--ok-soft); }
+.choice.correct .key { background: var(--ok); color: #fff; }
+.choice.wrong, .choice.wrong:hover { border-color: var(--danger); background: var(--danger-soft); }
+.choice.wrong .key { background: var(--danger); color: #fff; }
 .choice:disabled { cursor: default; opacity: .7; }
 .choice.correct:disabled, .choice.wrong:disabled { opacity: 1; }
 .answer-row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
@@ -53,7 +63,9 @@ main > * + * { margin-top: 1rem; }
 .feedback.bad { border-left-color: var(--danger); background: var(--danger-soft); }
 .feedback b { display: block; margin-bottom: .2rem; }
 .feedback b.good { color: var(--ok); } .feedback b.nope { color: var(--danger); }
-.q-actions { display: flex; gap: .5rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
+.q-actions { display: flex; gap: .5rem; align-items: center; margin-top: 1.25rem; flex-wrap: wrap; }
+/* the button that moves the quiz on should be the easiest thing on the page to hit */
+.q-actions #q-check, .q-actions #q-next { font-size: 1.02rem; font-weight: 700; padding: .62rem 1.5rem; }
 .q-actions .spacer { flex: 1; }
 .kbd-hint { white-space: nowrap; }
 @media (max-width: 560px) { .kbd-hint { display: none; } }

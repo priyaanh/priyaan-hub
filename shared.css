@@ -317,7 +317,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .pill.warn { background: var(--warn-soft); color: var(--warn-text); }
 .pill.danger { background: var(--danger-soft); color: var(--danger-text); }
 .pill.neutral { background: var(--surface-2); color: var(--muted); }
-.progress { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.progress { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); }
 .progress > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .3s; }
 
 /* Tabs */

@@ -15,9 +15,9 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
 .msg.you .who { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-text); }
 .msg .bubble p { margin: 0; }
 .msg .bubble p + p { margin-top: .45rem; }
-.msg .q { font-size: 1.2rem; line-height: 1.5; }
+.msg .q { font-size: 1.32rem; line-height: 1.38; font-weight: 700; letter-spacing: -.01em; }
 .msg .q .cue { font-size: .8em; color: var(--muted); }
-.msg .from { font-size: .74rem; color: var(--muted); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .25rem; }
+.msg .from { font-size: .72rem; color: var(--muted); font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: .4rem; }
 .msg .ok { color: var(--ok-text); font-weight: 700; }
 .msg .no { color: var(--danger-text); font-weight: 700; }
 .msg .why { color: var(--muted); font-size: .9rem; margin-top: .3rem; }
@@ -27,16 +27,19 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
 .msg .fig { margin: .5rem 0; }
 .msg .fig svg { max-width: 100%; height: auto; }
 .choices { display: grid; gap: .35rem; margin-top: .6rem; }
-.choices button { font: inherit; text-align: left; padding: .45rem .6rem; border: 1px solid var(--border); background: var(--surface-2);
-  color: inherit; border-radius: 8px; cursor: pointer; display: flex; gap: .5rem; }
-.choices button:hover { border-color: var(--accent-text); }
-.choices button .k { font-weight: 800; color: var(--accent-text); }
+.choices button { font: inherit; font-size: 1.02rem; font-weight: 600; text-align: left; padding: .68rem .8rem;
+  border: 2px solid var(--border); background: var(--surface-2); color: inherit; border-radius: 9px; cursor: pointer;
+  display: flex; gap: .7rem; align-items: center; transition: background .12s, border-color .12s, transform .08s; }
+.choices button:hover { border-color: var(--accent-text); background: var(--accent-soft); }
+.choices button:active { transform: translateY(1px); }
+.choices button .k { flex: none; width: 1.7rem; height: 1.7rem; display: grid; place-items: center; border-radius: 6px;
+  background: var(--surface); font-weight: 800; font-size: .88rem; color: var(--accent-text); }
 .choices button[aria-checked="true"] { border-color: var(--accent-text); background: var(--accent-soft); }
 .choices button[disabled] { cursor: default; opacity: 1; }
 .choices button.is-right { border-color: var(--ok); background: var(--ok-soft); }
-.choices button.is-right .k { color: var(--ok-text); }
+.choices button.is-right .k { background: var(--ok); color: #fff; }
 .choices button.is-wrong { border-color: var(--danger); background: var(--danger-soft); }
-.choices button.is-wrong .k { color: var(--danger-text); }
+.choices button.is-wrong .k { background: var(--danger); color: #fff; }
 .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
 .chips button { font: inherit; font-size: .85rem; padding: .3rem .6rem; border: 1px solid var(--border); background: var(--surface-2);
   color: inherit; border-radius: 999px; cursor: pointer; }
