@@ -1,0 +1,125 @@
+<!doctype html><title>name &amp; email</title><body style="margin:0"><script>
+/* The name/email control is built by shared.js, so every page has one. Checks that a name typed on any
+   page reaches the hub, that a junk address is refused, and -- the part that matters most -- that an email
+   address never leaves the device: not in a backup file, not in anything sync would push. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const NAME='ph.name', EMAIL='ph.email';
+const snapN=localStorage.getItem(NAME), snapE=localStorage.getItem(EMAIL);
+const f=document.createElement('iframe'); f.style.cssText='width:1100px;height:800px;border:0'; document.body.appendChild(f);
+let nav=0;
+async function go(page){
+  const want=page.replace(/\?.*/,'');
+  f.src='../'+page+(page.indexOf('?')<0?'?':'&')+'n='+(++nav);
+  const deadline=Date.now()+15000;
+  for(let i=0;i<5000&&Date.now()<deadline;i++){
+    await tick();
+    try{const d=f.contentDocument;
+      if(d&&d.location.href.indexOf(want)>=0&&d.readyState==='complete'&&d.querySelector('#whoBtn'))break;
+    }catch(e){}
+  }
+  for(let i=0;i<8;i++)await tick();
+}
+const $ = s => f.contentDocument.querySelector(s);
+async function type(sel,v){ const el=$(sel); el.value=v; el.dispatchEvent(new f.contentWindow.Event('input',{bubbles:true})); await tick(); }
+
+(async()=>{
+ try{
+  localStorage.removeItem(NAME); localStorage.removeItem(EMAIL);
+
+  /* ---- the control is on a page that is not the hub ---- */
+  await go('python.html');
+  let w=f.contentWindow, d=f.contentDocument;
+  ok('the name button is on an app page too', !!$('#whoBtn'));
+  ok('with nothing saved it invites a name', ($('#whoBtn').textContent||'').indexOf('Add your name')>=0, $('#whoBtn').textContent);
+  ok('it says what it does', ($('#whoBtn').getAttribute('aria-label')||'').length>6, $('#whoBtn').getAttribute('aria-label'));
+  ok('the popover starts closed', $('#whoMenu').hidden && $('#whoBtn').getAttribute('aria-expanded')==='false');
+
+  $('#whoBtn').click(); await tick();
+  ok('clicking opens it', !$('#whoMenu').hidden && $('#whoBtn').getAttribute('aria-expanded')==='true');
+  ok('there is a name field', !!$('#whoIn'));
+  ok('there is an email field', !!$('#whoEmail') && $('#whoEmail').type==='email');
+  ok('the email is marked optional', ($('#whoMenu').textContent||'').toLowerCase().indexOf('optional')>=0);
+  ok('it says the details stay put', /never sent anywhere/i.test($('#whoMenu').textContent||''));
+  ok('it says whose details to type', /nobody else|your own/i.test($('#whoMenu').textContent||''));
+
+  /* ---- saving a name ---- */
+  await type('#whoIn','Alex Rivera');
+  $('#whoSave').click(); await tick();
+  ok('saving a name stores it', localStorage.getItem(NAME)==='Alex Rivera', String(localStorage.getItem(NAME)));
+  ok('and closes the popover', $('#whoMenu').hidden);
+  ok('the button then shows the first name', ($('#whoBtn').textContent||'').indexOf('Alex')>=0, $('#whoBtn').textContent);
+  ok('a surname does not stretch the top bar', ($('#whoBtn').textContent||'').indexOf('Rivera')<0, $('#whoBtn').textContent);
+  ok('the tab title takes the name', d.title.indexOf(w.PH.hubName())>=0, d.title + ' (wanted ' + w.PH.hubName() + ')');
+
+  /* ---- a junk address is refused ---- */
+  $('#whoBtn').click(); await tick();
+  await type('#whoEmail','not an address');
+  $('#whoSave').click(); await tick();
+  ok('a junk address is refused', localStorage.getItem(EMAIL)===null, String(localStorage.getItem(EMAIL)));
+  ok('and the popover stays open to be fixed', !$('#whoMenu').hidden);
+  ok('and says what is wrong', ($('#whoErr').textContent||'').length>5, $('#whoErr').textContent);
+
+  await type('#whoEmail','alex@example.com');
+  $('#whoSave').click(); await tick();
+  ok('a real address is kept', localStorage.getItem(EMAIL)==='alex@example.com', String(localStorage.getItem(EMAIL)));
+  ok('the name survived the second save', localStorage.getItem(NAME)==='Alex Rivera');
+
+  /* ---- an address must never travel ---- */
+  const dump=w.PH.exportable();
+  ok('a backup leaves the email out', !('ph.email' in dump), Object.keys(dump).filter(k=>/email/.test(k)).join());
+  ok('but keeps the name', dump['ph.name']==='Alex Rivera');
+  ok('the email counts as a secret, so sync skips it', w.PH.isSecretKey('ph.email')===true);
+  ok('a backup file cannot carry it at all', JSON.stringify(dump).indexOf('alex@example.com')<0);
+
+  /* ---- shapes accepted and rejected ---- */
+  const good=['a@b.co','first.last@sub.example.org','x+tag@example.co.uk'];
+  const bad=['a@b','@example.com','a b@example.com','a@@b.com','a@b.','','javascript:alert(1)@x.com'.replace('@x.com',''),'<script>@x.com'];
+  ok('ordinary addresses are accepted', good.every(v=>w.PH.validEmail(v)), good.filter(v=>!w.PH.validEmail(v)).join());
+  ok('malformed ones are not', bad.every(v=>!w.PH.validEmail(v)), bad.filter(v=>w.PH.validEmail(v)).join());
+  ok('an over-long address is refused', !w.PH.validEmail('a'.repeat(120)+'@example.com'));
+
+  /* ---- clearing ---- */
+  $('#whoBtn').click(); await tick();
+  $('#whoClear').click(); await tick();
+  ok('clear forgets the name', localStorage.getItem(NAME)===null, String(localStorage.getItem(NAME)));
+  ok('clear forgets the email too', localStorage.getItem(EMAIL)===null, String(localStorage.getItem(EMAIL)));
+
+  /* ---- the hub and the profile page agree with the top bar ---- */
+  await go('index.html');
+  d=f.contentDocument;
+  $('#whoBtn').click(); await tick();
+  await type('#whoIn','Sam');
+  $('#whoSave').click(); await tick();
+  ok('the hub greeting updates as soon as it is saved', (d.querySelector('#greet').textContent||'').indexOf('Sam')>0,
+     d.querySelector('#greet').textContent);
+  ok('the hub heading becomes theirs', (d.querySelector('[data-ph="hub"]').textContent||'').indexOf('Sam')>=0,
+     d.querySelector('[data-ph="hub"]').textContent);
+
+  await go('profile.html');
+  d=f.contentDocument; w=f.contentWindow;
+  ok('the profile page shows the saved name', $('#nameIn').value==='Sam', $('#nameIn').value);
+  await type('#emailIn','sam@example.com');
+  $('#nameForm').dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true})); await tick();
+  ok('the profile page saves an email', localStorage.getItem(EMAIL)==='sam@example.com', String(localStorage.getItem(EMAIL)));
+  ok('and lists it as saved data', (d.querySelector('#dtable').textContent||'').indexOf('Your email')>=0);
+  ok('and says it is not backed up', /never in a backup|never synced/i.test(d.querySelector('#dtable').textContent||''));
+  await type('#emailIn','nonsense');
+  $('#nameForm').dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true})); await tick();
+  ok('the profile page refuses a junk address', localStorage.getItem(EMAIL)==='sam@example.com', String(localStorage.getItem(EMAIL)));
+  ok('and says so', ($('#emailErr').textContent||'').length>5, $('#emailErr').textContent);
+  ok('the button on this page shows the name too', ($('#whoBtn').textContent||'').indexOf('Sam')>=0, $('#whoBtn').textContent);
+
+  /* ---- an address is never shown on a page, only held for the person who typed it ---- */
+  await go('index.html');
+  ok('the hub never prints the address on screen', (f.contentDocument.body.innerText||'').indexOf('sam@example.com')<0);
+
+ }catch(e){ ok('the suite ran to the end', false, e && (e.stack||e.message)); }
+ finally{
+  snapN===null?localStorage.removeItem(NAME):localStorage.setItem(NAME,snapN);
+  snapE===null?localStorage.removeItem(EMAIL):localStorage.setItem(EMAIL,snapE);
+  const failed=R.filter(l=>l.indexOf('FAIL')===0).length;
+  console.log('RESULTS '+failed+' failed of '+R.length);
+ }
+})();
+</script>

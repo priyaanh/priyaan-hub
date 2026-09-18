@@ -45,13 +45,22 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
 
   <section class="card" aria-labelledby="h-you">
     <div class="card-head"><h2 id="h-you">You</h2><span class="small" id="youSub"></span></div>
-    <p class="muted">Your name goes at the top of the hub, on printed worksheets and on the piano practice log.</p>
+    <p class="muted">Your name goes at the top of the hub, on printed worksheets and on the piano practice log.
+      An email address is optional, and is only used to label a sheet you hand in.</p>
     <form class="row2" id="nameForm">
       <div class="field"><label for="nameIn">Your name</label>
         <input class="input" id="nameIn" maxlength="40" autocomplete="given-name" spellcheck="false" placeholder="Your name"></div>
+      <div class="field"><label for="emailIn">Your email <span class="muted">(optional)</span></label>
+        <input class="input" id="emailIn" type="email" maxlength="120" autocomplete="email" spellcheck="false"
+          placeholder="you@example.com" aria-describedby="emailErr"></div>
       <button class="btn btn-primary" type="submit">Save</button>
       <button class="btn btn-ghost" type="button" id="clearName">Clear</button>
     </form>
+    <p class="small" id="emailErr" role="status"></p>
+    <p class="small muted"><b>Put in your own details, not anyone else’s.</b> Everything here is saved in this
+      browser and nowhere else. There is no account and no server behind this site, so nothing you type can
+      reach another person. Your email address is left out of the backup file and out of sync on purpose, so
+      even a copy of this hub that you hand to someone cannot carry it.</p>
   </section>
 
   <section class="card" aria-labelledby="h-colours">
@@ -109,6 +118,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     ['ph.progress.v1', '📈', 'Progress',         'Which stretch of time the charts are showing'],
     ['ph.theme',       '🎨', 'Colours',          'The theme you chose'],
     ['ph.name',        '👤', 'Your name',        'The name shown on the hub and on printouts'],
+    ['ph.email',       '✉️', 'Your email',       'Only on this device: never in a backup and never synced'],
     ['ph.sync.v1',     '☁️', 'Sync',             'Where the copy is kept and when it was last written']
   ];
 
@@ -145,15 +155,27 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   /* ===================== You ===================== */
   function renderYou() {
     $('#nameIn').value = PH.person();
+    $('#emailIn').value = PH.personEmail();
     $('#youSub').textContent = PH.person() ? 'This hub is ' + PH.hubName() : 'No name set yet';
   }
   $('#nameForm').addEventListener('submit', function (e) {
     e.preventDefault();
+    if (PH.setPersonEmail($('#emailIn').value) === null) {
+      $('#emailErr').textContent = 'That does not look like an email address.';
+      $('#emailIn').focus();
+      return;
+    }
+    $('#emailErr').textContent = '';
     var set = PH.setPerson($('#nameIn').value);
     renderYou();
-    PH.toast(set ? 'Hello, ' + set : 'Name cleared');
+    renderData();
+    PH.toast(set ? 'Hello, ' + set : 'Saved');
   });
-  $('#clearName').addEventListener('click', function () { PH.setPerson(''); renderYou(); PH.toast('Name cleared'); });
+  $('#clearName').addEventListener('click', function () {
+    PH.setPerson(''); PH.setPersonEmail('');
+    $('#emailErr').textContent = '';
+    renderYou(); renderData(); PH.toast('Cleared');
+  });
 
   /* ===================== Colours ===================== */
   function renderThemes() {

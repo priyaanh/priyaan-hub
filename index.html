@@ -262,6 +262,9 @@
   });
   renderGreeting();
   askName(false);
+  /* the name can also be set from the button in the top bar, on this page or on any other */
+  document.addEventListener('ph:name', renderGreeting);
+  window.addEventListener('storage', function (e) { if (e.key === 'ph.name') renderGreeting(); });
 
 
 

@@ -94,8 +94,12 @@ window.PH = (function () {
     return a.href;
   }
   /* Secrets stay on the device they were typed on: never in a backup file, never synced.
-     One list, so every page that copies data agrees about what must not be copied. */
-  var SECRET_KEY = /^ph\.(ai\.key|sync\.token)/;
+     One list, so every page that copies data agrees about what must not be copied. An email address is
+     on that list too. It is not a secret in the way an API key is, but it identifies a real person, and a
+     backup file gets passed around: keeping it here means a copy of this hub can never carry someone's
+     address to anyone else. Nothing on this site sends it anywhere either -- there is no server to send
+     it to. Whoever types an address is the only one who ever sees it. */
+  var SECRET_KEY = /^ph\.(ai\.key|sync\.token|email)/;
   function isSecretKey(k) { return SECRET_KEY.test(String(k || '')); }
   /** Everything this hub has saved, minus the secrets. */
   function exportable() {
@@ -139,6 +143,26 @@ window.PH = (function () {
       /* "Priyaan\u2019s " or nothing, so a heading reads right either way */
       else if (k === 'possessive') slots[i].textContent = who ? who + '\u2019s ' : '';
     }
+  }
+
+  /* ---- your email address -----------------------------------------------------------------------
+     Optional, and only ever your own: it is what a printed sheet is labelled with when a teacher asks for
+     one, nothing more. Kept out of exports and sync by SECRET_KEY above. Never type someone else's here. */
+  var EMAIL_KEY = 'ph.email';
+  /* Deliberately loose. The point is to catch a typo, not to police which addresses exist. */
+  var EMAIL_RE = /^[^\s@,;:<>"'()\[\]\\]+@[^\s@,;:<>"'()\[\]\\]+\.[A-Za-z]{2,}$/;
+  function validEmail(v) { var t = String(v == null ? '' : v).trim(); return t.length <= 120 && EMAIL_RE.test(t); }
+  function personEmail() {
+    try { var v = localStorage.getItem(EMAIL_KEY); return validEmail(v) ? String(v).trim() : ''; }
+    catch (e) { return ''; }
+  }
+  /** Saves it and returns what was saved; returns null, saving nothing, if it is not an address. */
+  function setPersonEmail(v) {
+    var t = String(v == null ? '' : v).trim();
+    if (t && !validEmail(t)) return null;
+    try { t ? localStorage.setItem(EMAIL_KEY, t) : localStorage.removeItem(EMAIL_KEY); } catch (e) {}
+    document.dispatchEvent(new CustomEvent('ph:email', { detail: { email: t } }));
+    return t;
   }
 
   /* ---- themes ----------------------------------------------------------------------------------
@@ -188,6 +212,7 @@ window.PH = (function () {
   return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, safeHTML, plainText, uid, toast, download, pickFile, rng, openChatGPT, chatGPTUrl,
     THEMES: THEMES, themeChoice: themeChoice, setTheme: setTheme,
     person: person, setPerson: setPerson, hubName: hubName, applyName: applyName,
+    personEmail: personEmail, setPersonEmail: setPersonEmail, validEmail: validEmail,
     isSecretKey: isSecretKey, exportable: exportable };
 })();
 
@@ -253,6 +278,98 @@ window.PH = (function () {
   if (spacer && spacer.nextSibling) bar.insertBefore(wrap, spacer.nextSibling);
   else bar.appendChild(wrap);
   draw();
+})();
+
+/* A name button beside it, so the person whose hub this is can put their name in from any page rather
+   than only from the hub. One control, built here, shared by all thirteen pages. */
+(function () {
+  var bar = document.querySelector('.topbar .inner');
+  if (!bar || document.getElementById('whoBtn')) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'who-wrap no-print';
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-sm btn-ghost';
+  btn.id = 'whoBtn';
+  btn.setAttribute('aria-haspopup', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.innerHTML = '<span class="who-face" aria-hidden="true">👤</span><span class="who-lbl"></span>';
+  var menu = document.createElement('div');
+  menu.className = 'who-menu';
+  menu.id = 'whoMenu';
+  menu.hidden = true;
+  menu.innerHTML =
+    '<label for="whoIn">Your name</label>' +
+    '<input class="input" id="whoIn" maxlength="40" autocomplete="given-name" spellcheck="false" placeholder="Your name">' +
+    '<label for="whoEmail">Your email <span class="opt">(optional)</span></label>' +
+    '<input class="input" id="whoEmail" type="email" maxlength="120" autocomplete="email" spellcheck="false" placeholder="you@example.com" aria-describedby="whoErr">' +
+    '<p class="hint" id="whoErr" role="status"></p>' +
+    '<p class="hint">Your own name and address, nobody else\u2019s. They stay in this browser, are left out of backups, and are never sent anywhere.</p>' +
+    '<div class="row"><button type="button" class="btn btn-sm btn-primary" id="whoSave">Save</button>' +
+    '<button type="button" class="btn btn-sm btn-ghost" id="whoClear">Clear</button></div>';
+
+  /* First name only on the button: a top bar has room for one word, not for "Firstname Lastname". */
+  function label() {
+    var who = PH.person();
+    var short = who ? who.split(/\s+/)[0] : '';
+    btn.querySelector('.who-lbl').textContent = short || 'Add your name';
+    btn.className = 'btn btn-sm btn-ghost' + (who ? '' : ' unset');
+    btn.setAttribute('aria-label', who ? 'Your name: ' + who + '. Change it' : 'Add your name');
+    btn.title = btn.getAttribute('aria-label');
+  }
+  function open(yes) {
+    menu.hidden = !yes;
+    btn.setAttribute('aria-expanded', yes ? 'true' : 'false');
+    if (yes) {
+      var input = menu.querySelector('#whoIn');
+      input.value = PH.person();
+      menu.querySelector('#whoEmail').value = PH.personEmail();
+      menu.querySelector('#whoErr').textContent = '';
+      menu.querySelector('#whoClear').disabled = !PH.person() && !PH.personEmail();
+      input.focus();
+      input.select();
+    }
+  }
+  function save() {
+    var mail = menu.querySelector('#whoEmail');
+    /* a typo in an address is worth catching before it ends up on a printed sheet */
+    if (PH.setPersonEmail(mail.value) === null) {
+      menu.querySelector('#whoErr').textContent = 'That does not look like an email address.';
+      mail.focus();
+      mail.select();
+      return;
+    }
+    var set = PH.setPerson(menu.querySelector('#whoIn').value);
+    open(false);
+    btn.focus();
+    PH.toast(set ? 'Hello, ' + set : 'Saved');
+  }
+  btn.addEventListener('click', function (e) { e.stopPropagation(); open(menu.hidden); });
+  menu.addEventListener('click', function (e) { e.stopPropagation(); });
+  menu.querySelector('#whoSave').addEventListener('click', save);
+  menu.querySelector('#whoClear').addEventListener('click', function () {
+    menu.querySelector('#whoIn').value = '';
+    menu.querySelector('#whoEmail').value = '';
+    save();
+  });
+  /* Enter saves: the input is not in a form, because a top bar sits inside whatever the page already has. */
+  ['#whoIn', '#whoEmail'].forEach(function (sel) {
+    menu.querySelector(sel).addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); save(); }
+    });
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('.who-wrap')) open(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
+  });
+  /* the hub and the profile page have their own name field; keep the button in step with them */
+  document.addEventListener('ph:name', label);
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+  var spacer = bar.querySelector('.spacer');
+  if (spacer && spacer.nextSibling) bar.insertBefore(wrap, spacer.nextSibling);
+  else bar.appendChild(wrap);
+  label();
 })();
 
 /* Offline support on the hosted site: register the service worker (sw.js) and add the web-app manifest + iOS icon so the

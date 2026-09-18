@@ -135,7 +135,32 @@ body[data-app="profile"]  { --accent:#a16207; --accent-soft:rgba(161,98,7,.16); 
 .sw[data-swatch="midnight"] { background-image: linear-gradient(135deg, #18203a 0 50%, #080b14 50% 100%); }
 .sw[data-swatch="paper"]    { background-image: linear-gradient(135deg, #fffaf1 0 50%, #eae1d1 50% 100%); }
 .sw[data-swatch="contrast"] { background-image: linear-gradient(135deg, #ffffff 0 50%, #000000 50% 100%); }
-@media print { .theme-wrap { display: none !important; } }
+/* ---- the name button in the top bar: set your name from any page ---- */
+.who-wrap { position: relative; display: inline-flex; flex: none; }
+#whoBtn { display: inline-flex; align-items: center; gap: .35rem; max-width: 9.5rem; }
+#whoBtn .who-face { font-size: 1rem; line-height: 1; }
+#whoBtn .who-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#whoBtn.unset { border-style: dashed; }
+.who-menu {
+  position: absolute; top: calc(100% + .4rem); right: 0; z-index: 60;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); padding: .6rem; width: 16rem; display: grid; gap: .45rem;
+}
+.who-menu label { font-size: .8rem; font-weight: 600; }
+.who-menu .hint { font-size: .78rem; color: var(--muted); margin: 0; }
+.who-menu .hint:empty { display: none; }
+.who-menu #whoErr { color: var(--danger-text); font-weight: 600; }
+.who-menu label .opt { font-weight: 400; color: var(--muted); }
+.who-menu .row { display: flex; gap: .4rem; }
+.who-menu .row .btn { flex: 1; }
+/* A narrow phone top bar has room for the back link, the page name and two small buttons -- and no more.
+   Below this width the name button keeps only its face, and the name itself lives inside the popover. */
+@media (max-width: 560px) {
+  #whoBtn .who-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #whoBtn { max-width: none; padding: .4rem; width: 2.1rem; height: 2.1rem; justify-content: center; }
+}
+@media (max-width: 400px) { .who-menu { right: -.4rem; width: min(14rem, calc(100vw - 1.6rem)); } }
+@media print { .theme-wrap, .who-wrap { display: none !important; } }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }

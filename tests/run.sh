@@ -22,7 +22,7 @@ for page in index piano badges math quizzes hindi schedule calendar ai python pr
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub search progress review theme profile dates free ai gradesheet python tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark contrast-midnight contrast-paper contrast-contrast hostile offline)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub search progress review theme profile name dates free ai gradesheet python tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark contrast-midnight contrast-paper contrast-contrast hostile offline)
 
 # The offline suite needs a real origin: service workers do not run from file://.
 serve() {

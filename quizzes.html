@@ -261,7 +261,7 @@ main > * + * { margin-top: 1rem; }
       '.kicker{font-size:8.5pt;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#6b7280;margin-bottom:3px}',
       '.meta{font-size:8.5pt;color:#6b7280;text-align:right;line-height:1.5;white-space:nowrap}',
       '.idline{display:flex;gap:22px;margin:11px 0 16px;font-size:10.5pt;color:#374151}',
-      '.idline span{display:flex;gap:6px;align-items:baseline;flex:1}.idline i{flex:1;border-bottom:1px solid #9aa0ab;min-width:1.3in;font-style:normal}',
+      '.idline span{display:flex;gap:6px;align-items:baseline;flex:1}.idline i{flex:1;border-bottom:1px solid #9aa0ab;min-width:1.3in;font-style:normal;color:#14161c}',
       'ol.problems{list-style:none;margin:0;padding:0;columns:2;column-gap:26px}',
       'li.prob{break-inside:avoid;page-break-inside:avoid;display:flex;gap:9px;margin:0 0 14px}',
       '.num{flex:none;width:19px;height:19px;border-radius:50%;background:#14161c;color:#fff;font-size:9.5pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}',
@@ -281,7 +281,7 @@ main > * + * { margin-top: 1rem; }
     return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>' + css + '</style></head><body><div class="page">' +
       '<header><div><div class="kicker">' + esc(BANK.book || 'Core Connections Integrated II') + '</div><h1>' + esc(title) + '</h1></div>' +
       '<div class="meta">' + n + ' questions<br>seed ' + q.seed + '</div></header>' +
-      '<div class="idline"><span>Name <i></i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
+      '<div class="idline"><span>Name <i>' + esc(PH.person()) + '</i></span><span>Date <i></i></span><span>Score <i></i></span></div>' +
       '<ol class="problems">' + rows + '</ol>' +
       '<footer><span>Chapter ' + esc(BANK.chapter || 1) + ' · ' + esc(BANK.title || '') + '</span><span>' + esc(PH.hubName()) + '</span></footer>' +
       '<section class="key"><h2>Answer key — ' + esc(title) + '</h2><ol>' + key + '</ol>' +
