@@ -5,7 +5,7 @@ const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?''
 const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
 const waitFor=async(cond,n)=>{for(let i=0;i<(n||300);i++){ if(cond()) return true; await tick(); } return cond();};
 
-const KEYS=['ph.piano.v1','ph.quiz.v1','ph.math.v1','ph.python.v1','ph.hindi.v1','ph.badges.v1','ph.ai.v1','ph.schedule.v1','ph.review.v1','ph.progress.v1'];
+const KEYS=['ph.ask.v1','ph.piano.v1','ph.quiz.v1','ph.math.v1','ph.python.v1','ph.hindi.v1','ph.badges.v1','ph.ai.v1','ph.schedule.v1','ph.review.v1','ph.progress.v1'];
 const snap={}; KEYS.forEach(k=>{ snap[k]=localStorage.getItem(k); });
 
 const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10);};
@@ -30,6 +30,10 @@ localStorage.setItem('ph.quiz.v1', JSON.stringify({ version:1, settings:{}, summ
 localStorage.setItem('ph.math.v1', JSON.stringify({ version:1, settings:{}, summary:{}, history:[
   {id:'m1',date:D(1),topics:['linear'],count:10,difficulty:2,seed:1,name:'P',score:{right:10,total:10}},
   {id:'m2',date:D(5),topics:['slope'],count:20,difficulty:2,seed:2,name:'P',score:null}] }));
+localStorage.setItem('ph.ask.v1', JSON.stringify({ version:1, summary:{}, history:[
+  {id:'k1',date:D(1),gen:'science',topics:['moon'],count:6,difficulty:2,seed:4,score:{right:6,total:6},missed:[]},
+  {id:'k2',date:D(2),gen:'math',topics:['slope'],count:5,difficulty:2,seed:5,score:{right:3,total:5},missed:[0,1]},
+  {id:'k3',date:D(3),gen:'math',topics:['slope'],count:5,difficulty:2,seed:6,score:null,missed:[]}] }));
 localStorage.setItem('ph.python.v1', JSON.stringify({ version:1, settings:{}, summary:{}, rounds:[
   {id:'r1',date:T,right:4,total:5,seed:7,topics:['loops'],difficulty:2}] }));
 localStorage.setItem('ph.hindi.v1', JSON.stringify({ version:1, quizzes:[], settings:{}, summary:{},
@@ -83,7 +87,7 @@ f.addEventListener('load', async () => {
     ok('the streak counts every app', nums[0] === '4', nums[0]);
     ok('active days are counted', nums[1] === '9', nums[1]);
     ok('piano minutes add up', nums[2] === '100m', nums[2]);
-    ok('accuracy is right across all four apps', nums[3] === '77%', nums[3] + ' (33 of 43)');
+    ok('accuracy is right across every app', nums[3] === '78%', nums[3] + ' (42 of 54)');
     ok('Hindi cards add up', nums[4] === '20', nums[4]);
 
     /* ---- the range picker actually narrows things ---- */
@@ -114,9 +118,14 @@ f.addEventListener('load', async () => {
 
     /* ---- per-app bars ---- */
     const bars = $$('#appBars .appbar');
-    ok('one bar per app used', bars.length === 9, bars.map(b => b.querySelector('.nm').textContent).join(', '));
+    ok('one bar per app used', bars.length === 10, bars.map(b => b.querySelector('.nm').textContent).join(', '));
     const qty = {}; bars.forEach(b => { qty[b.querySelector('.nm').textContent] = Number(b.querySelector('.qty').textContent); });
     ok('piano is counted right', qty['Piano'] === 4, String(qty['Piano']));
+    /* the bars count sessions, not questions: one science round in the thread, and a maths round in the
+       thread sitting alongside the two worksheets */
+    ok('a science round asked in the thread is counted as science', qty['Science'] === 1, String(qty['Science']));
+    ok('and a maths one in the thread joins the maths worksheets',
+       qty['Math worksheets'] === 3, String(qty['Math worksheets']));
     ok('badges are counted right', qty['Merit badges'] === 2, String(qty['Merit badges']));
     ok('the widest bar is the busiest app', $$('#appBars .fill').some(el => el.style.width === '100%'));
     /* two questions put right on one day read as one line, not two identical ones */
@@ -124,7 +133,7 @@ f.addEventListener('load', async () => {
 
     /* ---- accuracy ---- */
     ok('the accuracy chart is drawn', $$('#accHost svg .line').length === 1 && $$('#accHost svg .dot').length >= 2);
-    ok('the accuracy caption totals the answers', /33 of 43 right/.test(text('#accSub')), text('#accSub'));
+    ok('the accuracy caption totals the answers', /42 of 54 right/.test(text('#accSub')), text('#accSub'));
     ok('the chart carries a text alternative', ($('#accHost svg').getAttribute('aria-label') || '').indexOf('%') > 0);
 
     /* ---- piano ---- */
@@ -172,7 +181,7 @@ f.addEventListener('load', async () => {
     /* ---- records ---- */
     const recs = $$('#mileHost .m').map(m => m.querySelector('.t').textContent + '=' + m.querySelector('.v').textContent);
     ok('the longest streak is a record', recs.some(r => /^Longest streak=4 days/.test(r)), recs.join(' | '));
-    ok('questions answered are a record', recs.some(r => r === 'Questions answered=43'));
+    ok('questions answered are a record', recs.some(r => r === 'Questions answered=54'), recs.join(' | '));
     ok('the best round is a record', recs.some(r => /^Best round=100%/.test(r)));
     ok('piano time is a record', recs.some(r => r === 'Piano, all time=100 min'), recs.join(' | '));
     ok('the longest practice day is a record', recs.some(r => /^Longest practice day=40 min/.test(r)));

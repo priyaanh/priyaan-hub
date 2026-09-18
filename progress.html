@@ -165,13 +165,14 @@ main > * + * { margin-top: 1rem; }
     math:     { name: 'Math worksheets',  emoji: '🧮', color: '#2f6fed', href: 'math.html' },
     python:   { name: 'Python',           emoji: '🐍', color: '#3572a5', href: 'python.html' },
     spanish:  { name: 'Spanish',          emoji: '💬', color: '#b91c1c', href: 'spanish.html' },
+    science:  { name: 'Science',          emoji: '🔬', color: '#0369a1', href: 'ask.html#science' },
     hindi:    { name: 'Hindi flashcards', emoji: '📖', color: '#e0701f', href: 'hindi.html' },
     ai:       { name: 'Make Practice',    emoji: '✏️', color: '#0d9488', href: 'ai.html' },
     badges:   { name: 'Merit badges',     emoji: '🏕️', color: '#2f8f4e', href: 'badges.html' },
     review:   { name: 'Review Mistakes',  emoji: '🎯', color: '#9333ea', href: 'review.html' },
     schedule: { name: 'Weekly plan',      emoji: '📅', color: '#0f9d9a', href: 'schedule.html' }
   };
-  var ORDER = ['piano', 'quiz', 'math', 'spanish', 'python', 'hindi', 'ai', 'review', 'badges', 'schedule'];
+  var ORDER = ['piano', 'quiz', 'math', 'spanish', 'science', 'python', 'hindi', 'ai', 'review', 'badges', 'schedule'];
 
   /* ===================== Read every app ===================== */
   /* One event per dated thing that happened: { date, app, label, minutes?, right?, total?, cards? }. */
@@ -211,6 +212,19 @@ main > * + * { margin-top: 1rem; }
         right: sc ? Math.round(num(sc.right)) : 0, total: sc ? Math.round(num(sc.total)) : 0,
         label: sc ? 'Worksheet — ' + Math.round(num(sc.right)) + '/' + Math.round(num(sc.total))
                   : 'Made a worksheet (' + plural(Math.round(num(h.count)) || 0, 'problem') + ')' });
+    });
+
+    /* rounds asked in the thread on ask.html, counted under the subject they came from */
+    var ASK_APP = { math: 'math', spanish: 'spanish', science: 'science', python: 'python', grade: 'ai', lesson: 'quiz' };
+    var ak = PH.load('ph.ask.v1', null);
+    if (isObj(ak)) (Array.isArray(ak.history) ? ak.history : []).forEach(function (h) {
+      if (!isObj(h) || !okISO(h.date)) return;
+      var sc = isObj(h.score) && num(h.score.total) > 0 ? h.score : null;
+      if (!sc) return;
+      var right = Math.round(num(sc.right)), total = Math.round(num(sc.total));
+      if (!(total > 0) || right < 0 || right > total) return;
+      ev.push({ date: h.date, app: ASK_APP[h.gen] || 'math', right: right, total: total, scored: true,
+        label: 'Asked \u2014 ' + right + '/' + total });
     });
 
     var sp = PH.load('ph.spanish.v1', null);
