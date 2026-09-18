@@ -8,8 +8,14 @@ f.addEventListener('load', async () => {
   try {
     ok('grade mode is what you land on', !$('#gradeCard').hidden && $('[data-mode="grade"]').classList.contains('on'));
     ok('no AI key box in grade mode', $('#setupCard').hidden);
-    ok('four levels offered', $$('[data-grade]').length === 4 && /Grade 6/.test($('#gradeCards').textContent)
-        && /Integrated Math 1/.test($('#gradeCards').textContent));
+    /* every level grades.js knows about, plus Integrated Math 1 from im1.js */
+    ok('every level is offered', $$('[data-grade]').length === w.GRADES.LEVELS.length + 1,
+       $$('[data-grade]').length + ' cards for ' + w.GRADES.LEVELS.length + ' levels');
+    ok('the younger grades are there too', /Grade 4/.test($('#gradeCards').textContent) && /Grade 5/.test($('#gradeCards').textContent));
+    ok('and the CPM courses are named', /Course 1/.test($('#gradeCards').textContent) && /Integrated II/.test($('#gradeCards').textContent),
+       $('#gradeCards').textContent.slice(0, 160));
+    ok('Integrated Math 1 and 2 are both offered', /Integrated Math 1/.test($('#gradeCards').textContent)
+       && /Integrated Math 2/.test($('#gradeCards').textContent));
     ok('grade 7 is picked by default', $('[data-grade="7"]').classList.contains('on'));
     ok('topics listed for the grade', $$('[data-gtopic]').length === 8);
     // make one
