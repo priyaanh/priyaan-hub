@@ -27,6 +27,7 @@ const add = (icon, title, sub, url, keywords) => entries.push({ i: icon, t: titl
  ['📅', 'Weekly Plan', 'The week, with checkboxes and tasks due', 'schedule.html', 'timetable routine chores homework'],
  ['🐍', 'Python Practice', 'What does this print? Eleven topics', 'python.html', 'code coding programming'],
  ['💬', 'Spanish Practice', 'Endless Spanish questions, marked on the page', 'spanish.html', 'español verbs ser estar conjugation vocabulary numbers time gustar'],
+ ['🔬', 'Science', 'Moon phases, energy, cells, rocks and more, asked as multiple choice', 'ask.html#science', 'science moon planets solar system seasons matter water cycle energy forces cells food chain atoms light sound rocks'],
  ['🗨️', 'Ask for Practice', 'Say what to practise and get asked it, multiple choice', 'ask.html', 'chat ask question quiz multiple choice explain why maths spanish python lesson grade'],
  ['✏️', 'Make Practice', 'A worksheet by grade, or from a PDF', 'ai.html', 'grade 6 7 8 worksheet pdf chatgpt claude packet'],
  ['🗓️', 'Calendar & Tasks', 'Google Calendar and Google Tasks', 'calendar.html', 'google events todo reminders'],
@@ -76,6 +77,11 @@ const grades = require('./grades.js');
 const es = require('./spanish.js');
 (es.TOPICS || []).forEach(t => add('💬', t.name, 'Spanish · ' + t.unit, 'spanish.html#' + t.id, t.name + ' ' + t.description + ' spanish español'));
 (es.VOCAB || []).forEach(w => add('💬', w.es, 'Spanish · ' + w.en, 'spanish.html#vocab', w.es + ' ' + w.en + ' spanish español ' + (w.set || '')));
+
+/* science topics, asked in the thread */
+const sci = require('./science.js');
+(sci.TOPICS || []).forEach(t => add('🔬', t.name, 'Science · ' + t.unit + ' · ' + (sci.BANDS[t.band] || ''), 'ask.html#' + t.id,
+  t.name + ' ' + t.description + ' ' + t.unit + ' science'));
 
 /* Python topics */
 const py = require('./pyquiz.js');

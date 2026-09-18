@@ -76,7 +76,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
 </main>
 <script src="shared.js"></script>
 <script src="im1.js"></script><script src="spanish.js"></script><script src="pyquiz.js"></script>
-<script src="grades.js"></script><script src="cpm_int2_ch1.js"></script>
+<script src="grades.js"></script><script src="science.js"></script><script src="cpm_int2_ch1.js"></script>
 <script>
 /* Ask for practice in your own words and get asked it, one question at a time, in a thread.
    Nothing is sent anywhere: the request is read here, on the device, and the questions come from the
@@ -128,6 +128,15 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
       make: o => GRADES.generate(o),
       items: ws => ws.problems.map(p => ({ from: p.topicName, q: p.question, answer: String(p.answer), explain: p.work || '', check: t => GRADES.checkAnswer(p, t) }))
     },
+    science: {
+      name: 'Science', short: 'science', emoji: '🔬', words: 'science moon phases planets solar system seasons cells energy forces water cycle rocks atoms light sound weather ecosystem',
+      ready: () => !!window.SCI,
+      topics: () => (window.SCI ? SCI.TOPICS : []).map(t => ({ id: t.id, name: t.name, words: t.name + ' ' + t.description + ' ' + t.unit })),
+      make: o => SCI.generate(o),
+      items: set => set.problems.map(p => ({ from: p.topicName, q: p.question, answer: String(p.answer),
+        explain: p.work || '', choices: p.choices ? p.choices.slice() : null,
+        check: (t, pick) => (p.choices && pick != null) ? String(p.choices[pick]) === String(p.answer) : SCI.checkAnswer(p, t) }))
+    },
     lesson: {
       name: 'CPM lesson quizzes', short: 'the lesson quizzes', emoji: '📝', words: 'cpm lesson quiz chapter geometry integrated 2 ii',
       ready: () => !!(window.CPM_QUIZZES && CPM_QUIZZES.materialise),
@@ -152,7 +161,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
         check: (t, pick) => CPM_QUIZZES.checkAnswer(m.item, m.item.type === 'mc' ? pick : t) }))
     }
   };
-  const SRC_ORDER = ['math', 'lesson', 'grade', 'spanish', 'python'];
+  const SRC_ORDER = ['math', 'lesson', 'grade', 'science', 'spanish', 'python'];
   const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   /* ===================== turning anything into a multiple choice ===================== */
@@ -399,11 +408,12 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
   /* ===================== the thread ===================== */
   const EXAMPLES = [
     '10 questions on slope',
+    'moon phases',
     'Spanish ser vs estar, hard',
     'Python loops, 8 questions',
     'lesson 1.1.1',
     'grade 7 percents',
-    'easy exponents'
+    'the water cycle'
   ];
   function say(who, html, opts) {
     const wrap = document.createElement('div');
@@ -643,6 +653,20 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
 
   greet();
   save();
+  /* a link like ask.html#moon (the hub search uses these) starts on that topic straight away */
+  function fromHash() {
+    const want = decodeURIComponent(location.hash.replace(/^#/, '')).trim();
+    if (!want) return;
+    const src = SOURCES[want];
+    if (src && src.ready()) { handle(src.name); return; }
+    for (const k of SRC_ORDER) {
+      if (!SOURCES[k].ready()) continue;
+      const t = SOURCES[k].topics().filter(x => x.id === want)[0];
+      if (t) { handle(t.name); return; }
+    }
+  }
+  fromHash();
+  window.addEventListener('hashchange', fromHash);
   /* so the tests can drive a conversation without typing into it */
   window.PH_ASK = { handle: handle, read: readRequest, run: () => run, state: () => state, sources: SOURCES };
 })();

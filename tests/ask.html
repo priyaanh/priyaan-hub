@@ -20,10 +20,10 @@ f.addEventListener('load', async () => {
   const recent = (n) => msgs().slice(-(n || 3)).map(m => m.innerText).join('\n');
   const last = () => recent(3);
   try {
-    await waitFor(() => w.PH_ASK && w.IM1 && w.ES && w.PY && w.GRADES && w.CPM_QUIZZES, 500);
+    await waitFor(() => w.PH_ASK && w.IM1 && w.ES && w.PY && w.GRADES && w.SCI && w.CPM_QUIZZES, 500);
     const A = w.PH_ASK;
     ok('the page is driveable from a test', !!A);
-    ok('every generator it offers is loaded', !!(w.IM1 && w.ES && w.PY && w.GRADES && w.CPM_QUIZZES));
+    ok('every generator it offers is loaded', !!(w.IM1 && w.ES && w.PY && w.GRADES && w.SCI && w.CPM_QUIZZES));
     ok('it opens with something to say', msgs().length >= 1 && /practise/i.test(body()), body().slice(0,100));
     ok('and suggests things to ask for', $$('[data-chip]').length >= 4, String($$('[data-chip]').length));
 
@@ -34,6 +34,9 @@ f.addEventListener('load', async () => {
     ok('it picks up Spanish', read('spanish ser vs estar').source === 'spanish');
     ok('and which Spanish topic', read('spanish ser vs estar').topics.indexOf('serestar') >= 0, read('spanish ser vs estar').topics.join());
     ok('it picks up Python', read('python loops').source === 'python');
+    ok('it picks up science', read('moon phases').source === 'science', JSON.stringify(read('moon phases')));
+    ok('and which science topic', read('moon phases').topics.indexOf('moon') >= 0, read('moon phases').topics.join());
+    ok('a science question elsewhere is found too', read('the water cycle').source === 'science', read('the water cycle').topics.join());
     ok('it picks up a CPM lesson number', read('lesson 1.1.1').source === 'lesson' && read('lesson 1.1.1').topics[0] === '1.1.1');
     ok('a lesson number is not mistaken for a count', read('lesson 1.1.1').count === null, String(read('lesson 1.1.1').count));
     ok('it picks up a grade', read('grade 7 percents').grade === '7' && read('grade 7 percents').source === 'grade');
@@ -119,7 +122,7 @@ f.addEventListener('load', async () => {
 
     /* ---- the other generators all answer ---- */
     const tried = [];
-    for (const ask of ['4 questions on spanish gustar', '4 python questions', 'lesson 1.1.1', '4 grade 7 percents']) {
+    for (const ask of ['4 questions on spanish gustar', '4 python questions', 'lesson 1.1.1', '4 grade 7 percents', '6 questions on moon phases']) {
       A.handle(ask); await tick();
       const r = A.run();
       tried.push(ask + ':' + (r ? r.items.length : 0) + (r && r.items.every(i => i.choices) ? ' mc' : ' TYPED'));
@@ -127,6 +130,14 @@ f.addEventListener('load', async () => {
     }
     ok('every source can be asked, and all of it is multiple choice',
        tried.every(t => / mc$/.test(t) && !/:0/.test(t)), tried.join(' | '));
+
+    /* ---- a science round carries its own options, and explains ---- */
+    A.handle('6 questions on moon phases'); await tick();
+    const sr = A.run();
+    ok('a science round is asked', !!sr && sr.items.length === 6, sr ? String(sr.items.length) : 'none');
+    ok('its options come from the topic itself', sr.items.every(i => i.choices && i.choices.length >= 2));
+    ok('and exactly one of them is right', sr.items.every(i => i.choices.filter((c, n) => i.check('', n)).length === 1));
+    A.handle('stop'); await tick();
 
     /* ---- nothing goes anywhere ---- */
     ok('the page says nothing is sent away', /leaves this device|nothing.*sent/i.test(body()));
