@@ -102,8 +102,9 @@ main > * + * { margin-top: 1rem; }
         <button class="btn" id="nextBtn" hidden>Next →</button>
       </div>
       <div class="choices" id="choices" role="radiogroup" aria-label="Choose an answer" hidden></div>
-      <div class="row no-print" id="pickRow" style="gap:.5rem;margin-top:.8rem">
+      <div class="row no-print" id="pickRow" style="gap:.6rem;margin-top:.8rem;align-items:center">
         <button class="btn" id="nextBtn2" hidden>Next →</button>
+        <span class="muted small" id="pickHint"></span>
       </div>
       <div class="keys no-print" id="keys" hidden aria-label="Accented letters"></div>
       <div class="verdict" id="verdict" hidden></div>
@@ -358,6 +359,7 @@ main > * + * { margin-top: 1rem; }
           '<span class="k">' + LETTERS[i] + '</span><span>' + ES.safeHTML(String(c)) + '</span></button>';
       }).join('');
       $('#nextBtn2').hidden = !marked && !revealed;
+      $('#pickHint').textContent = (marked || revealed) ? 'Enter for the next one' : 'Tap one, or press A\u2013' + LETTERS[p.choices.length - 1];
       if (marked || revealed) $('#nextBtn2').focus();
     } else {
       $('#checkBtn').hidden = !!marked;
@@ -516,6 +518,16 @@ main > * + * { margin-top: 1rem; }
     if (e.target.closest('#importBtn')) { importJSON(); return; }
   });
   document.addEventListener('keydown', e => {
+    const tag = (e.target && e.target.tagName) || '';
+    /* while picking, A-D and 1-4 answer, and Enter moves on: the same keys as the ask page */
+    const p = current();
+    if (p && p.choices && !/^(input|textarea|select)$/i.test(tag) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (!marked && !revealed) {
+        const at = LETTERS.map(l => l.toLowerCase()).indexOf(String(e.key).toLowerCase());
+        const n = at >= 0 ? at : (/^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1);
+        if (n >= 0 && n < p.choices.length) { e.preventDefault(); pickNow(n); return; }
+      } else if (e.key === 'Enter') { e.preventDefault(); nextQuestion(); return; }
+    }
     if (e.key !== 'Enter') return;
     if (e.target === $('#ansIn')) { e.preventDefault(); marked ? nextQuestion() : checkNow(); return; }
     if (e.target === $('#nextBtn')) { e.preventDefault(); nextQuestion(); }

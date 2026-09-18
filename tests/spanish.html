@@ -127,9 +127,20 @@ f.addEventListener('load', async () => {
     ok('and it does not disturb the topics', w.PH_ES.state().settings.topics.join() === beforeTopics.join());
     ok('the right option is shown in green', $$('#choices .is-right').length === 1);
     ok('answered options cannot be picked again', $$('#choices [data-choice][disabled]').length >= 2);
+    ok('it says which keys answer it', /press A/.test(txt('#pickHint')) || /Enter/.test(txt('#pickHint')), txt('#pickHint'));
     $('#nextBtn2').click(); await tick();
     ok('it moves on', /Question 2 of 3/.test(txt('#qNum')), txt('#qNum'));
-    const wrongIdx = w.PH_ES.round().items[1].choices.map((c, n) => n).filter(n => !w.PH_ES.round().items[1].check('', n))[0];
+    /* the keyboard answers it too */
+    const before = w.PH_ES.round().i;
+    d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    await tick();
+    ok('pressing A picks the first option', !!txt('#verdict').trim(), txt('#verdict'));
+    ok('and Enter moves on from there', (d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })), true));
+    await tick();
+    ok('which it did', w.PH_ES.round().i === before + 1, w.PH_ES.round().i + ' after ' + before);
+    /* whichever question the round is on now, not a fixed index: the keyboard steps above moved it along */
+    const here = w.PH_ES.round().items[w.PH_ES.round().i];
+    const wrongIdx = here.choices.map((c, n) => n).filter(n => !here.check('', n))[0];
     $$('#choices [data-choice]:not([disabled])')[wrongIdx].click(); await tick();
     ok('picking a wrong one is marked wrong', /Not quite/.test(txt('#verdict')), txt('#verdict'));
     ok('and the right one is still shown', $$('#choices .is-right').length === 1 && $$('#choices .is-wrong').length === 1);
