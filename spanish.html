@@ -346,7 +346,7 @@ main > * + * { margin-top: 1rem; }
   }
   function sheetHTML() {
     return ES.renderWorksheet(sheet, { title: 'Spanish · ' + sheet.topics.map(topicName).join(', '),
-      name: PH.person(), hub: PH.hubName(), showAnswers: true });
+      name: PH.person(), email: PH.personEmail(), hub: PH.hubName(), showAnswers: true });
   }
   function printSheet() {
     if (!sheet && !makeSheet()) return;

@@ -5,7 +5,7 @@
 const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
 const waitFor=async(cond,n)=>{for(let i=0;i<(n||300);i++){ if(cond()) return true; await tick(); } return cond();};
-const KEYS=['ph.name','ph.theme','ph.piano.v1','ph.quiz.v1','ph.hindi.v1','ph.sync.v1','ph.sync.token','ph.ai.key','ph.meta.backupAt'];
+const KEYS=['ph.name','ph.email','ph.grade','ph.theme','ph.piano.v1','ph.quiz.v1','ph.hindi.v1','ph.sync.v1','ph.sync.token','ph.ai.key','ph.meta.backupAt'];
 const snap={}; KEYS.forEach(k=>{ snap[k]=localStorage.getItem(k); });
 
 localStorage.setItem('ph.name','Priyaan');
@@ -36,6 +36,21 @@ f.addEventListener('load', async () => {
     ok('and the tab title follows', /Asha’s Hub/.test(d.title), d.title);
     $('#clearName').click(); await tick();
     ok('clearing it falls back to a neutral name', !localStorage.getItem('ph.name') && /Practice Hub/.test(d.title), d.title);
+
+    /* ---- the email and the school year ---- */
+    $('#nameIn').value = 'Asha'; $('#emailIn').value = 'asha@example.com'; $('#gradeIn').value = '7';
+    $('#nameForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true })); await tick();
+    ok('an email can be saved here', localStorage.getItem('ph.email') === 'asha@example.com', String(localStorage.getItem('ph.email')));
+    ok('a school year can be saved here', localStorage.getItem('ph.grade') === '7', String(localStorage.getItem('ph.grade')));
+    ok('and the heading says which year', /Grade 7/.test(txt('#youSub')), txt('#youSub'));
+    ok('every school year is offered', $$('#gradeIn option').length === w.PH.GRADES_LIST.length + 1, String($$('#gradeIn option').length));
+    $('#emailIn').value = 'not an address';
+    $('#nameForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true })); await tick();
+    ok('a junk address is refused', localStorage.getItem('ph.email') === 'asha@example.com', String(localStorage.getItem('ph.email')));
+    ok('and it says why', txt('#emailErr').length > 5, txt('#emailErr'));
+    ok('the page says the details never leave the browser', /nowhere else|cannot carry it/.test(txt('body')));
+    $('#clearName').click(); await tick();
+    ok('clearing forgets all three', !localStorage.getItem('ph.name') && !localStorage.getItem('ph.email') && !localStorage.getItem('ph.grade'));
     w.PH.setPerson('Priyaan'); await tick();
 
     /* ---- colours ---- */

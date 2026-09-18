@@ -165,6 +165,22 @@ window.PH = (function () {
     return t;
   }
 
+  /* ---- which year at school ---------------------------------------------------------------------
+     Optional, and used for one thing: it picks the grade the practice page opens on, so nobody has to
+     choose it every time. Not a secret, so it travels in a backup like the rest of the settings. */
+  var GRADE_KEY = 'ph.grade';
+  var GRADES_LIST = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
+  function schoolYear() {
+    try { var v = localStorage.getItem(GRADE_KEY); return GRADES_LIST.indexOf(v) >= 0 ? v : ''; }
+    catch (e) { return ''; }
+  }
+  function setSchoolYear(v) {
+    var g = GRADES_LIST.indexOf(String(v)) >= 0 ? String(v) : '';
+    try { g ? localStorage.setItem(GRADE_KEY, g) : localStorage.removeItem(GRADE_KEY); } catch (e) {}
+    document.dispatchEvent(new CustomEvent('ph:grade', { detail: { grade: g } }));
+    return g;
+  }
+
   /* ---- themes ----------------------------------------------------------------------------------
      One stored choice for the whole site. "system" follows the device and keeps following it, so a
      phone that dims at sunset dims the hub too. Everything else is resolved once and pinned. */
@@ -213,6 +229,7 @@ window.PH = (function () {
     THEMES: THEMES, themeChoice: themeChoice, setTheme: setTheme,
     person: person, setPerson: setPerson, hubName: hubName, applyName: applyName,
     personEmail: personEmail, setPersonEmail: setPersonEmail, validEmail: validEmail,
+    schoolYear: schoolYear, setSchoolYear: setSchoolYear, GRADES_LIST: GRADES_LIST,
     isSecretKey: isSecretKey, exportable: exportable };
 })();
 

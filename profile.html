@@ -46,13 +46,16 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   <section class="card" aria-labelledby="h-you">
     <div class="card-head"><h2 id="h-you">You</h2><span class="small" id="youSub"></span></div>
     <p class="muted">Your name goes at the top of the hub, on printed worksheets and on the piano practice log.
-      An email address is optional, and is only used to label a sheet you hand in.</p>
+      An email address is optional, and is printed under your name on a sheet you hand in. Your school year
+      decides which grade <a href="ai.html">Make Practice</a> opens on.</p>
     <form class="row2" id="nameForm">
       <div class="field"><label for="nameIn">Your name</label>
         <input class="input" id="nameIn" maxlength="40" autocomplete="given-name" spellcheck="false" placeholder="Your name"></div>
       <div class="field"><label for="emailIn">Your email <span class="muted">(optional)</span></label>
         <input class="input" id="emailIn" type="email" maxlength="120" autocomplete="email" spellcheck="false"
           placeholder="you@example.com" aria-describedby="emailErr"></div>
+      <div class="field"><label for="gradeIn">School year <span class="muted">(optional)</span></label>
+        <select class="input" id="gradeIn"><option value="">Not saying</option></select></div>
       <button class="btn btn-primary" type="submit">Save</button>
       <button class="btn btn-ghost" type="button" id="clearName">Clear</button>
     </form>
@@ -119,6 +122,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     ['ph.theme',       '🎨', 'Colours',          'The theme you chose'],
     ['ph.name',        '👤', 'Your name',        'The name shown on the hub and on printouts'],
     ['ph.email',       '✉️', 'Your email',       'Only on this device: never in a backup and never synced'],
+    ['ph.grade',       '🎓', 'Your school year', 'Which grade Make Practice opens on'],
     ['ph.sync.v1',     '☁️', 'Sync',             'Where the copy is kept and when it was last written']
   ];
 
@@ -154,9 +158,17 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
 
   /* ===================== You ===================== */
   function renderYou() {
+    if (!$('#gradeIn').options.length || $('#gradeIn').options.length === 1) {
+      $('#gradeIn').innerHTML = '<option value="">Not saying</option>' +
+        PH.GRADES_LIST.map(function (g) { return '<option value="' + g + '">Grade ' + g + '</option>'; }).join('');
+    }
     $('#nameIn').value = PH.person();
     $('#emailIn').value = PH.personEmail();
-    $('#youSub').textContent = PH.person() ? 'This hub is ' + PH.hubName() : 'No name set yet';
+    $('#gradeIn').value = PH.schoolYear();
+    var bits = [];
+    if (PH.person()) bits.push('This hub is ' + PH.hubName());
+    if (PH.schoolYear()) bits.push('Grade ' + PH.schoolYear());
+    $('#youSub').textContent = bits.length ? bits.join(' \u00b7 ') : 'No name set yet';
   }
   $('#nameForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -166,13 +178,14 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
       return;
     }
     $('#emailErr').textContent = '';
+    PH.setSchoolYear($('#gradeIn').value);
     var set = PH.setPerson($('#nameIn').value);
     renderYou();
     renderData();
     PH.toast(set ? 'Hello, ' + set : 'Saved');
   });
   $('#clearName').addEventListener('click', function () {
-    PH.setPerson(''); PH.setPersonEmail('');
+    PH.setPerson(''); PH.setPersonEmail(''); PH.setSchoolYear('');
     $('#emailErr').textContent = '';
     renderYou(); renderData(); PH.toast('Cleared');
   });

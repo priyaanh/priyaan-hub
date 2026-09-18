@@ -258,7 +258,7 @@ main > * + * { margin-top: 1rem; }
   }
   function sheetHTML(withAnswers) {
     return IM1.renderWorksheet(ws, { title: 'Integrated Math 1 · ' + ws.topics.map(id => (IM1.TOPICS.filter(t => t.id === id)[0] || {}).name || id).join(', '),
-      name: state.settings.name, hub: PH.hubName(), showAnswers: withAnswers !== false });
+      name: state.settings.name, email: PH.personEmail(), hub: PH.hubName(), showAnswers: withAnswers !== false });
   }
   function printSheet() {
     if (!ws && !makeWorksheet(opts())) return;

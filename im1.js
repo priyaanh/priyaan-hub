@@ -698,6 +698,7 @@
     o = o || {};
     if (!ws || !Array.isArray(ws.problems)) throw new Error('renderWorksheet needs a worksheet from IM1.generate');
     var title = o.title || 'Integrated Math 1 Practice', name = o.name || '', showAnswers = o.showAnswers !== false;
+    var email = o.email || '';
     var topics = (ws.topics || []).map(function (id) { return TOPIC_BY_ID[id] ? TOPIC_BY_ID[id].name : id; });
     var n = ws.problems.length, boxH = n <= 8 ? 2.1 : n <= 12 ? 1.6 : n <= 20 ? 1.2 : n <= 30 ? 0.95 : 0.75;
     var diffName = ['', 'Warm-up', 'Standard', 'Challenge'][ws.difficulty] || '';
@@ -715,6 +716,7 @@
       '.idline{display:flex;gap:22px;margin:11px 0 16px;font-size:10.5pt;color:#374151}',
       '.idline span{display:flex;gap:6px;align-items:baseline;flex:1}',
       '.idline i{flex:1;border-bottom:1px solid #9aa0ab;min-width:1.3in;font-style:normal;color:#14161c}',
+      '.idline em{display:block;font-style:normal;font-size:8pt;color:#6b7280;line-height:1.3}',
       'ol.problems{list-style:none;margin:0;padding:0;columns:2;column-gap:26px}',
       'li.prob{break-inside:avoid;page-break-inside:avoid;display:flex;gap:9px;margin:0 0 13px}',
       '.num{flex:none;width:19px;height:19px;border-radius:50%;background:#14161c;color:#fff;font-size:9.5pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}',
@@ -735,7 +737,7 @@
     ].join('');
     var head = '<header><div><div class="kicker">Practice worksheet</div><h1>' + esc(title) + '</h1></div>' +
       '<div class="meta">' + n + ' problems · level ' + esc(ws.difficulty) + (diffName ? ' ' + diffName : '') + '<br>' + esc(topics.join(' · ')) + '</div></header>' +
-      '<div class="idline"><span>Name <i>' + esc(name) + '</i></span><span>Date <i></i></span><span>Score <i></i></span></div>';
+      '<div class="idline"><span>Name <i>' + esc(name) + (email ? '<em>' + esc(email) + '</em>' : '') + '</i></span><span>Date <i></i></span><span>Score <i></i></span></div>';
     var items = ws.problems.map(function (p, i) {
       return '<li class="prob"><span class="num">' + (i + 1) + '</span><div class="body"><div class="t">' + safe(p.question) + '</div><div class="work"></div></div></li>';
     }).join('');
