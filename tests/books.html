@@ -1,0 +1,59 @@
+<!doctype html><title>books &amp; help</title><body style="margin:0"><script>
+/* The CPM books are not in this repo and must not be: this page only points at where CPM publishes
+   them. The suite checks that every link leaves for cpm.org, that the chapter guides are built for the
+   two courses that have them, and that the page says plainly whose the books are. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const f=document.createElement('iframe'); f.style.cssText='width:1200px;height:1600px;border:0'; document.body.appendChild(f);
+let phase=0;
+f.src='../books.html';
+f.addEventListener('load', async () => {
+  if (phase++) return;
+  const d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const body = () => d.body.innerText || '';
+  try {
+    for (let i=0;i<200 && !$('#ch-int1 a');i++) await tick();
+
+    ok('all three courses are listed', !!$('#int1') && !!$('#int2') && !!$('#int3'));
+    ok('each one links to homework help',
+       $$('a[href*="homework.cpm.org"]').length === 3, String($$('a[href*="homework.cpm.org"]').length));
+    ok('and to the eBook', $$('a[href*="ebooks.cpm.org"]').length >= 2);
+
+    /* the chapter guides */
+    ok('Integrated I has its chapter guides', $$('#ch-int1 a').length === 11, String($$('#ch-int1 a').length));
+    ok('Integrated II has its chapter guides', $$('#ch-int2 a').length === 12, String($$('#ch-int2 a').length));
+    ok('they are numbered from one', $$('#ch-int1 a')[0].textContent.indexOf('Chapter 1') >= 0, $$('#ch-int1 a')[0].textContent);
+    const hrefs = $$('#ch-int1 a, #ch-int2 a').map(a => a.getAttribute('href'));
+    ok('every guide opens on cpm.org', hrefs.every(h => h.indexOf('https://pdfs.cpm.org/') === 0), hrefs[0]);
+    ok('the first one is the right file',
+       hrefs[0] === 'https://pdfs.cpm.org/CoreConnections/ParentGuide/int1/INT1_PG_Ch1_1.pdf', hrefs[0]);
+    ok('Integrated II guides point at the int2 folder',
+       $$('#ch-int2 a')[0].getAttribute('href').indexOf('/int2/INT2_PG_Ch1_1.pdf') > 0,
+       $$('#ch-int2 a')[0].getAttribute('href'));
+    ok('each guide says what it is, for a screen reader',
+       $$('#ch-int1 a').every(a => (a.getAttribute('aria-label') || '').indexOf('PDF on cpm.org') > 0));
+
+    /* nothing copyrighted is served from here */
+    const all = $$('a[href]').map(a => a.getAttribute('href'));
+    const pdfs = all.filter(h => /\.pdf(\?|$)/i.test(h));
+    ok('there are no PDFs served from this site', pdfs.every(h => h.indexOf('https://pdfs.cpm.org/') === 0),
+       pdfs.filter(h => h.indexOf('https://pdfs.cpm.org/') !== 0).join(' '));
+    ok('the page says the books belong to CPM', /belong to CPM/.test(body()), body().slice(0, 200));
+    ok('and that they are not kept here', /not kept in this hub/.test(body()));
+    ok('Integrated III explains why it has no guides', /does not publish chapter guides for Integrated III/.test(body()));
+
+    /* every external link opens in a new tab, safely */
+    const ext = $$('a[href^="http"]');
+    ok('every outside link opens in a new tab', ext.every(a => a.target === '_blank'), String(ext.length));
+    ok('and none of them can reach back', ext.every(a => (a.rel || '').indexOf('noopener') >= 0));
+
+    /* it also points back at the practice this hub can do */
+    ok('it links to the practice here too',
+       !!$('a[href="math.html"]') && !!$('a[href="quizzes.html"]') && !!$('a[href^="ai.html"]'));
+  } catch (e) { ok('the suite ran to the end', false, e && (e.stack || e.message)); }
+  finally {
+    const failed = R.filter(l => l.indexOf('FAIL') === 0).length;
+    console.log('RESULTS ' + failed + ' failed of ' + R.length);
+  }
+});
+</script>

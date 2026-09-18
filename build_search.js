@@ -37,6 +37,7 @@ const add = (icon, title, sub, url, keywords) => entries.push({ i: icon, t: titl
  ['🗓️', 'Calendar & Tasks', 'Google Calendar and Google Tasks', 'calendar.html', 'google events todo reminders'],
  ['📈', 'Progress', 'Streaks, accuracy, practice time, every app at once', 'progress.html', 'streak history chart stats calendar heatmap records minutes accuracy'],
  ['🎯', 'Review Mistakes', 'Questions you got wrong, asked again until you have it', 'review.html', 'mistakes wrong missed retry redo practice again spaced repetition weak topics'],
+ ['📚', 'Books & Help', 'CPM Integrated I, II and III: homework help and chapter guides', 'books.html', 'cpm textbook book ebook homework help parent guide pdf integrated 1 2 3 chapter'],
  ['👤', 'Profile', 'Your name, the colours, and everything this hub has saved', 'profile.html', 'settings name theme colours dark light backup restore sync gist storage account device']
 ].forEach(a => add(a[0], a[1], a[2], a[3], a[4]));
 
