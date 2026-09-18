@@ -1,0 +1,479 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spanish Practice · Practice Hub</title>
+<meta name="description" content="Endless Spanish questions: verbs, agreement, numbers, time and vocabulary, asked and marked on the page.">
+<link rel="stylesheet" href="shared.css">
+<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+main > * + * { margin-top: 1rem; }
+/* the question, one at a time */
+.qcard { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); padding: 1.1rem 1rem; }
+.qcard.right { border-color: var(--ok); background: var(--ok-soft); }
+.qcard.wrong { border-color: var(--danger); background: var(--danger-soft); }
+.qhead { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; font-size: .78rem; color: var(--muted); }
+.qhead .topic { font-weight: 700; color: var(--accent-text); }
+.qtext { font-size: 1.35rem; line-height: 1.5; margin: .5rem 0 .1rem; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .qtext { font-size: 1.15rem; } }
+.qtext .cue { font-size: .8em; color: var(--muted); }
+.answer { display: flex; gap: .45rem; margin-top: .9rem; flex-wrap: wrap; }
+.answer .input { flex: 1; min-width: 9rem; font-size: 1.1rem; }
+.verdict { margin-top: .7rem; font-weight: 600; display: flex; gap: .5rem; align-items: baseline; flex-wrap: wrap; }
+.verdict.ok { color: var(--ok-text); } .verdict.no { color: var(--danger-text); }
+.verdict .was { color: var(--text); font-weight: 400; }
+.why { margin-top: .35rem; font-size: .88rem; color: var(--muted); }
+.why b { color: var(--text); }
+.acc { margin-top: .6rem; font-size: .8rem; color: var(--muted); }
+/* the little accent keys, for a keyboard that has none */
+.keys { display: flex; gap: .25rem; flex-wrap: wrap; margin-top: .5rem; }
+.keys button { font: inherit; font-size: .95rem; line-height: 1; padding: .3rem .5rem; border: 1px solid var(--border); background: var(--surface); color: inherit; border-radius: 6px; cursor: pointer; }
+.keys button:hover { border-color: var(--accent-text); background: var(--surface-2); }
+.progress { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-top: .9rem; }
+.progress i { display: block; height: 100%; background: var(--accent-fill); transition: width .2s; }
+/* topic picker */
+.chapters { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.topic-pick { display: flex; gap: .6rem; align-items: flex-start; padding: .5rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; background: var(--surface); }
+.topic-pick:hover { border-color: var(--accent-text); background: var(--surface-2); }
+.topic-pick input { margin: .2rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--accent-text); flex: none; cursor: pointer; }
+.topic-pick.on { border-color: var(--accent-text); background: var(--accent-soft); }
+.topic-pick .tn { font-weight: 600; font-size: .93rem; display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; }
+.topic-pick .tn .ch { font-size: .72rem; font-weight: 700; color: var(--muted); background: var(--surface-2); padding: .05rem .35rem; border-radius: 999px; }
+.topic-pick.on .tn .ch { background: var(--surface); }
+.topic-pick .td { font-size: .78rem; color: var(--muted); line-height: 1.35; margin-top: .1rem; }
+.opts { display: grid; gap: .9rem; grid-template-columns: 1fr; margin-top: 1rem; }
+@media (min-width: 700px) { .opts { grid-template-columns: auto auto 1fr; align-items: end; } }
+.countbtns { display: flex; gap: .3rem; }
+.countbtns .btn.on, .tabs .tab.on { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-text); }
+.tabs .tab.on { box-shadow: none; }
+/* printable set */
+.ws-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .9rem 1.6rem; grid-template-columns: 1fr; }
+@media (min-width: 780px) { .ws-list { grid-template-columns: 1fr 1fr; } }
+.prob { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .65rem .75rem; background: var(--surface); }
+.prob .qline { display: flex; gap: .55rem; line-height: 1.5; }
+.prob .n { font-weight: 800; color: var(--accent-text); min-width: 1.5rem; font-variant-numeric: tabular-nums; }
+.prob .qt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.prob .qt .cue { font-size: .85em; color: var(--muted); }
+.prob .tag { font-size: .7rem; color: var(--muted); margin-top: .2rem; }
+.prob .showans { margin-top: .4rem; font-size: .88rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: .35rem; }
+.prob .showans b { color: var(--text); }
+/* history */
+.hrow { display: flex; gap: .7rem; align-items: center; padding: .55rem 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.hrow:first-child { border-top: 0; }
+.hrow .meta { flex: 1; min-width: 12rem; }
+.hrow .meta .t { font-weight: 600; }
+.hrow .meta .s { font-size: .8rem; color: var(--muted); }
+#printFrame { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }
+</style></head>
+<body data-app="spanish">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <h1 class="title"><span class="emoji">💬</span><span class="name">Spanish Practice</span></h1>
+  <div class="spacer"></div>
+  <button class="btn btn-sm" id="exportBtn">↓ <span class="lbl">Export</span></button>
+  <button class="btn btn-sm" id="importBtn">↑ <span class="lbl">Import</span></button>
+</div></header>
+<main class="container">
+
+  <div class="stats no-print" id="stats"></div>
+
+  <section class="card" id="playCard" aria-labelledby="h-play">
+    <div class="card-head"><h2 id="h-play">Practice</h2>
+      <span class="small" id="roundLbl"></span>
+    </div>
+    <div class="qcard" id="qcard">
+      <div class="qhead"><span class="topic" id="qTopic"></span><span id="qNum"></span></div>
+      <div class="qtext" id="qText">Pick some topics below and press <b>Start practising</b>.</div>
+      <div class="answer" id="answerRow" hidden>
+        <input class="input" id="ansIn" placeholder="Your answer" autocomplete="off" autocapitalize="off"
+          autocorrect="off" spellcheck="false" aria-label="Your answer" lang="es">
+        <button class="btn btn-primary" id="checkBtn">Check</button>
+        <button class="btn" id="nextBtn" hidden>Next →</button>
+      </div>
+      <div class="keys no-print" id="keys" hidden aria-label="Accented letters"></div>
+      <div class="verdict" id="verdict" hidden></div>
+      <div class="why" id="why" hidden></div>
+      <div class="acc" id="accNote" hidden>Accents are not required — <i>esta</i> is marked the same as <i>está</i>.</div>
+      <div class="progress" id="progress" hidden><i id="progressBar" style="width:0%"></i></div>
+    </div>
+    <div class="row no-print" style="gap:.5rem;margin-top:.9rem;flex-wrap:wrap">
+      <button class="btn btn-primary" id="startBtn">Start practising</button>
+      <button class="btn" id="skipBtn" hidden>Skip</button>
+      <button class="btn btn-ghost" id="revealBtn" hidden>Show the answer</button>
+      <span class="grow"></span>
+      <button class="btn btn-sm btn-ghost btn-danger" id="stopBtn" hidden>Stop</button>
+    </div>
+  </section>
+
+  <section class="card no-print" aria-labelledby="h-pick">
+    <div class="card-head"><h2 id="h-pick">What to practise</h2>
+      <span class="small"><a href="#" data-pick="all">All</a> · <a href="#" data-pick="none">None</a></span>
+    </div>
+    <div class="chapters" id="topics"></div>
+    <div class="opts">
+      <div class="field"><label>Questions in a round</label>
+        <div class="countbtns" id="countBtns">
+          <button class="btn btn-sm" data-count="10">10</button><button class="btn btn-sm" data-count="15">15</button>
+          <button class="btn btn-sm" data-count="20">20</button><button class="btn btn-sm" data-count="30">30</button>
+        </div>
+      </div>
+      <div class="field"><label>Level</label>
+        <div class="tabs" id="diffTabs" role="group" aria-label="Level">
+          <button class="tab" data-diff="1">1 · Warm-up</button><button class="tab" data-diff="2">2 · Standard</button><button class="tab" data-diff="3">3 · Challenge</button>
+        </div>
+      </div>
+      <div class="field"><span class="muted small" id="pickNote"></span></div>
+    </div>
+  </section>
+
+  <section class="card no-print" aria-labelledby="h-sheet">
+    <div class="card-head"><h2 id="h-sheet">A set to write on</h2>
+      <span class="small">Same questions, on paper</span>
+    </div>
+    <p class="muted">Everything above happens on the page. If you would rather write by hand, this makes one
+      set of the same questions with an answer key on its own sheet.</p>
+    <div class="row" style="gap:.5rem;flex-wrap:wrap">
+      <button class="btn" id="sheetBtn">Show a set here</button>
+      <button class="btn" id="printBtn">🖨️ Print</button>
+      <button class="btn" id="downloadBtn">⬇ Download</button>
+      <button class="btn btn-sm btn-ghost" id="answersBtn" aria-pressed="false" hidden>👁 Show answers</button>
+    </div>
+    <ol class="ws-list" id="wsList" style="margin-top:1rem"></ol>
+  </section>
+
+  <section class="card no-print" aria-labelledby="h-hist">
+    <div class="card-head"><h2 id="h-hist">Rounds</h2><button class="btn btn-sm btn-ghost btn-danger" id="clearHist" hidden>Clear</button></div>
+    <div id="hist"></div>
+  </section>
+</main>
+<iframe id="printFrame" title="Printable worksheet" aria-hidden="true"></iframe>
+<script src="shared.js"></script><script src="spanish.js"></script><script>
+(function () {
+  'use strict';
+  const KEY = 'ph.spanish.v1';
+  const $ = s => document.querySelector(s), $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
+  const esc = PH.esc, ALL = ES.TOPICS.map(t => t.id);
+
+  /* ---------------- state ---------------- */
+  function blank() {
+    return { version: 1, history: [], settings: { topics: ['present', 'serestar', 'vocab'], count: 10, difficulty: 2 }, summary: { headline: '', sub: '' } };
+  }
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  /* 2026-02-30 parses as March 2 rather than failing, so check the date round-trips, not just its shape. */
+  const validISO = s => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s; };
+  function scoreOf(v) {
+    if (!isObj(v)) return null;
+    const total = Math.round(Number(v.total)), right = Math.round(Number(v.right));
+    if (!(total > 0) || !(right >= 0)) return null;
+    return { right: Math.min(right, total), total: total };
+  }
+  /* Indices into a regenerated round: anything out of range would ask the wrong question. */
+  function idxList(v, max) {
+    if (!Array.isArray(v)) return [];
+    const out = [], seen = {};
+    v.forEach(n => { const i = Math.round(Number(n));
+      if (Number.isInteger(i) && i >= 0 && i < max && !seen[i]) { seen[i] = 1; out.push(i); } });
+    return out.slice(0, 60);
+  }
+  function normalize(raw) {
+    const s = blank();
+    if (!isObj(raw)) return s;
+    const st = isObj(raw.settings) ? raw.settings : {};
+    const t = Array.isArray(st.topics) ? st.topics.filter(x => ALL.indexOf(x) >= 0) : [];
+    if (t.length) s.settings.topics = t;
+    if (isFinite(st.count)) s.settings.count = Math.min(60, Math.max(1, Math.round(st.count)));
+    if ([1, 2, 3].indexOf(st.difficulty) >= 0) s.settings.difficulty = st.difficulty;
+    if (Array.isArray(raw.history)) {
+      s.history = raw.history.filter(isObj).map(h => {
+        const count = isFinite(h.count) ? Math.min(60, Math.max(1, Math.round(h.count))) : 10;
+        return {
+          id: typeof h.id === 'string' && h.id ? h.id : PH.uid(),
+          date: validISO(h.date) ? h.date : PH.todayISO(),
+          topics: Array.isArray(h.topics) ? h.topics.filter(x => ALL.indexOf(x) >= 0) : [],
+          count: count,
+          difficulty: [1, 2, 3].indexOf(h.difficulty) >= 0 ? h.difficulty : 2,
+          seed: isFinite(h.seed) ? Math.round(h.seed) : 1,
+          score: scoreOf(h.score),
+          missed: idxList(h.missed, count)
+        };
+      }).filter(h => h.topics.length).slice(0, 200);
+    }
+    return s;
+  }
+  const stored = PH.load(KEY, null);
+  let state = normalize(stored);
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+
+  const played = () => state.history.filter(h => h.score);
+  function streak() {
+    const days = {}; played().forEach(h => days[h.date] = 1);
+    let n = 0, d = PH.todayISO();
+    if (!days[d]) d = PH.addDays(d, -1);    // today not practised yet: a streak can still end yesterday
+    while (days[d]) { n++; d = PH.addDays(d, -1); }
+    return n;
+  }
+  function totals() {
+    return played().reduce((a, h) => ({ right: a.right + h.score.right, total: a.total + h.score.total }), { right: 0, total: 0 });
+  }
+  function topicName(id) { const t = ES.TOPICS.filter(x => x.id === id)[0]; return t ? t.name : id; }
+  function buildSummary() {
+    const pl = played();
+    if (!pl.length) return state.history.length ? { headline: 'Ready to practise', sub: 'No round finished yet' } : { headline: '', sub: '' };
+    const last = pl[0], t = totals(), st = streak();
+    const names = last.topics.map(topicName);
+    return {
+      headline: 'Last round ' + last.score.right + '/' + last.score.total,
+      sub: names.slice(0, 2).join(' · ') + (names.length > 2 ? ' +' + (names.length - 2) : '') +
+        (t.total ? ' · ' + Math.round(t.right / t.total * 100) + '% overall' : '') + (st > 1 ? ' · 🔥 ' + st + ' days' : '')
+    };
+  }
+
+  /* ---------------- the endless round ----------------
+     A "round" is an ordinary seeded worksheet, asked one question at a time. When it runs out another
+     one starts with a new seed, which is what makes it endless -- and because each round is still
+     {seed, topics, difficulty, count}, review.html can rebuild any question from four numbers. */
+  const ROUND_KEYS = ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'];
+  let round = null, marked = null, revealed = false, histId = null;
+  const randSeed = () => Math.floor(Math.random() * 999999) + 1;
+  const current = () => (round && round.ws.problems[round.i]) || null;
+
+  function startRound(seed) {
+    if (!state.settings.topics.length) { PH.toast('Pick at least one topic first'); return false; }
+    let ws;
+    try { ws = ES.generate({ topics: state.settings.topics, count: state.settings.count, difficulty: state.settings.difficulty, seed: seed || randSeed() }); }
+    catch (e) { PH.toast(e.message); return false; }
+    round = { ws: ws, i: 0, marks: {} };
+    const h = { id: PH.uid(), date: PH.todayISO(), topics: ws.topics.slice(), count: ws.problems.length,
+      difficulty: ws.difficulty, seed: ws.seed, score: null, missed: [] };
+    state.history.unshift(h); state.history = state.history.slice(0, 200); histId = h.id;
+    save();
+    marked = null; revealed = false;
+    renderQuestion(); renderHistory(); renderStats();
+    return true;
+  }
+  function finishRound() {
+    const ws = round.ws;
+    const right = Object.keys(round.marks).filter(k => round.marks[k].ok).length;
+    const missed = ws.problems.map((p, i) => (round.marks[p.id] && !round.marks[p.id].ok) ? i : -1).filter(i => i >= 0);
+    const h = state.history.filter(x => x.id === histId)[0];
+    if (h) { h.score = { right: right, total: ws.problems.length }; h.missed = missed; h.date = PH.todayISO(); }
+    save(); renderHistory(); renderStats();
+    PH.toast(right === ws.problems.length ? '🎉 ' + right + '/' + ws.problems.length + ' — perfect round!' : 'Round saved: ' + right + '/' + ws.problems.length);
+  }
+  function stopRound() {
+    if (round && Object.keys(round.marks).length) finishRound();
+    else if (round) { state.history = state.history.filter(x => x.id !== histId); save(); renderHistory(); }
+    round = null; marked = null; revealed = false; histId = null;
+    renderQuestion();
+  }
+  function renderQuestion() {
+    const p = current();
+    const on = !!p;
+    $('#startBtn').hidden = on;
+    $('#skipBtn').hidden = !on;
+    $('#revealBtn').hidden = !on;
+    $('#stopBtn').hidden = !on;
+    $('#answerRow').hidden = !on;
+    $('#keys').hidden = !on;
+    $('#progress').hidden = !on;
+    $('#accNote').hidden = !on;
+    $('#qcard').className = 'qcard' + (marked ? (marked.ok ? ' right' : ' wrong') : '');
+    if (!on) {
+      $('#qTopic').textContent = ''; $('#qNum').textContent = ''; $('#roundLbl').textContent = '';
+      $('#qText').innerHTML = state.settings.topics.length
+        ? 'Ready when you are. Press <b>Start practising</b> — the questions keep coming until you stop.'
+        : 'Pick at least one topic below, then press <b>Start practising</b>.';
+      $('#verdict').hidden = true; $('#why').hidden = true;
+      return;
+    }
+    $('#qTopic').textContent = p.topicName;
+    $('#qNum').textContent = 'Question ' + (round.i + 1) + ' of ' + round.ws.problems.length;
+    $('#roundLbl').textContent = 'Round seed ' + round.ws.seed + ' · level ' + round.ws.difficulty;
+    $('#qText').innerHTML = ES.safeHTML(p.question);
+    $('#progressBar').style.width = Math.round(round.i / round.ws.problems.length * 100) + '%';
+    const v = $('#verdict'), w = $('#why');
+    if (marked) {
+      v.hidden = false;
+      v.className = 'verdict ' + (marked.ok ? 'ok' : 'no');
+      v.innerHTML = marked.ok ? '✓ Correct' : '✗ Not quite <span class="was">— the answer is <b>' + ES.safeHTML(p.answer) + '</b></span>';
+      if (p.work) { w.hidden = false; w.innerHTML = ES.safeHTML(p.work); } else w.hidden = true;
+    } else if (revealed) {
+      v.hidden = false; v.className = 'verdict no';
+      v.innerHTML = '<span class="was">The answer is <b>' + ES.safeHTML(p.answer) + '</b></span>';
+      if (p.work) { w.hidden = false; w.innerHTML = ES.safeHTML(p.work); } else w.hidden = true;
+    } else { v.hidden = true; w.hidden = true; }
+    $('#checkBtn').hidden = !!marked;
+    $('#nextBtn').hidden = !marked && !revealed;
+    const inp = $('#ansIn');
+    inp.disabled = !!marked;
+    if (!marked) { inp.value = ''; }
+    if (!$('#keys').innerHTML) $('#keys').innerHTML = ROUND_KEYS.map(k => '<button type="button" data-key="' + k + '">' + k + '</button>').join('');
+    (marked || revealed ? $('#nextBtn') : inp).focus();
+  }
+  function checkNow() {
+    const p = current();
+    if (!p || marked) return;
+    const typed = $('#ansIn').value.trim();
+    if (!typed) { PH.toast('Type an answer first'); $('#ansIn').focus(); return; }
+    marked = { typed: typed, ok: ES.checkAnswer(p, typed) };
+    round.marks[p.id] = marked;
+    renderQuestion(); renderStats();
+  }
+  function nextQuestion() {
+    if (!round) return;
+    round.i++;
+    marked = null; revealed = false;
+    if (round.i >= round.ws.problems.length) { finishRound(); startRound(); return; }
+    renderQuestion();
+  }
+
+  /* ---------------- a set to write on ---------------- */
+  let sheet = null, showAns = false;
+  function makeSheet() {
+    if (!state.settings.topics.length) { PH.toast('Pick at least one topic first'); return null; }
+    try { sheet = ES.generate({ topics: state.settings.topics, count: state.settings.count, difficulty: state.settings.difficulty, seed: randSeed() }); }
+    catch (e) { PH.toast(e.message); return null; }
+    showAns = false;
+    renderSheet();
+    return sheet;
+  }
+  function renderSheet() {
+    $('#answersBtn').hidden = !sheet;
+    $('#answersBtn').setAttribute('aria-pressed', String(showAns));
+    if (!sheet) { $('#wsList').innerHTML = ''; return; }
+    $('#wsList').innerHTML = sheet.problems.map((p, i) =>
+      '<li class="prob"><div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + ES.safeHTML(p.question) +
+      '<div class="tag">' + esc(p.topicName) + '</div></div></div>' +
+      (showAns ? '<div class="showans"><b>Answer:</b> ' + ES.safeHTML(p.answer) + (p.work ? '<br><span class="muted">' + ES.safeHTML(p.work) + '</span>' : '') + '</div>' : '') +
+      '</li>').join('');
+  }
+  function sheetHTML() {
+    return ES.renderWorksheet(sheet, { title: 'Spanish · ' + sheet.topics.map(topicName).join(', '),
+      name: PH.person(), hub: PH.hubName(), showAnswers: true });
+  }
+  function printSheet() {
+    if (!sheet && !makeSheet()) return;
+    const f = $('#printFrame');
+    f.srcdoc = sheetHTML();
+    f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { PH.toast('Could not open the print dialog'); } };
+  }
+
+  /* ---------------- rendering the rest ---------------- */
+  function renderTopics() {
+    $('#topics').innerHTML = ES.TOPICS.map(t => {
+      const on = state.settings.topics.indexOf(t.id) >= 0;
+      return '<label class="topic-pick' + (on ? ' on' : '') + '"><input type="checkbox" data-topic="' + t.id + '"' + (on ? ' checked' : '') + '>' +
+        '<span><span class="tn">' + esc(t.name) + ' <span class="ch">' + esc(t.unit) + '</span></span><span class="td">' + esc(t.description) + '</span></span></label>';
+    }).join('');
+    $$('#countBtns .btn').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === state.settings.count));
+    $$('#diffTabs .tab').forEach(b => { const on = Number(b.dataset.diff) === state.settings.difficulty; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    const n = state.settings.topics.length;
+    $('#pickNote').textContent = n ? n + ' topic' + (n === 1 ? '' : 's') + ' · ' + state.settings.count + ' questions a round' : 'Pick at least one topic';
+    $('#startBtn').disabled = !n;
+  }
+  function renderStats() {
+    const t = totals(), st = streak();
+    const live = round ? Object.keys(round.marks).length : 0;
+    $('#stats').innerHTML = [
+      ['Questions answered', t.total + live],
+      ['Correct', t.total || live ? Math.round((t.right + (round ? Object.keys(round.marks).filter(k => round.marks[k].ok).length : 0)) / (t.total + live) * 100) + '%' : '—'],
+      ['Rounds finished', played().length],
+      ['Practice streak', st + (st === 1 ? ' day' : ' days')]
+    ].map(([lbl, num]) => '<div class="stat"><div class="num">' + esc(String(num)) + '</div><div class="lbl">' + lbl + '</div></div>').join('');
+  }
+  function renderHistory() {
+    $('#clearHist').hidden = !state.history.length;
+    if (!state.history.length) { $('#hist').innerHTML = '<div class="empty">No rounds yet. Press <b>Start practising</b> and they will show up here.</div>'; return; }
+    $('#hist').innerHTML = state.history.slice(0, 40).map(h => {
+      const names = h.topics.map(topicName);
+      const pct = h.score ? Math.round(h.score.right / h.score.total * 100) : null;
+      return '<div class="hrow" data-h="' + esc(h.id) + '">' +
+        '<div class="meta"><div class="t">' + esc(names.join(' · ')) + '</div>' +
+        '<div class="s">' + esc(PH.fmtDate(h.date, { month: 'short', day: 'numeric' })) + ' · ' + h.count + ' questions · level ' + h.difficulty + ' · seed ' + h.seed + '</div></div>' +
+        (h.score ? '<span class="pill ' + (pct >= 80 ? 'ok' : pct >= 60 ? 'warn' : 'danger') + '">' + h.score.right + '/' + h.score.total + '</span>' : '<span class="pill neutral">unfinished</span>') +
+        '<div class="acts"><button class="btn btn-sm" data-again="' + esc(h.id) + '">Ask again</button>' +
+        '<button class="btn btn-sm btn-ghost btn-danger" data-del="' + esc(h.id) + '" aria-label="Delete">✕</button></div></div>';
+    }).join('');
+  }
+  function renderAll() { renderTopics(); renderStats(); renderHistory(); renderQuestion(); renderSheet(); }
+
+  /* ---------------- events ---------------- */
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.topic) {
+      const id = t.dataset.topic, i = state.settings.topics.indexOf(id);
+      if (t.checked && i < 0) state.settings.topics.push(id); else if (!t.checked && i >= 0) state.settings.topics.splice(i, 1);
+      save(); renderTopics();
+    }
+  });
+  document.addEventListener('click', e => {
+    const pick = e.target.closest('[data-pick]');
+    if (pick) { e.preventDefault();
+      state.settings.topics = pick.dataset.pick === 'all' ? ALL.slice() : [];
+      save(); renderTopics(); return; }
+    const cb = e.target.closest('[data-count]');
+    if (cb) { state.settings.count = Number(cb.dataset.count); save(); renderTopics(); return; }
+    const db = e.target.closest('[data-diff]');
+    if (db) { state.settings.difficulty = Number(db.dataset.diff); save(); renderTopics(); return; }
+    const k = e.target.closest('[data-key]');
+    if (k) { const inp = $('#ansIn'); const at = inp.selectionStart == null ? inp.value.length : inp.selectionStart;
+      inp.value = inp.value.slice(0, at) + k.dataset.key + inp.value.slice(inp.selectionEnd == null ? at : inp.selectionEnd);
+      inp.focus(); try { inp.setSelectionRange(at + 1, at + 1); } catch (er) {} return; }
+    if (e.target.closest('#startBtn')) { startRound(); return; }
+    if (e.target.closest('#checkBtn')) { checkNow(); return; }
+    if (e.target.closest('#nextBtn')) { nextQuestion(); return; }
+    if (e.target.closest('#skipBtn')) { revealed = false; marked = null; nextQuestion(); return; }
+    if (e.target.closest('#revealBtn')) { revealed = true; renderQuestion(); return; }
+    if (e.target.closest('#stopBtn')) { stopRound(); return; }
+    if (e.target.closest('#sheetBtn')) { makeSheet(); return; }
+    if (e.target.closest('#printBtn')) { printSheet(); return; }
+    if (e.target.closest('#downloadBtn')) { if (!sheet && !makeSheet()) return;
+      PH.download('spanish_' + sheet.topics.join('-') + '_d' + sheet.difficulty + '_s' + sheet.seed + '.html', sheetHTML(), 'text/html');
+      PH.toast('Downloaded'); return; }
+    if (e.target.closest('#answersBtn')) { showAns = !showAns; renderSheet(); return; }
+    const again = e.target.closest('[data-again]');
+    if (again) { const h = state.history.filter(x => x.id === again.dataset.again)[0];
+      if (h) { state.settings.topics = h.topics.slice(); state.settings.count = h.count; state.settings.difficulty = h.difficulty;
+        save(); renderTopics(); startRound(h.seed); $('#playCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      return; }
+    const del = e.target.closest('[data-del]');
+    if (del) { state.history = state.history.filter(x => x.id !== del.dataset.del); save(); renderHistory(); renderStats(); return; }
+    if (e.target.closest('#clearHist')) { state.history = []; save(); renderHistory(); renderStats(); PH.toast('Rounds cleared'); return; }
+    if (e.target.closest('#exportBtn')) { PH.download('spanish-' + PH.todayISO() + '.json', JSON.stringify(state, null, 2)); return; }
+    if (e.target.closest('#importBtn')) { importJSON(); return; }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (e.target === $('#ansIn')) { e.preventDefault(); marked ? nextQuestion() : checkNow(); return; }
+    if (e.target === $('#nextBtn')) { e.preventDefault(); nextQuestion(); }
+  });
+  async function importJSON() {
+    const text = await PH.pickFile('application/json');
+    if (!text) return;
+    let obj; try { obj = JSON.parse(text); } catch (e) { PH.toast('That file is not valid JSON'); return; }
+    if (isObj(obj) && isObj(obj.data) && typeof obj.data[KEY] === 'string') {   // whole-hub backup file
+      try { obj = JSON.parse(obj.data[KEY]); } catch (e) { obj = null; }
+    }
+    const inc = normalize(obj);
+    if (!inc.history.length && !obj) { PH.toast('No Spanish data in that file'); return; }
+    const seen = {};
+    state.history.concat(inc.history).forEach(h => { const k = h.topics.join(',') + '|' + h.seed + '|' + h.count + '|' + h.difficulty; if (!seen[k]) seen[k] = h; });
+    state.history = Object.keys(seen).map(k => seen[k]).sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id)).slice(0, 200);
+    state.settings = inc.settings;
+    save(); renderAll(); PH.toast('Imported ' + state.history.length + ' rounds');
+  }
+
+  /* A link like spanish.html#gustar (used by the hub's search) narrows to that topic. */
+  function applyHash() {
+    const want = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!want || ALL.indexOf(want) < 0) return false;
+    state.settings.topics = [want];
+    return true;
+  }
+  if (applyHash()) save();
+  window.addEventListener('hashchange', () => { if (applyHash()) { save(); renderAll(); } });
+
+  renderAll();
+  if (stored) save();
+  /* so the tests can drive a round without clicking through it */
+  window.PH_ES = { state: () => state, round: () => round, start: startRound, check: checkNow, next: nextQuestion, stop: stopRound };
+})();
+</script>
+</body></html>

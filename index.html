@@ -90,6 +90,7 @@
   .app[data-app="calendar"] { --accent:#d64292; --accent-soft:rgba(214,66,146,.15); }
   .app[data-app="ai"]       { --accent:#0d9488; --accent-soft:rgba(13,148,136,.15); }
   .app[data-app="python"]   { --accent:#3572a5; --accent-soft:rgba(53,114,165,.16); }
+  .app[data-app="spanish"]  { --accent:#b91c1c; --accent-soft:rgba(185,28,28,.15); }
   footer { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: .875rem; }
   footer .spacer { flex: 1; }
 </style>
@@ -155,6 +156,12 @@
       <div class="top"><span class="emoji">🧮</span><h2>Math Worksheets</h2></div>
       <p class="desc">Print Integrated Math 1 practice sheets with answer keys: equations, systems, exponents, and more.</p>
       <div class="summary none" data-key="ph.math.v1"><span class="headline">No worksheets made yet</span><span class="sub">Pick topics and print</span></div>
+      <span class="open">Open →</span>
+    </a>
+    <a class="app" data-app="spanish" href="spanish.html">
+      <div class="top"><span class="emoji">💬</span><h2>Spanish Practice</h2></div>
+      <p class="desc">Endless Spanish questions, asked and marked right here: verbs, ser and estar, agreement, numbers, telling time and vocabulary. A set to print if you want one.</p>
+      <div class="summary none" data-key="ph.spanish.v1"><span class="headline">No rounds yet</span><span class="sub">Pick topics and start</span></div>
       <span class="open">Open →</span>
     </a>
     <a class="app" data-app="quiz" href="quizzes.html">
@@ -371,6 +378,17 @@
       value: total ? right + ' / ' + total : 'Not yet',
       sub: total ? (today.length === 1 ? 'one round today' : today.length + ' rounds today') : 'a quick round',
       colour: '#3572a5', cls: total ? 'done' : 'due' });
+  });
+
+  // spanish: questions answered today
+  safe(() => {
+    const d = load('ph.spanish.v1'); if (!d || !Array.isArray(d.history) || !d.history.length) return;
+    const today = d.history.filter(h => h && h.date === T && h.score);
+    const right = today.reduce((n, h) => n + h.score.right, 0), total = today.reduce((n, h) => n + h.score.total, 0);
+    tile({ id: 'spanish', href: 'spanish.html', emoji: '\u{1F4AC}', label: 'Spanish',
+      value: total ? right + ' / ' + total : 'Not yet',
+      sub: total ? (today.length === 1 ? 'one round today' : today.length + ' rounds today') : 'a quick round',
+      colour: '#b91c1c', cls: total ? 'done' : 'due' });
   });
 
   // merit badges: requirements signed off in the last week

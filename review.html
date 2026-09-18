@@ -142,9 +142,10 @@ main > * + * { margin-top: 1rem; }
     quiz:   { name: 'Lesson quizzes',  emoji: '📝', href: 'quizzes.html', script: 'cpm_int2_ch1.js', global: 'CPM_QUIZZES' },
     math:   { name: 'Math worksheets', emoji: '🧮', href: 'math.html',    script: 'im1.js',          global: 'IM1' },
     python: { name: 'Python',          emoji: '🐍', href: 'python.html',  script: 'pyquiz.js',       global: 'PY' },
+    spanish:{ name: 'Spanish',         emoji: '💬', href: 'spanish.html', script: 'spanish.js',      global: 'ES' },
     ai:     { name: 'Make Practice',   emoji: '✏️', href: 'ai.html',      script: 'grades.js',       global: 'GRADES', optional: true }
   };
-  var ORDER = ['quiz', 'math', 'python', 'ai'];
+  var ORDER = ['quiz', 'math', 'spanish', 'python', 'ai'];
 
   /* ===================== State (ours is tiny: what has since been got right) ===================== */
   function blank() { return { version: 1, cleared: {}, settings: { sources: {}, howMany: 10 }, summary: { headline: '', sub: '' } }; }
@@ -206,6 +207,17 @@ main > * + * { margin-top: 1rem; }
         push('m|' + h.seed + '|' + sig + '|' + h.difficulty + '|' + h.count + '|' + i, 'math', h.date,
           'Integrated Math 1', sig || 'maths',
           { kind: 'math', topics: h.topics, count: h.count, difficulty: h.difficulty, seed: h.seed, idx: i });
+      });
+    });
+
+    var sp = PH.load('ph.spanish.v1', null);
+    if (isObj(sp)) arr(sp.history).forEach(function (h) {
+      if (!isObj(h) || !arr(h.missed).length) return;
+      var topics = arr(h.topics).slice().sort(), sig = topics.join(',');
+      arr(h.missed).forEach(function (i) {
+        push('s|' + h.seed + '|' + sig + '|' + h.difficulty + '|' + h.count + '|' + i, 'spanish', h.date,
+          'Spanish', sig || 'spanish',
+          { kind: 'spanish', topics: h.topics, count: h.count, difficulty: h.difficulty, seed: h.seed, idx: i });
       });
     });
 
@@ -303,6 +315,17 @@ main > * + * { margin-top: 1rem; }
           from: p.topicName || 'Integrated Math 1', topic: p.topic || 'maths', qtext: p.question, svg: '', code: '',
           choices: null, answerText: String(p.answer), explain: p.work || '',
           ok: function (pick, typed) { return IM1.checkAnswer(p, typed); }
+        };
+      }
+      if (g.kind === 'spanish') {
+        if (!window.ES) return null;
+        var sws = ES.generate({ topics: g.topics, count: g.count, difficulty: g.difficulty, seed: g.seed });
+        var sp_ = sws && sws.problems && sws.problems[g.idx];
+        if (!sp_) return null;
+        return {
+          from: sp_.topicName || 'Spanish', topic: sp_.topic || 'spanish', qtext: sp_.question, svg: '', code: '',
+          choices: null, answerText: String(sp_.answer), explain: sp_.work || '',
+          ok: function (pick, typed) { return ES.checkAnswer(sp_, typed); }
         };
       }
       if (g.kind === 'python') {
@@ -638,7 +661,7 @@ main > * + * { margin-top: 1rem; }
   }
   window.PH_REVIEW = { collect: collect, build: build, refresh: refresh, start: start, check: check, next: next,
     state: function () { return state; }, open: function () { return open_; }, run: function () { return run; },
-    ready: function () { return !!(window.CPM_QUIZZES || window.IM1 || window.PY); } };
+    ready: function () { return !!(window.CPM_QUIZZES || window.IM1 || window.PY || window.ES); } };
 })();
 </script>
 </body></html>

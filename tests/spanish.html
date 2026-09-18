@@ -1,0 +1,148 @@
+<!doctype html><title>spanish practice</title><body style="margin:0"><script>
+/* Drives a real round on spanish.html: a right answer, a wrong one, the accent keys, and the bit the
+   page is for -- that it never runs out. A finished round has to leave behind {seed, topics, difficulty,
+   count} and the indices missed, because that is all review.html gets to rebuild a question from. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||400);i++){ if(cond()) return true; await tick(); } return cond();};
+const KEY='ph.spanish.v1';
+const snap=localStorage.getItem(KEY);
+localStorage.setItem(KEY, JSON.stringify({ version:1, history:[], summary:{},
+  settings:{ topics:['present'], count:3, difficulty:2 } }));
+
+const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1500px;border:0'; document.body.appendChild(f);
+let phase=0;
+f.src='../spanish.html';
+f.addEventListener('load', async () => {
+  if (phase++) return;                     /* a reload must not re-run everything against a changed page */
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const txt = s => ($(s) ? $(s).textContent : '');
+  const body = () => d.body.innerText || '';   /* innerText, not textContent: textContent includes <script> source */
+  try {
+    await waitFor(() => w.PH_ES && w.ES && $('#topics').children.length, 400);
+    ok('the page is driveable from a test', !!w.PH_ES);
+    ok('the generator is loaded', !!w.ES && typeof w.ES.generate === 'function');
+
+    /* ---- what it offers ---- */
+    ok('every topic is offered', $$('#topics .topic-pick').length === w.ES.TOPICS.length,
+       $$('#topics .topic-pick').length + ' of ' + w.ES.TOPICS.length);
+    ok('each topic says what it covers', $$('#topics .td').every(e => e.textContent.trim().length > 20));
+    ok('the saved topic is ticked', $('#topics [data-topic="present"]').checked);
+    ok('nothing is being asked yet', $('#answerRow').hidden && !$('#startBtn').hidden);
+    ok('it says how to begin', /Start practising/.test(body()), body().slice(0, 120));
+
+    /* ---- a round ---- */
+    $('#startBtn').click(); await tick();
+    ok('a question appears', !$('#answerRow').hidden && txt('#qText').length > 4, txt('#qText'));
+    ok('it says which question this is', /Question 1 of 3/.test(txt('#qNum')), txt('#qNum'));
+    ok('it names the topic', txt('#qTopic').length > 4, txt('#qTopic'));
+    ok('the round is remembered straight away', w.PH_ES.state().history.length === 1);
+    const seed = w.PH_ES.round().ws.seed;
+    ok('the round has a seed', seed > 0, String(seed));
+    ok('a round is an ordinary worksheet, so it can be rebuilt', w.PH_ES.round().ws.problems.length === 3);
+
+    /* the same seed must rebuild the same questions, or review.html asks the wrong thing */
+    const again = w.ES.generate({ topics:['present'], count:3, difficulty:2, seed });
+    ok('the same seed rebuilds the same questions',
+       again.problems.map(p=>p.question).join('|') === w.PH_ES.round().ws.problems.map(p=>p.question).join('|'));
+
+    /* ---- a right answer ---- */
+    const p0 = w.PH_ES.round().ws.problems[0];
+    $('#ansIn').value = p0.answer;
+    $('#checkBtn').click(); await tick();
+    ok('a right answer is marked right', /Correct/.test(txt('#verdict')), txt('#verdict'));
+    ok('the card shows it', $('#qcard').className.indexOf('right') >= 0, $('#qcard').className);
+    ok('Check is replaced by Next', $('#checkBtn').hidden && !$('#nextBtn').hidden);
+
+    $('#nextBtn').click(); await tick();
+    ok('it moves on', /Question 2 of 3/.test(txt('#qNum')), txt('#qNum'));
+    ok('the box is empty for the next one', $('#ansIn').value === '', $('#ansIn').value);
+    ok('and the card is plain again', $('#qcard').className === 'qcard', $('#qcard').className);
+
+    /* ---- a wrong answer says what was wanted ---- */
+    const p1 = w.PH_ES.round().ws.problems[1];
+    $('#ansIn').value = 'definitely not that';
+    $('#checkBtn').click(); await tick();
+    ok('a wrong answer is marked wrong', /Not quite/.test(txt('#verdict')), txt('#verdict'));
+    ok('and the right answer is shown', txt('#verdict').indexOf(p1.answer) > 0, txt('#verdict'));
+    ok('the card shows it', $('#qcard').className.indexOf('wrong') >= 0, $('#qcard').className);
+
+    /* ---- accents are optional, and typeable ---- */
+    $('#nextBtn').click(); await tick();
+    const p2 = w.PH_ES.round().ws.problems[2];
+    const bare = p2.answer.replace(/[áéíóúüñ]/g, c => ({'á':'a','é':'e','í':'i','ó':'o','ú':'u','ü':'u','ñ':'n'}[c]));
+    ok('there are accent keys for a keyboard without them', $$('#keys button').length >= 7, String($$('#keys button').length));
+    $('#ansIn').value = ''; $('#ansIn').focus();
+    $$('#keys button')[0].click(); await tick();
+    ok('an accent key types into the box', $('#ansIn').value === 'á', JSON.stringify($('#ansIn').value));
+    $('#ansIn').value = bare;
+    $('#checkBtn').click(); await tick();
+    ok('an answer typed without accents is still right', /Correct/.test(txt('#verdict')), bare + ' → ' + txt('#verdict'));
+
+    /* ---- the round ends and another begins by itself: this is the endless part ---- */
+    $('#nextBtn').click();
+    await waitFor(() => w.PH_ES.state().history.length === 2, 400);
+    const st = w.PH_ES.state();
+    ok('finishing a round starts another one', st.history.length === 2, String(st.history.length));
+    ok('and it is a different round', st.history[0].seed !== st.history[1].seed, st.history[0].seed + ' vs ' + st.history[1].seed);
+    ok('it never says there are no questions left', !$('#answerRow').hidden && txt('#qText').length > 4, txt('#qText'));
+    ok('and it is asking question 1 of the new round', /Question 1 of 3/.test(txt('#qNum')), txt('#qNum'));
+    const done = st.history[1];
+    ok('the finished round kept its score', done.score && done.score.total === 3, JSON.stringify(done.score));
+    ok('it got 2 of 3 right', done.score.right === 2, JSON.stringify(done.score));
+    ok('it remembered which one was missed', JSON.stringify(done.missed) === '[1]', JSON.stringify(done.missed));
+    ok('with everything review needs to ask it again',
+       done.seed > 0 && done.count === 3 && done.difficulty === 2 && done.topics.join() === 'present',
+       JSON.stringify({ seed: done.seed, count: done.count, difficulty: done.difficulty, topics: done.topics }));
+    ok('the hub summary says how it went', /2\/3/.test(st.summary.headline || ''), st.summary.headline);
+    ok('the saved state really is in localStorage', (localStorage.getItem(KEY) || '').indexOf('"seed"') > 0);
+
+    /* ---- the counters ---- */
+    ok('the counters show up', $$('#stats .stat').length === 4, String($$('#stats .stat').length));
+    ok('it counts the questions answered', /3/.test($$('#stats .num')[0].textContent), $$('#stats .num')[0].textContent);
+    ok('the round shows in the list', /present|Present/.test(txt('#hist')), txt('#hist').slice(0, 90));
+
+    /* ---- stopping ---- */
+    $('#stopBtn').click(); await tick();
+    ok('stopping puts the question away', $('#answerRow').hidden && !$('#startBtn').hidden);
+    ok('an untouched round is not saved as practice', w.PH_ES.state().history.length === 1, String(w.PH_ES.state().history.length));
+
+    /* ---- a set to write on ---- */
+    $('#sheetBtn').click(); await tick();
+    ok('a printable set is shown on the page', $$('#wsList .prob').length === 3, String($$('#wsList .prob').length));
+    ok('the answers are hidden to start with', !$('#wsList .showans'));
+    $('#answersBtn').click(); await tick();
+    ok('and can be shown', $$('#wsList .showans').length === 3, String($$('#wsList .showans').length));
+    ok('the print button exists without needing a PDF', !!$('#printBtn') && !!$('#downloadBtn'));
+
+    /* ---- picking topics ---- */
+    $('#topics [data-topic="numbers"]').click(); await tick();
+    ok('ticking a topic is remembered', w.PH_ES.state().settings.topics.indexOf('numbers') >= 0,
+       w.PH_ES.state().settings.topics.join());
+    d.querySelector('[data-pick="none"]').click(); await tick();
+    ok('clearing them all is allowed', w.PH_ES.state().settings.topics.length === 0);
+    ok('and then it will not start', $('#startBtn').disabled);
+    d.querySelector('[data-pick="all"]').click(); await tick();
+    ok('all of them can be picked at once', w.PH_ES.state().settings.topics.length === w.ES.TOPICS.length);
+    ok('and then it will start', !$('#startBtn').disabled);
+
+    /* ---- every topic can actually be asked ---- */
+    let bad = [];
+    w.ES.TOPICS.forEach(t => {
+      for (const diff of [1, 2, 3]) {
+        const ws = w.ES.generate({ topics: [t.id], count: 4, difficulty: diff, seed: 2468 });
+        if (ws.problems.length !== 4 || ws.problems.some(p => !p.question || !p.answer)) bad.push(t.id + '@' + diff);
+      }
+    });
+    ok('every topic produces questions at every level', !bad.length, bad.join(' '));
+
+    /* ---- nothing personal is on the page ---- */
+    ok('the page does not name anybody by default', !/priyaan/i.test(body()));
+  } catch (e) { ok('the suite ran to the end', false, e && (e.stack || e.message)); }
+  finally {
+    snap === null ? localStorage.removeItem(KEY) : localStorage.setItem(KEY, snap);
+    const failed = R.filter(l => l.indexOf('FAIL') === 0).length;
+    console.log('RESULTS ' + failed + ' failed of ' + R.length);
+  }
+});
+</script>

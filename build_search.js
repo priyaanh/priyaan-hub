@@ -26,6 +26,7 @@ const add = (icon, title, sub, url, keywords) => entries.push({ i: icon, t: titl
  ['📖', 'Hindi Flashcards', 'Malhar Class 6 and 7 vocabulary', 'hindi.html', 'हिंदी malhar ncert vocabulary flashcards devanagari'],
  ['📅', 'Weekly Plan', 'The week, with checkboxes and tasks due', 'schedule.html', 'timetable routine chores homework'],
  ['🐍', 'Python Practice', 'What does this print? Eleven topics', 'python.html', 'code coding programming'],
+ ['💬', 'Spanish Practice', 'Endless Spanish questions, marked on the page', 'spanish.html', 'español verbs ser estar conjugation vocabulary numbers time gustar'],
  ['✏️', 'Make Practice', 'A worksheet by grade, or from a PDF', 'ai.html', 'grade 6 7 8 worksheet pdf chatgpt claude packet'],
  ['🗓️', 'Calendar & Tasks', 'Google Calendar and Google Tasks', 'calendar.html', 'google events todo reminders'],
  ['📈', 'Progress', 'Streaks, accuracy, practice time, every app at once', 'progress.html', 'streak history chart stats calendar heatmap records minutes accuracy'],
@@ -69,6 +70,11 @@ const grades = require('./grades.js');
   add('✏️', g.name, 'Worksheets · ' + g.sub, 'ai.html#' + g.id, g.name + ' ' + g.sub + ' worksheet practice');
   (g.topics || []).forEach(t => add('✏️', t.name, g.name + ' topic', 'ai.html#' + g.id, t.name + ' ' + t.description + ' ' + g.name));
 });
+
+/* Spanish topics, and the words themselves */
+const es = require('./spanish.js');
+(es.TOPICS || []).forEach(t => add('💬', t.name, 'Spanish · ' + t.unit, 'spanish.html#' + t.id, t.name + ' ' + t.description + ' spanish español'));
+(es.VOCAB || []).forEach(w => add('💬', w.es, 'Spanish · ' + w.en, 'spanish.html#vocab', w.es + ' ' + w.en + ' spanish español ' + (w.set || '')));
 
 /* Python topics */
 const py = require('./pyquiz.js');
