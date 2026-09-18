@@ -101,6 +101,7 @@ body[data-app="progress"] { --accent:#e11d48; --accent-soft:rgba(225,29,72,.15);
 body[data-app="review"]   { --accent:#9333ea; --accent-soft:rgba(147,51,234,.15); }
 body[data-app="profile"]  { --accent:#a16207; --accent-soft:rgba(161,98,7,.16); }
 body[data-app="spanish"]  { --accent:#b91c1c; --accent-soft:rgba(185,28,28,.15); }
+body[data-app="ask"]      { --accent:#4f46e5; --accent-soft:rgba(79,70,229,.15); }
 
 /* Resolved per element, not once at the root, so each page's own --accent feeds the mix. */
 *, *::before, *::after {

@@ -15,14 +15,14 @@ FLAGS=(--headless=new --disable-gpu --no-first-run --hide-scrollbars --allow-fil
 fail=0
 
 echo "▶ pages load without console errors"
-for page in index piano badges math spanish quizzes hindi schedule calendar ai python progress review profile; do
+for page in index piano badges math spanish ask quizzes hindi schedule calendar ai python progress review profile; do
   "$CHROME" "${FLAGS[@]}" --virtual-time-budget=5000 --dump-dom "file://$ROOT/$page.html" >/dev/null 2>"$TMP/$page.err"
   errs=$(grep "CONSOLE" "$TMP/$page.err" | grep -iE "error|uncaught|not defined|undefined|failed" | grep -v favicon)
   if [ -n "$errs" ]; then fail=1; echo "  ✗ $page.html"; echo "$errs" | sed 's/^\[[^]]*\] /    /' | head -5
   else echo "  ✓ $page.html"; fi
 done
 
-want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub search progress review theme profile name dates free ai gradesheet spanish python tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark contrast-midnight contrast-paper contrast-contrast hostile offline)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=(hub search progress review theme profile name dates free ai gradesheet spanish ask python tasks sched quizprint cal badges hindicards pianolog a11y mobile metronome contrast contrast-dark contrast-midnight contrast-paper contrast-contrast hostile offline)
 
 # The offline suite needs a real origin: service workers do not run from file://.
 serve() {

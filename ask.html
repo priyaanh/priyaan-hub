@@ -1,0 +1,650 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ask for Practice · Practice Hub</title>
+<meta name="description" content="Say what you want to practise in your own words and get asked it, one question at a time.">
+<link rel="stylesheet" href="shared.css">
+<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); }
+.thread { flex: 1; display: flex; flex-direction: column; gap: .8rem; padding-bottom: 1rem; }
+.msg { display: flex; gap: .6rem; align-items: flex-start; max-width: 52rem; }
+.msg .who { flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; background: var(--surface-2); border: 1px solid var(--border); }
+.msg .bubble { border-radius: var(--radius-sm); padding: .7rem .85rem; line-height: 1.55; overflow-wrap: anywhere; min-width: 0; }
+.msg.hub .bubble { background: var(--surface); border: 1px solid var(--border); }
+.msg.you { align-self: flex-end; flex-direction: row-reverse; }
+.msg.you .bubble { background: var(--accent-soft); border: 1px solid var(--accent-text); }
+.msg.you .who { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-text); }
+.msg .bubble p { margin: 0; }
+.msg .bubble p + p { margin-top: .45rem; }
+.msg .q { font-size: 1.2rem; line-height: 1.5; }
+.msg .q .cue { font-size: .8em; color: var(--muted); }
+.msg .from { font-size: .74rem; color: var(--muted); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .25rem; }
+.msg .ok { color: var(--ok-text); font-weight: 700; }
+.msg .no { color: var(--danger-text); font-weight: 700; }
+.msg .why { color: var(--muted); font-size: .9rem; margin-top: .3rem; }
+.msg code { font-family: var(--mono); font-size: .92em; }
+.msg pre { margin: .5rem 0 0; padding: .6rem .7rem; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: .88rem; line-height: 1.45; }
+.msg .fig { margin: .5rem 0; }
+.msg .fig svg { max-width: 100%; height: auto; }
+.choices { display: grid; gap: .35rem; margin-top: .6rem; }
+.choices button { font: inherit; text-align: left; padding: .45rem .6rem; border: 1px solid var(--border); background: var(--surface-2);
+  color: inherit; border-radius: 8px; cursor: pointer; display: flex; gap: .5rem; }
+.choices button:hover { border-color: var(--accent-text); }
+.choices button .k { font-weight: 800; color: var(--accent-text); }
+.choices button[aria-checked="true"] { border-color: var(--accent-text); background: var(--accent-soft); }
+.choices button[disabled] { cursor: default; opacity: 1; }
+.choices button.is-right { border-color: var(--ok); background: var(--ok-soft); }
+.choices button.is-right .k { color: var(--ok-text); }
+.choices button.is-wrong { border-color: var(--danger); background: var(--danger-soft); }
+.choices button.is-wrong .k { color: var(--danger-text); }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
+.chips button { font: inherit; font-size: .85rem; padding: .3rem .6rem; border: 1px solid var(--border); background: var(--surface-2);
+  color: inherit; border-radius: 999px; cursor: pointer; }
+.chips button:hover { border-color: var(--accent-text); background: var(--accent-soft); }
+.composer { position: sticky; bottom: 0; background: var(--bg); padding: .7rem 0 1rem; border-top: 1px solid var(--border); }
+.composer .row { display: flex; gap: .5rem; align-items: flex-end; }
+.composer textarea { flex: 1; min-height: 2.7rem; max-height: 9rem; resize: none; font: inherit; padding: .6rem .7rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: inherit; }
+.composer textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.composer .hint { font-size: .76rem; color: var(--muted); margin-top: .35rem; }
+.keys { display: flex; gap: .25rem; flex-wrap: wrap; margin-bottom: .4rem; }
+.keys button { font: inherit; font-size: .9rem; line-height: 1; padding: .25rem .45rem; border: 1px solid var(--border);
+  background: var(--surface); color: inherit; border-radius: 6px; cursor: pointer; }
+.scorebar { display: flex; gap: .6rem; align-items: baseline; font-size: .8rem; color: var(--muted); }
+.scorebar b { color: var(--text); font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) { .msg .q { font-size: 1.05rem; } }
+</style></head>
+<body data-app="ask">
+<header class="topbar"><div class="inner">
+  <a class="back" href="index.html">← Hub</a>
+  <h1 class="title"><span class="emoji">🗨️</span><span class="name">Ask for Practice</span></h1>
+  <div class="spacer"></div>
+  <span class="scorebar no-print" id="scorebar"></span>
+  <button class="btn btn-sm btn-ghost" id="clearBtn" title="Start a new conversation">✕ <span class="lbl">Clear</span></button>
+</div></header>
+<main class="container">
+  <div class="thread" id="thread" role="log" aria-live="polite" aria-label="Conversation"></div>
+  <div class="composer no-print">
+    <div class="keys" id="keys" hidden aria-label="Accented letters"></div>
+    <div class="row">
+      <textarea id="box" rows="1" placeholder="Ask for practice — say what you want and how much"
+        aria-label="Ask for practice, or type your answer" autocomplete="off" spellcheck="false"></textarea>
+      <button class="btn btn-primary" id="send">Send</button>
+    </div>
+    <div class="hint" id="hint">Enter sends · Shift+Enter makes a new line</div>
+  </div>
+</main>
+<script src="shared.js"></script>
+<script src="im1.js"></script><script src="spanish.js"></script><script src="pyquiz.js"></script>
+<script src="grades.js"></script><script src="cpm_int2_ch1.js"></script>
+<script>
+/* Ask for practice in your own words and get asked it, one question at a time, in a thread.
+   Nothing is sent anywhere: the request is read here, on the device, and the questions come from the
+   same generators the other pages use. That is why it works offline and costs nothing.
+   A finished round is saved as {gen, topics, count, difficulty, seed} plus the indices missed, which is
+   all review.html needs to ask any of them again. */
+(function () {
+  'use strict';
+  const KEY = 'ph.ask.v1';
+  const $ = s => document.querySelector(s), $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
+  const esc = PH.esc;
+
+  /* ===================== what we can ask about ===================== */
+  /* Each source knows how to make a set, turn one into an askable question, and mark an answer.
+     Adding a generator here is the only thing needed to make it answerable in the thread. */
+  const SOURCES = {
+    math: {
+      name: 'Integrated Math 1', short: 'maths', emoji: '🧮', words: 'math maths algebra integrated cpm worksheet equation',
+      ready: () => !!window.IM1,
+      topics: () => (window.IM1 ? IM1.TOPICS : []).map(t => ({ id: t.id, name: t.name, words: t.name + ' ' + t.description + ' ' + t.unitName })),
+      make: o => IM1.generate(o),
+      items: ws => ws.problems.map(p => ({ from: p.topicName, q: p.question, answer: String(p.answer), explain: p.work || '', check: t => IM1.checkAnswer(p, t) }))
+    },
+    spanish: {
+      name: 'Spanish', short: 'Spanish', emoji: '💬', words: 'spanish espanol español verb conjugate vocabulary',
+      ready: () => !!window.ES,
+      topics: () => (window.ES ? ES.TOPICS : []).map(t => ({ id: t.id, name: t.name, words: t.name + ' ' + t.description })),
+      make: o => ES.generate(o),
+      items: ws => ws.problems.map(p => ({ from: p.topicName, q: p.question, answer: String(p.answer), explain: p.work || '', check: t => ES.checkAnswer(p, t), accents: true }))
+    },
+    python: {
+      name: 'Python', short: 'Python', emoji: '🐍', words: 'python code coding program print output',
+      ready: () => !!window.PY,
+      topics: () => (window.PY ? PY.TOPICS : []).map(t => ({ id: t.id, name: t.name, words: t.name + ' ' + t.description })),
+      make: o => PY.generate(o),
+      items: set => set.questions.map(q => ({ from: q.topicName, q: q.prompt || 'What does this print?', code: q.code || '',
+        choices: (q.choices && q.choices.length) ? q.choices.slice() : null, answer: String(q.answer), explain: q.explain || '',
+        check: t => PY.checkAnswer(q, t) }))
+    },
+    grade: {
+      name: 'Grade practice', short: 'grade practice', emoji: '✏️', words: 'grade sixth seventh eighth ratios percents fractions',
+      ready: () => !!window.GRADES,
+      topics: () => {
+        const out = [];
+        (window.GRADES ? GRADES.LEVELS : []).forEach(l => (l.topics || []).forEach(t =>
+          out.push({ id: t.id, name: t.name, grade: l.id, words: t.name + ' ' + t.description + ' ' + l.name })));
+        return out;
+      },
+      make: o => GRADES.generate(o),
+      items: ws => ws.problems.map(p => ({ from: p.topicName, q: p.question, answer: String(p.answer), explain: p.work || '', check: t => GRADES.checkAnswer(p, t) }))
+    },
+    lesson: {
+      name: 'CPM lesson quizzes', short: 'the lesson quizzes', emoji: '📝', words: 'cpm lesson quiz chapter geometry integrated 2 ii',
+      ready: () => !!(window.CPM_QUIZZES && CPM_QUIZZES.materialise),
+      topics: () => (window.CPM_QUIZZES ? CPM_QUIZZES.lessons : []).map(l => ({ id: l.id, name: l.id + ' · ' + l.title, words: l.id + ' ' + l.title })),
+      make: o => {
+        const rnd = PH.rng(o.seed);
+        const ids = o.topics && o.topics.length ? o.topics : CPM_QUIZZES.lessons.map(l => l.id);
+        const refs = [];
+        ids.forEach(id => {
+          const l = CPM_QUIZZES.lessons.filter(x => x.id === id)[0];
+          if (l) l.questions.forEach((q, i) => refs.push({ id: id, idx: i }));
+        });
+        for (let i = refs.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = refs[i]; refs[i] = refs[j]; refs[j] = t; }
+        const picked = refs.slice(0, o.count);
+        return { seed: o.seed, topics: ids, difficulty: o.difficulty, count: picked.length,
+          made: picked.map(r => ({ ref: r, item: CPM_QUIZZES.materialise(r.id, r.idx, rnd) })).filter(x => x.item) };
+      },
+      items: set => set.made.map(m => ({ from: 'Lesson ' + m.ref.id, q: m.item.q, svg: m.item.svg || '',
+        choices: m.item.type === 'mc' ? m.item.choices.slice() : null,
+        answer: m.item.type === 'mc' ? m.item.choices[m.item.answer] : String(m.item.answer) + (m.item.unit ? ' ' + m.item.unit : ''),
+        explain: m.item.explain || '',
+        check: (t, pick) => CPM_QUIZZES.checkAnswer(m.item, m.item.type === 'mc' ? pick : t) }))
+    }
+  };
+  const SRC_ORDER = ['math', 'lesson', 'grade', 'spanish', 'python'];
+  const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  /* ===================== turning anything into a multiple choice ===================== */
+  /* Every question here is pick-one, whatever generator it came from. The wrong options are real
+     answers to other questions of the same topic, generated from a seed of their own: that makes them
+     the right kind of thing -- other verb forms beside a verb form, other numbers beside a number --
+     without a hand-written list of wrong answers per topic. */
+  function answerKey(s) { return String(s == null ? '' : s).replace(/<[^>]+>/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  const MINUS = /[\u2212\u2013\u2014]/g;
+  /* What KIND of answer this is. Wrong options have to be the same kind as the right one, or the
+     question answers itself: a number beside three equations is not a choice, it is a giveaway. */
+  function shapeOf(a) {
+    const t = answerKey(a).replace(MINUS, '-');
+    if (/^-?\d+(\.\d+)?$/.test(t)) return 'num';
+    if (/^-?\d+\/\d+$/.test(t)) return 'frac';
+    if (/^-?\$/.test(t)) return 'money';
+    if (/%$/.test(t)) return 'percent';
+    if (/^\(.*,.*\)$/.test(t)) return 'point';
+    if (/^\{.*\}$/.test(t)) return 'set';
+    const eq = t.match(/^([a-z][a-z0-9()]*)\s*(=|<=|>=|<|>)/);
+    if (eq) return 'eq:' + eq[1] + eq[2];
+    return 'text:' + Math.min(4, t.split(' ').length);
+  }
+  function numOf(a) {
+    const t = answerKey(a).replace(MINUS, '-').replace(/[$,%]/g, '');
+    const fr = t.match(/^(-?\d+)\/(\d+)$/);
+    if (fr) return Number(fr[1]) / Number(fr[2]);
+    return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
+  }
+  function distractorPool(srcKey, o) {
+    const src = SOURCES[srcKey];
+    const pool = {};
+    try {
+      /* a second, bigger draw with a seed of its own: the asked questions keep their own order, so the
+         indices review.html stores still point at the same questions */
+      const big = src.make(Object.assign({}, o, { count: 40, seed: (o.seed + 7919) % 4294967296 }));
+      src.items(big).forEach(it => {
+        const k = shapeOf(it.answer) + '|' + (it.from || '');
+        (pool[k] = pool[k] || []).push(String(it.answer));
+        const any = shapeOf(it.answer) + '|*';
+        (pool[any] = pool[any] || []).push(String(it.answer));
+      });
+    } catch (e) { /* no pool is survivable: the fallbacks below still give four options */ }
+    return pool;
+  }
+  /* last resort, in the same shape as the answer it is standing beside. Rebuilt from the number rather
+     than patched into the text, so "−$3.00" becomes "−$5.00" and never "−$−5". */
+  function reformat(sample, value) {
+    const src = String(sample);
+    const minus = src.indexOf('\u2212') >= 0 ? '\u2212' : '-';
+    const dec = (src.match(/\d+\.(\d+)/) || ['', ''])[1].length;
+    const abs = Math.abs(value);
+    let body = dec ? abs.toFixed(dec) : String(Math.round(abs * 1000) / 1000);
+    if (/\$/.test(src)) body = '$' + body;
+    if (/%$/.test(src)) body = body + '%';
+    return (value < 0 ? minus : '') + body;
+  }
+  function nudge(ans, n) {
+    const deltas = [1, -1, 2, -2, 3, -3, 10, -10];
+    const d = deltas[n % deltas.length];
+    const fr = answerKey(ans).replace(MINUS, '-').match(/^(-?\d+)\/(\d+)$/);
+    if (fr) {
+      const top = Number(fr[1]) + d;
+      return (top < 0 ? (String(ans).indexOf('\u2212') >= 0 ? '\u2212' : '-') : '') + Math.abs(top) + '/' + fr[2];
+    }
+    const v = numOf(ans);
+    if (v !== null) return reformat(ans, Number.isInteger(v) ? v + d : Math.round((v + d) * 100) / 100);
+    return String(ans) + ['s', 'es', 'n', 'o'][n % 4];
+  }
+  /* Some generators write the options into the question itself and expect the letter back --
+     "(a) ... <br>(b) ...". Those are already multiple choice; lift them out so they are shown as
+     buttons rather than asking for a letter that would clash with the A/B/C/D beside it. */
+  function liftLettered(it) {
+    if (it.choices || !/^[a-e]$/i.test(answerKey(it.answer))) return null;
+    const parts = String(it.q).split(/<br\s*\/?>/i);
+    const opts = [], labels = [];
+    let stem = [];
+    parts.forEach(seg => {
+      const m = seg.match(/^\s*\(([a-e])\)\s*([\s\S]+)$/i);
+      if (m) { labels.push(m[1].toLowerCase()); opts.push(m[2].trim()); }
+      else if (!opts.length) stem.push(seg);
+    });
+    if (opts.length < 2) return null;
+    const at = labels.indexOf(answerKey(it.answer));
+    if (at < 0) return null;
+    return Object.assign({}, it, { q: stem.join('<br>').trim(), choices: opts, correct: at,
+      answer: opts[at], check: (typed, pick) => pick === at });
+  }
+  function toChoices(items, srcKey, o) {
+    const pool = distractorPool(srcKey, o);
+    return items.map((it0, idx) => {
+      const lifted = liftLettered(it0);
+      const it = lifted || it0;
+      if (it.choices && it.choices.length >= 2) return it;
+      const rnd = PH.rng((o.seed + idx * 131) % 4294967296);
+      const right = answerKey(it.answer), shape = shapeOf(it.answer), target = numOf(it.answer);
+      const seen = {}; seen[right] = 1;
+      const opts = [];
+      const take = list => {
+        let cands = (list || []).filter(c => { const k = answerKey(c); return k && !seen[k]; });
+        /* for numbers, near misses make a real question; anything else is a giveaway */
+        if (target !== null) cands.sort((a, b) => Math.abs((numOf(a) == null ? 1e9 : numOf(a)) - target) - Math.abs((numOf(b) == null ? 1e9 : numOf(b)) - target));
+        else for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = cands[i]; cands[i] = cands[j]; cands[j] = t; }
+        cands.forEach(c => { const k = answerKey(c); if (opts.length < 3 && !seen[k]) { seen[k] = 1; opts.push(String(c)); } });
+      };
+      take(pool[shape + '|' + (it.from || '')]);
+      if (opts.length < 3) take(pool[shape + '|*']);
+      /* Made-up options are only honest for numbers, where a near miss is a real wrong answer. Inventing
+         a word ("weak negatives") would be a giveaway, so a short question gets three options, or two. */
+      if (target !== null || shape === 'frac') {
+        let n = 0;
+        while (opts.length < 3 && n < 16) { const c = nudge(it.answer, n++); const k = answerKey(c); if (!seen[k]) { seen[k] = 1; opts.push(c); } }
+      }
+      if (!opts.length) return it;                 /* nothing plausible to offer: ask for it typed */
+      const choices = opts.concat([String(it.answer)]);
+      for (let i = choices.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = choices[i]; choices[i] = choices[j]; choices[j] = t; }
+      const at = choices.map(answerKey).indexOf(right);
+      return Object.assign({}, it, { choices: choices, correct: at, check: (typed, pick) => pick === at });
+    });
+  }
+
+  /* ===================== reading what was asked ===================== */
+  const STOP = ' a an the me some please can you i want give ask on about of for with questions question quiz practice test problems problem ask at do lets let us more another new '.split(' ');
+  function words(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9áéíóúüñ.]+/g, ' ').split(' ')
+      .filter(w => w && STOP.indexOf(w) < 0);
+  }
+  function fold(s) { return String(s).toLowerCase().replace(/[áéíóúüñ]/g, c => ({ 'á':'a','é':'e','í':'i','ó':'o','ú':'u','ü':'u','ñ':'n' }[c])); }
+
+  function readRequest(text) {
+    const raw = String(text || ''), low = fold(raw.toLowerCase());
+    const out = { count: null, difficulty: null, source: null, topics: [], grade: null, lesson: null, unclear: [] };
+
+    /* a lesson number is the most specific thing anyone can say, so look for it first */
+    const lm = low.match(/\b(\d+\.\d+\.\d+)\b/);
+    if (lm) { out.lesson = lm[1]; out.source = 'lesson'; }
+
+    const gm = low.match(/\bgrade\s*(\d{1,2})\b/) || low.match(/\b(\d{1,2})(?:st|nd|rd|th)\s+grade\b/);
+    if (gm) out.grade = gm[1];
+    ['sixth', 'seventh', 'eighth'].forEach((w, i) => { if (low.indexOf(w) >= 0) out.grade = String(6 + i); });
+
+    /* how many: any small number that is not part of a lesson id or a grade */
+    let scrubbed = low.replace(/\d+\.\d+\.\d+/g, ' ').replace(/grade\s*\d{1,2}/g, ' ').replace(/\b\d{1,2}(?:st|nd|rd|th)\s+grade/g, ' ')
+      .replace(/integrated\s*(1|2|3|i|ii|iii)\b/g, ' ').replace(/\blevel\s*[123]\b/g, ' ');
+    const cm = scrubbed.match(/\b(\d{1,2})\b/);
+    if (cm) out.count = Math.min(50, Math.max(1, Number(cm[1])));
+
+    if (/\b(easy|easier|simple|warm|gentle|basic|start)\b/.test(low)) out.difficulty = 1;
+    if (/\b(hard|harder|hardest|challenge|challenging|difficult|tough|tricky)\b/.test(low)) out.difficulty = 3;
+    const dm = low.match(/\blevel\s*([123])\b/);
+    if (dm) out.difficulty = Number(dm[1]);
+
+    /* which source and which topics: score the words against every topic there is */
+    const ws = words(low);
+    const scores = {}, hits = {};
+    SRC_ORDER.forEach(k => {
+      const src = SOURCES[k];
+      if (!src.ready()) return;
+      scores[k] = 0; hits[k] = [];
+      const srcWords = src.words.split(' ');
+      ws.forEach(w => { if (srcWords.indexOf(w) >= 0) scores[k] += 3; });
+      src.topics().forEach(t => {
+        const tw = fold(t.words).toLowerCase();
+        let n = 0;
+        ws.forEach(w => { if (w.length > 2 && tw.indexOf(w) >= 0) n++; });
+        if (fold(t.name).toLowerCase() === low.trim()) n += 5;
+        if (n) { scores[k] += n; hits[k].push({ id: t.id, name: t.name, n: n, grade: t.grade }); }
+      });
+    });
+    if (out.lesson) {
+      const l = (window.CPM_QUIZZES ? CPM_QUIZZES.lessons : []).filter(x => x.id === out.lesson)[0];
+      if (l) { out.source = 'lesson'; out.topics = [l.id]; return out; }
+      out.unclear.push('There is no lesson ' + out.lesson + ' in the quiz bank.');
+      out.lesson = null; out.source = null;
+    }
+    if (out.grade) {
+      const lvl = (window.GRADES ? GRADES.LEVELS : []).filter(l => String(l.id) === out.grade)[0];
+      if (lvl) { out.source = 'grade'; }
+      else out.unclear.push('There is no Grade ' + out.grade + ' set yet.');
+    }
+    let best = null;
+    Object.keys(scores).forEach(k => { if (best === null || scores[k] > scores[best]) best = k; });
+    if (!out.source && best && scores[best] > 0) out.source = best;
+    if (out.source && hits[out.source] && hits[out.source].length) {
+      const top = hits[out.source].slice().sort((a, b) => b.n - a.n);
+      const keep = top.filter(t => t.n === top[0].n).slice(0, 4);
+      out.topics = keep.map(t => t.id);
+      if (out.source === 'grade' && !out.grade && keep[0] && keep[0].grade) out.grade = keep[0].grade;
+    }
+    return out;
+  }
+
+  /* ===================== state ===================== */
+  function blank() { return { version: 1, history: [], summary: { headline: '', sub: '' } }; }
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const validISO = s => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00'); return !isNaN(d.getTime()) && PH.todayISO(d) === s; };
+  function scoreOf(v) {
+    if (!isObj(v)) return null;
+    const total = Math.round(Number(v.total)), right = Math.round(Number(v.right));
+    if (!(total > 0) || !(right >= 0)) return null;
+    return { right: Math.min(right, total), total: total };
+  }
+  function idxList(v, max) {
+    if (!Array.isArray(v)) return [];
+    const out = [], seen = {};
+    v.forEach(n => { const i = Math.round(Number(n));
+      if (Number.isInteger(i) && i >= 0 && i < max && !seen[i]) { seen[i] = 1; out.push(i); } });
+    return out.slice(0, 60);
+  }
+  function normalize(raw) {
+    const s = blank();
+    if (!isObj(raw) || !Array.isArray(raw.history)) return s;
+    s.history = raw.history.filter(isObj).map(h => {
+      const count = isFinite(h.count) ? Math.min(60, Math.max(1, Math.round(h.count))) : 10;
+      return {
+        id: typeof h.id === 'string' && h.id ? h.id : PH.uid(),
+        date: validISO(h.date) ? h.date : PH.todayISO(),
+        gen: SOURCES[h.gen] ? h.gen : '',
+        topics: Array.isArray(h.topics) ? h.topics.filter(t => typeof t === 'string').slice(0, 20) : [],
+        grade: typeof h.grade === 'string' ? h.grade.slice(0, 3) : '',
+        count: count,
+        difficulty: [1, 2, 3].indexOf(h.difficulty) >= 0 ? h.difficulty : 2,
+        seed: isFinite(h.seed) ? Math.round(h.seed) : 1,
+        score: scoreOf(h.score),
+        missed: idxList(h.missed, count),
+        refs: Array.isArray(h.refs) ? h.refs.filter(r => typeof r === 'string' && /^[\d.]+:\d+$/.test(r)).slice(0, 60) : null
+      };
+    }).filter(h => h.gen).slice(0, 200);
+    return s;
+  }
+  let state = normalize(PH.load(KEY, null));
+  function save() { state.summary = buildSummary(); PH.save(KEY, state); }
+  const played = () => state.history.filter(h => h.score);
+  function buildSummary() {
+    const pl = played();
+    if (!pl.length) return { headline: '', sub: '' };
+    const last = pl[0], src = SOURCES[last.gen];
+    const t = pl.reduce((a, h) => ({ r: a.r + h.score.right, n: a.n + h.score.total }), { r: 0, n: 0 });
+    return { headline: 'Last ' + last.score.right + '/' + last.score.total,
+      sub: (src ? src.name : 'Practice') + (t.n ? ' · ' + Math.round(t.r / t.n * 100) + '% of ' + t.n : '') };
+  }
+
+  /* ===================== the thread ===================== */
+  const EXAMPLES = [
+    '10 questions on slope',
+    'Spanish ser vs estar, hard',
+    'Python loops, 8 questions',
+    'lesson 1.1.1',
+    'grade 7 percents',
+    'easy exponents'
+  ];
+  function say(who, html, opts) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + who;
+    wrap.innerHTML = '<div class="who" aria-hidden="true">' + (who === 'you' ? '🙂' : '🗨️') + '</div>' +
+      '<div class="bubble">' + html + '</div>';
+    $('#thread').appendChild(wrap);
+    if (opts && opts.chips) {
+      const c = document.createElement('div');
+      c.className = 'chips';
+      c.innerHTML = opts.chips.map(t => '<button type="button" data-chip="' + esc(t) + '">' + esc(t) + '</button>').join('');
+      wrap.querySelector('.bubble').appendChild(c);
+    }
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    return wrap;
+  }
+  function greet() {
+    const who = PH.person();
+    say('hub', '<p>' + (who ? 'Hola, ' + esc(who) + '. ' : '') +
+      'Tell me what you want to practise and I will ask you, one question at a time.</p>' +
+      '<p class="muted small">Maths, the CPM lesson quizzes, grade practice, Spanish or Python. ' +
+      'Nothing you type leaves this device.</p>', { chips: EXAMPLES });
+  }
+
+  /* ===================== a run ===================== */
+  let run = null;
+  function startRun(req) {
+    const src = SOURCES[req.source];
+    const count = req.count || 10;
+    const difficulty = req.difficulty || 2;
+    const seed = Math.floor(Math.random() * 999999) + 1;
+    const o = { topics: req.topics.slice(), count: count, difficulty: difficulty, seed: seed };
+    if (req.source === 'grade') o.grade = req.grade || '7';
+    let set, items;
+    try { set = src.make(o); items = toChoices(src.items(set), req.source, o); }
+    catch (e) { say('hub', '<p>That did not work: ' + esc(e.message) + '</p>', { chips: EXAMPLES }); return; }
+    if (!items.length) { say('hub', '<p>I could not find any questions for that.</p>', { chips: EXAMPLES }); return; }
+    const h = { id: PH.uid(), date: PH.todayISO(), gen: req.source, topics: (set.topics || o.topics || []).slice(0, 20),
+      grade: o.grade || '', count: items.length, difficulty: difficulty, seed: set.seed || seed, score: null, missed: [],
+      /* a lesson round picks its questions rather than deriving them from the seed alone, so say which */
+      refs: req.source === 'lesson' && set.made ? set.made.map(m => m.ref.id + ':' + m.ref.idx) : null };
+    state.history.unshift(h); state.history = state.history.slice(0, 200);
+    save();
+    run = { src: req.source, items: items, i: 0, right: 0, answered: 0, marks: [], histId: h.id, pick: null };
+    const names = topicNames(req.source, h.topics);
+    say('hub', '<p>Right — <b>' + items.length + '</b> question' + (items.length === 1 ? '' : 's') +
+      ' on <b>' + esc(names) + '</b>, level ' + difficulty + '.</p>' +
+      '<p class="muted small">Answer in the box. Say <b>skip</b> to move on, <b>answer</b> to be told, or <b>stop</b> to finish.</p>');
+    askCurrent();
+    renderScorebar();
+  }
+  function topicNames(srcKey, ids) {
+    const src = SOURCES[srcKey];
+    if (!src) return '';
+    const all = src.topics();
+    const names = (ids || []).map(id => { const t = all.filter(x => x.id === id)[0]; return t ? t.name : id; });
+    if (!names.length) return src.name;
+    return names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '');
+  }
+  function askCurrent() {
+    const it = run.items[run.i];
+    run.pick = null;
+    const html = '<div class="from">' + esc(it.from || '') + ' · question ' + (run.i + 1) + ' of ' + run.items.length + '</div>' +
+      (it.svg ? '<div class="fig">' + it.svg + '</div>' : '') +
+      '<div class="q">' + safeQ(it.q) + '</div>' +
+      (it.code ? '<pre>' + esc(it.code) + '</pre>' : '') +
+      (it.choices ? '<div class="choices" role="radiogroup" aria-label="Choose an answer">' + it.choices.map((c, i) =>
+        '<button type="button" role="radio" aria-checked="false" data-choice="' + i + '"><span class="k">' + LETTERS[i] + '</span><span>' + safeQ(String(c)) + '</span></button>').join('') + '</div>' : '');
+    run.node = say('hub', html);
+    $('#keys').hidden = !it.accents || !!it.choices;
+    $('#box').placeholder = it.choices ? 'Tap an answer, or type A, B, C or D' : 'Your answer';
+    $('#hint').textContent = it.choices ? 'Tap an answer above, or press A–D. Say skip, answer or stop.' : 'Enter sends · Shift+Enter makes a new line';
+    $('#box').focus();
+  }
+  /* the generators produce a few tags of their own; everything else is escaped */
+  function safeQ(s) { return window.ES ? ES.safeHTML(s) : esc(s); }
+
+  /** Which option someone meant: a tap, a letter, a number, or the words themselves. */
+  function readPick(it, text) {
+    const t = String(text || '').trim().toLowerCase().replace(/[).:]$/, '');
+    if (!it.choices) return null;
+    const letter = LETTERS.map(l => l.toLowerCase()).indexOf(t);
+    if (letter >= 0 && letter < it.choices.length) return letter;
+    const n = Number(t);
+    if (n >= 1 && n <= it.choices.length) return n - 1;
+    const exact = it.choices.map((c, i) => [String(c).replace(/<[^>]+>/g, '').toLowerCase().trim(), i]).filter(p => p[0] === t)[0];
+    return exact ? exact[1] : null;
+  }
+  function answerCurrent(text, pickIdx) {
+    const it = run.items[run.i];
+    const pick = pickIdx == null ? readPick(it, text) : pickIdx;
+    if (it.choices && pick == null) { say('hub', '<p>Tap one of the answers above, or type its letter.</p>'); return; }
+    let ok = false;
+    try { ok = !!it.check(text, pick); } catch (e) { ok = false; }
+    run.marks[run.i] = ok;
+    run.answered++;
+    if (ok) run.right++;
+    /* mark up the question that was just asked, so the thread reads back like a marked paper */
+    if (run.node && it.choices) {
+      const right = it.correct == null ? it.choices.map(function (c) { return String(c); }).indexOf(String(it.answer)) : it.correct;
+      Array.prototype.forEach.call(run.node.querySelectorAll('[data-choice]'), function (b) {
+        const i = Number(b.getAttribute('data-choice'));
+        b.disabled = true;
+        b.setAttribute('aria-checked', String(i === pick));
+        if (i === right) b.classList.add('is-right');
+        else if (i === pick) b.classList.add('is-wrong');
+      });
+    }
+    const chosen = it.choices && pick != null ? it.choices[pick] : text;
+    say('hub',
+      (ok ? '<p><span class="ok">✓ Right.</span> <b>' + safeQ(String(chosen)) + '</b> is the one.</p>'
+          : '<p><span class="no">✗ Not quite.</span> You picked <b>' + safeQ(String(chosen)) + '</b>. The answer is <b>' + safeQ(it.answer) + '</b>.</p>') +
+      '<div class="why">' + safeQ(reasonFor(it, ok)) + '</div>');
+    advance();
+  }
+  /* Why, in a sentence. Most generators hand one over; when one does not, say what the question was
+     about rather than pretending to a reason we do not have. */
+  function reasonFor(it, ok) {
+    if (it.explain) return it.explain;
+    if (it.from) return (ok ? 'That one was ' : 'This one is ') + String(it.from).toLowerCase().replace(/^the /, '') + '.';
+    return ok ? 'Straight in.' : 'Worth going over this one again.';
+  }
+  function advance() {
+    run.i++;
+    renderScorebar();
+    if (run.i >= run.items.length) { finishRun(); return; }
+    askCurrent();
+  }
+  function finishRun() {
+    const total = run.items.length, right = run.right;
+    const missed = run.marks.map((m, i) => m === false ? i : -1).filter(i => i >= 0);
+    const h = state.history.filter(x => x.id === run.histId)[0];
+    if (h) { h.score = { right: right, total: total }; h.missed = missed; h.date = PH.todayISO(); }
+    save();
+    const pct = Math.round(right / total * 100);
+    say('hub', '<p><b>' + right + ' out of ' + total + '</b> — ' + pct + '%. ' +
+      (pct === 100 ? 'Every one. 🎉' : pct >= 80 ? 'Good going.' : pct >= 50 ? 'Worth another go.' : 'These are worth going over again.') + '</p>' +
+      (missed.length ? '<p class="muted small">The ones you missed are waiting in <a href="review.html">Review Mistakes</a>.</p>' : ''),
+      { chips: ['Another round', 'Same again but harder'].concat(EXAMPLES.slice(0, 3)) });
+    run = null;
+    $('#keys').hidden = true;
+    $('#box').placeholder = 'Ask for practice — say what you want and how much';
+    renderScorebar();
+  }
+  function stopRun(quiet) {
+    if (!run) return;
+    if (run.answered) finishRun();
+    else {
+      state.history = state.history.filter(x => x.id !== run.histId);
+      save();
+      run = null;
+      if (!quiet) say('hub', '<p>Stopped. Ask for something else whenever you like.</p>', { chips: EXAMPLES });
+      renderScorebar();
+    }
+  }
+  function renderScorebar() {
+    $('#scorebar').innerHTML = run ? '<b>' + run.right + '</b> / ' + run.answered + ' right' : '';
+  }
+
+  /* ===================== what the person typed ===================== */
+  const LAST = { req: null };
+  function handle(text) {
+    const t = String(text || '').trim();
+    if (!t) return;
+    say('you', '<p>' + esc(t) + '</p>');
+    const low = fold(t.toLowerCase());
+
+    if (run) {
+      if (/^(stop|quit|done|enough|finish)\b/.test(low)) { stopRun(); return; }
+      if (/^(skip|next|pass|dunno|no idea)\b/.test(low)) {
+        run.marks[run.i] = false; run.answered++;
+        say('hub', '<p>Skipped — it was <b>' + safeQ(run.items[run.i].answer) + '</b>.</p>');
+        advance(); return;
+      }
+      if (/^(answer|show|tell me|what is it)\b/.test(low)) {
+        const it = run.items[run.i];
+        say('hub', '<p>It is <b>' + safeQ(it.answer) + '</b>.</p>' + (it.explain ? '<div class="why">' + safeQ(it.explain) + '</div>' : ''));
+        run.marks[run.i] = false; run.answered++;
+        advance(); return;
+      }
+      answerCurrent(t, null);
+      return;
+    }
+
+    if (/^(another|again|more|same again|one more|another round)/.test(low) && LAST.req) {
+      const r = JSON.parse(JSON.stringify(LAST.req));
+      if (/harder|hard/.test(low)) r.difficulty = Math.min(3, (r.difficulty || 2) + 1);
+      if (/easier|easy/.test(low)) r.difficulty = Math.max(1, (r.difficulty || 2) - 1);
+      startRun(r); LAST.req = r; return;
+    }
+    if (/^(help|what can you do|hi|hello|hey)\b/.test(low)) {
+      say('hub', '<p>Say what you want to practise. I can ask about:</p><p>' +
+        SRC_ORDER.filter(k => SOURCES[k].ready()).map(k => SOURCES[k].emoji + ' ' + esc(SOURCES[k].name)).join('<br>') + '</p>' +
+        '<p class="muted small">Add a number for how many, and <b>easy</b> or <b>hard</b> for the level.</p>', { chips: EXAMPLES });
+      return;
+    }
+
+    const req = readRequest(t);
+    if (!req.source) {
+      say('hub', '<p>' + (req.unclear.length ? esc(req.unclear.join(' ')) + ' ' : '') +
+        'I could not tell what that is about. Which of these did you mean?</p>',
+        { chips: SRC_ORDER.filter(k => SOURCES[k].ready()).map(k => SOURCES[k].name) });
+      return;
+    }
+    if (req.unclear.length) say('hub', '<p>' + esc(req.unclear.join(' ')) + '</p>');
+    LAST.req = req;
+    startRun(req);
+  }
+
+  /* ===================== events ===================== */
+  const ACCENTS = ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'];
+  $('#keys').innerHTML = ACCENTS.map(k => '<button type="button" data-key="' + k + '">' + k + '</button>').join('');
+  function send() { const b = $('#box'); const v = b.value; b.value = ''; b.style.height = 'auto'; handle(v); }
+  $('#send').addEventListener('click', send);
+  $('#box').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    if (run && run.items[run.i] && run.items[run.i].choices && /^[1-9a-fA-F]$/.test(e.key) && !$('#box').value) {
+      const n = readPick(run.items[run.i], e.key);
+      if (n != null) { e.preventDefault(); answerCurrent(e.key, n); }
+    }
+  });
+  $('#box').addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(144, e.target.scrollHeight) + 'px'; });
+  document.addEventListener('click', e => {
+    const chip = e.target.closest('[data-chip]');
+    if (chip) { handle(chip.getAttribute('data-chip')); return; }
+    const ch = e.target.closest('[data-choice]');
+    if (ch && run) { const i = Number(ch.getAttribute('data-choice'));
+      $$('[data-choice]').forEach(b => b.setAttribute('aria-checked', 'false'));
+      ch.setAttribute('aria-checked', 'true');
+      answerCurrent(String(run.items[run.i].choices[i]), i); return; }
+    const k = e.target.closest('[data-key]');
+    if (k) { const inp = $('#box'); const at = inp.selectionStart == null ? inp.value.length : inp.selectionStart;
+      inp.value = inp.value.slice(0, at) + k.getAttribute('data-key') + inp.value.slice(inp.selectionEnd == null ? at : inp.selectionEnd);
+      inp.focus(); try { inp.setSelectionRange(at + 1, at + 1); } catch (er) {} return; }
+    if (e.target.closest('#clearBtn')) { stopRun(true); $('#thread').innerHTML = ''; greet(); renderScorebar(); return; }
+  });
+
+  greet();
+  save();
+  /* so the tests can drive a conversation without typing into it */
+  window.PH_ASK = { handle: handle, read: readRequest, run: () => run, state: () => state, sources: SOURCES };
+})();
+</script>
+</body></html>

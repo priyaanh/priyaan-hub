@@ -1,0 +1,140 @@
+<!doctype html><title>ask for practice</title><body style="margin:0"><script>
+/* Holds a conversation with ask.html: it has to read a request written in ordinary words, ask multiple
+   choice questions from the right generator, say whether the pick was right and why, and leave the
+   misses behind in a shape review.html can rebuild. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const waitFor=async(cond,n)=>{for(let i=0;i<(n||400);i++){ if(cond()) return true; await tick(); } return cond();};
+const KEY='ph.ask.v1';
+const snap=localStorage.getItem(KEY);
+localStorage.removeItem(KEY);
+const f=document.createElement('iframe'); f.style.cssText='width:1200px;height:1400px;border:0'; document.body.appendChild(f);
+let phase=0;
+f.src='../ask.html';
+f.addEventListener('load', async () => {
+  if (phase++) return;
+  const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const body = () => d.body.innerText || '';
+  const msgs = () => $$('#thread .msg');
+  /* the reply to an answer is followed straight away by the next question, so look at the last few */
+  const recent = (n) => msgs().slice(-(n || 3)).map(m => m.innerText).join('\n');
+  const last = () => recent(3);
+  try {
+    await waitFor(() => w.PH_ASK && w.IM1 && w.ES && w.PY && w.GRADES && w.CPM_QUIZZES, 500);
+    const A = w.PH_ASK;
+    ok('the page is driveable from a test', !!A);
+    ok('every generator it offers is loaded', !!(w.IM1 && w.ES && w.PY && w.GRADES && w.CPM_QUIZZES));
+    ok('it opens with something to say', msgs().length >= 1 && /practise/i.test(body()), body().slice(0,100));
+    ok('and suggests things to ask for', $$('[data-chip]').length >= 4, String($$('[data-chip]').length));
+
+    /* ---- reading a request written in ordinary words ---- */
+    const read = t => A.read(t);
+    ok('it picks up a maths topic', read('10 questions on slope').source === 'math', JSON.stringify(read('10 questions on slope')));
+    ok('and how many were asked for', read('10 questions on slope').count === 10);
+    ok('it picks up Spanish', read('spanish ser vs estar').source === 'spanish');
+    ok('and which Spanish topic', read('spanish ser vs estar').topics.indexOf('serestar') >= 0, read('spanish ser vs estar').topics.join());
+    ok('it picks up Python', read('python loops').source === 'python');
+    ok('it picks up a CPM lesson number', read('lesson 1.1.1').source === 'lesson' && read('lesson 1.1.1').topics[0] === '1.1.1');
+    ok('a lesson number is not mistaken for a count', read('lesson 1.1.1').count === null, String(read('lesson 1.1.1').count));
+    ok('it picks up a grade', read('grade 7 percents').grade === '7' && read('grade 7 percents').source === 'grade');
+    ok('a grade is not mistaken for a count', read('grade 7 percents').count === null, String(read('grade 7 percents').count));
+    ok('"easy" means level 1', read('easy exponents').difficulty === 1);
+    ok('"hard" means level 3', read('hard exponents').difficulty === 3);
+    ok('"level 2" is taken literally', read('exponents level 2').difficulty === 2);
+    ok('a count is capped at something sensible', read('900 questions on slope').count <= 50, String(read('900 questions on slope').count));
+    ok('nonsense is not guessed at', read('banana wombat').source === null, String(read('banana wombat').source));
+    ok('a lesson that does not exist is said so', read('lesson 9.9.9').unclear.length > 0, read('lesson 9.9.9').unclear.join());
+
+    /* ---- it says so rather than guessing ---- */
+    A.handle('banana wombat'); await tick();
+    ok('an unreadable request gets a question back', /could not tell/i.test(last()), last().slice(0,80));
+    ok('with the subjects offered as chips', $$('[data-chip]').length >= 4);
+
+    /* ---- a real round ---- */
+    A.handle('6 questions on slope'); await tick();
+    const run = A.run();
+    ok('a round starts', !!run && run.items.length === 6, run ? String(run.items.length) : 'none');
+    ok('it says what it understood', /6 questions/i.test(body()) && /level 2/i.test(body()));
+    ok('every question is multiple choice', run.items.every(i => i.choices && i.choices.length >= 2),
+       run.items.filter(i => !i.choices).length + ' without choices');
+    ok('the right answer is among the options', run.items.every(i => i.choices.some((c, n) => i.check('', n))),
+       'some question cannot be answered right');
+    ok('only one option is right', run.items.every(i => i.choices.filter((c, n) => i.check('', n)).length === 1));
+    ok('no option is offered twice', run.items.every(i => new Set(i.choices.map(c => String(c).toLowerCase().trim())).size === i.choices.length));
+    ok('the options are shown as buttons', $$('#thread [data-choice]').length >= 2, String($$('#thread [data-choice]').length));
+    ok('and lettered A, B, C', /^A$/.test($$('#thread [data-choice] .k')[0].textContent), $$('#thread [data-choice] .k')[0].textContent);
+
+    /* ---- picking the right one ---- */
+    const it0 = run.items[0];
+    const rightIdx = it0.choices.map((c, n) => n).filter(n => it0.check('', n))[0];
+    $$('#thread [data-choice]')[rightIdx].click(); await tick();
+    ok('picking the right one is marked right', /Right/.test(last()), last().slice(0, 60));
+    ok('and it says why', recent(2).split('\n').filter(l => l.trim()).length >= 2, recent(2));
+    ok('the score bar counts it', /1 \/ 1 right/.test($('#scorebar').textContent), $('#scorebar').textContent);
+
+    /* ---- picking a wrong one ---- */
+    const run2 = A.run();
+    const it1 = run2.items[run2.i];
+    const wrongIdx = it1.choices.map((c, n) => n).filter(n => !it1.check('', n))[0];
+    const btns = $$('#thread [data-choice]:not([disabled])');
+    btns[wrongIdx].click(); await tick();
+    ok('picking a wrong one is marked wrong', /Not quite/.test(last()), last().slice(0, 80));
+    ok('it says which one was picked and which was right', /You picked/.test(last()) && /answer is/.test(last()), last().slice(0, 120));
+    ok('it explains why', recent(2).split('\n').filter(l => l.trim()).length >= 2, recent(2));
+    ok('the marked question shows the right answer in green', $$('#thread .is-right').length >= 1);
+    ok('and the wrong pick in red', $$('#thread .is-wrong').length >= 1);
+    ok('answered questions cannot be answered twice', $$('#thread [data-choice][disabled]').length >= 4);
+
+    /* ---- typing a letter works too ---- */
+    A.handle('A'); await tick();
+    ok('typing a letter picks that option', A.run().answered === 3, String(A.run().answered));
+    A.handle('skip'); await tick();
+    ok('skip moves on and says what it was', /Skipped/.test(last()), last().slice(0, 60));
+
+    /* ---- finishing ---- */
+    A.handle('answer'); await tick();
+    A.handle('answer'); await tick();
+    await waitFor(() => !A.run(), 200);
+    ok('the round ends by itself', !A.run());
+    ok('and reports a score', /out of 6/.test(body()), body().slice(-200));
+    const st = A.state();
+    ok('the round is saved', st.history.length === 1, String(st.history.length));
+    const h = st.history[0];
+    ok('with everything needed to ask it again',
+       h.gen === 'math' && h.count === 6 && h.difficulty === 2 && h.seed > 0 && h.topics.length > 0,
+       JSON.stringify({ gen: h.gen, count: h.count, difficulty: h.difficulty, seed: h.seed, topics: h.topics }));
+    ok('and which ones were missed', Array.isArray(h.missed) && h.missed.length >= 3 && h.missed.indexOf(0) < 0,
+       JSON.stringify(h.missed));
+    ok('a missed index really points at a question', h.missed.every(i => i >= 0 && i < h.count));
+    /* the saved seed must rebuild the very same questions, or review would ask the wrong thing */
+    const rebuilt = w.IM1.generate({ topics: h.topics, count: h.count, difficulty: h.difficulty, seed: h.seed });
+    ok('the seed rebuilds the same questions review would ask',
+       rebuilt.problems.length === h.count, rebuilt.problems.length + ' of ' + h.count);
+    ok('the hub summary says how it went', /\d\/6/.test(st.summary.headline || ''), st.summary.headline);
+
+    /* ---- asking for another ---- */
+    A.handle('another round'); await tick();
+    ok('"another round" repeats the last request', !!A.run() && A.run().items.length === 6);
+    A.handle('stop'); await tick();
+
+    /* ---- the other generators all answer ---- */
+    const tried = [];
+    for (const ask of ['4 questions on spanish gustar', '4 python questions', 'lesson 1.1.1', '4 grade 7 percents']) {
+      A.handle(ask); await tick();
+      const r = A.run();
+      tried.push(ask + ':' + (r ? r.items.length : 0) + (r && r.items.every(i => i.choices) ? ' mc' : ' TYPED'));
+      if (r) { A.handle('stop'); await tick(); }
+    }
+    ok('every source can be asked, and all of it is multiple choice',
+       tried.every(t => / mc$/.test(t) && !/:0/.test(t)), tried.join(' | '));
+
+    /* ---- nothing goes anywhere ---- */
+    ok('the page says nothing is sent away', /leaves this device|nothing.*sent/i.test(body()));
+  } catch (e) { ok('the suite ran to the end', false, e && (e.stack || e.message)); }
+  finally {
+    snap === null ? localStorage.removeItem(KEY) : localStorage.setItem(KEY, snap);
+    const failed = R.filter(l => l.indexOf('FAIL') === 0).length;
+    console.log('RESULTS ' + failed + ' failed of ' + R.length);
+  }
+});
+</script>

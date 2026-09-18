@@ -143,7 +143,7 @@ main > * + * { margin-top: 1rem; }
     math:   { name: 'Math worksheets', emoji: '🧮', href: 'math.html',    script: 'im1.js',          global: 'IM1' },
     python: { name: 'Python',          emoji: '🐍', href: 'python.html',  script: 'pyquiz.js',       global: 'PY' },
     spanish:{ name: 'Spanish',         emoji: '💬', href: 'spanish.html', script: 'spanish.js',      global: 'ES' },
-    ai:     { name: 'Make Practice',   emoji: '✏️', href: 'ai.html',      script: 'grades.js',       global: 'GRADES', optional: true }
+    ai:     { name: 'Make Practice',   emoji: '✏️', href: 'ai.html',      script: 'grades.js',       global: 'GRADES' }
   };
   var ORDER = ['quiz', 'math', 'spanish', 'python', 'ai'];
 
@@ -221,6 +221,29 @@ main > * + * { margin-top: 1rem; }
       });
     });
 
+    /* Questions asked in the thread on ask.html belong to the subject they came from, not to a source
+       of their own: a maths question missed there is a maths question missed. Each generator is asked
+       with the same {topics, count, difficulty, seed}, so the same index is the same question. */
+    var GEN_SRC = { math: 'math', spanish: 'spanish', python: 'python', grade: 'ai', lesson: 'quiz' };
+    var ak = PH.load('ph.ask.v1', null);
+    if (isObj(ak)) arr(ak.history).forEach(function (h) {
+      if (!isObj(h) || !arr(h.missed).length || !GEN_SRC[h.gen]) return;
+      var topics = arr(h.topics).slice().sort(), sig = topics.join(',');
+      arr(h.missed).forEach(function (i) {
+        if (h.gen === 'lesson') {
+          var ref = String(arr(h.refs)[i] || '').split(':');
+          if (ref.length !== 2) return;
+          push('q|' + ref[0] + '|' + ref[1], 'quiz', h.date, 'Lesson ' + ref[0], ref[0],
+            { kind: 'quiz', lesson: ref[0], idx: Number(ref[1]) });
+          return;
+        }
+        var kind = h.gen === 'grade' ? 'grade' : h.gen;
+        push('a|' + h.gen + '|' + h.seed + '|' + sig + '|' + h.difficulty + '|' + h.count + '|' + i,
+          GEN_SRC[h.gen], h.date, SOURCES[GEN_SRC[h.gen]].name, sig || h.gen,
+          { kind: kind, topics: h.topics, grade: h.grade, count: h.count, difficulty: h.difficulty, seed: h.seed, idx: i });
+      });
+    });
+
     var py = PH.load('ph.python.v1', null);
     if (isObj(py)) arr(py.rounds).forEach(function (r) {
       /* a retry round was built from a list of questions, not a seed, so it cannot be regenerated */
@@ -259,7 +282,7 @@ main > * + * { margin-top: 1rem; }
   }
 
   /* ===================== Loading a generator only when it is needed ===================== */
-  /* the ai source reads its questions straight out of storage, so it never waits on a script */
+  /* grade practice is rebuilt from grades.js, so that one does have to load before it can be asked */
   function canBuild(srcKey) {
     var src = SOURCES[srcKey];
     return !src || !src.script || !!src.optional || !!window[src.global];
@@ -326,6 +349,17 @@ main > * + * { margin-top: 1rem; }
           from: sp_.topicName || 'Spanish', topic: sp_.topic || 'spanish', qtext: sp_.question, svg: '', code: '',
           choices: null, answerText: String(sp_.answer), explain: sp_.work || '',
           ok: function (pick, typed) { return ES.checkAnswer(sp_, typed); }
+        };
+      }
+      if (g.kind === 'grade') {
+        if (!window.GRADES) return null;
+        var gws = GRADES.generate({ grade: g.grade || '7', topics: g.topics, count: g.count, difficulty: g.difficulty, seed: g.seed });
+        var gp = gws && gws.problems && gws.problems[g.idx];
+        if (!gp) return null;
+        return {
+          from: gp.topicName || 'Grade practice', topic: gp.topic || 'grade', qtext: gp.question, svg: '', code: '',
+          choices: null, answerText: String(gp.answer), explain: gp.work || '',
+          ok: function (pick, typed) { return GRADES.checkAnswer(gp, typed); }
         };
       }
       if (g.kind === 'python') {
