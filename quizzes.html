@@ -351,8 +351,13 @@ main > * + * { margin-top: 1rem; }
     /* a generated course topic: ten questions from the seed, no bank involved */
     if (isGen(opts.lesson)) {
       const g = genParts(opts.lesson);
-      const items = generatedItems(g.course, g.topic, opts.seed, QUIZ_LEN);
-      return { lesson: opts.lesson, lessons: null, seed: opts.seed >>> 0, kind: 'full', refs: null, gen: g,
+      let items = generatedItems(g.course, g.topic, opts.seed, QUIZ_LEN);
+      /* retrying the ones that were missed: the same seed gives the same ten back, so the indices
+         that were missed still point at the same questions. Rebuild and keep only those. */
+      const only = Array.isArray(opts.only) ? opts.only.filter(i => Number.isInteger(i) && i >= 0 && i < items.length) : null;
+      if (only && only.length) items = only.map(i => items[i]);
+      return { lesson: opts.lesson, lessons: null, seed: opts.seed >>> 0, kind: only && only.length ? 'missed' : 'full',
+        refs: null, gen: g, only: only && only.length ? only.slice() : null,
         items, i: 0, sel: null, checked: false, finished: false, given: [], started: Date.now(), timer: null, right: 0, seconds: 0 };
     }
     let picked;
@@ -605,7 +610,7 @@ main > * + * { margin-top: 1rem; }
       '<div class="row result-actions">' +
       (missedRefs.length ? '<button type="button" class="btn" id="r-missed">Retry missed (' + missedRefs.length + ')</button>' : '') +
       '<button type="button" class="btn" id="r-same" title="Same seed, same questions">Retake same questions</button>' +
-      '<button type="button" class="btn btn-primary" id="r-new">' + (quiz.lesson === MIX ? 'New mixed review' : 'New quiz on ' + esc(quiz.lesson)) + '</button>' +
+      '<button type="button" class="btn btn-primary" id="r-new">' + (quiz.lesson === MIX ? 'New mixed review' : 'New quiz on ' + esc(isGen(quiz.lesson) ? shortName(quiz.lesson) : quiz.lesson)) + '</button>' +
       '<button type="button" class="btn btn-ghost" id="r-back">Back to lessons</button></div>' +
       '<h3>Review</h3><ol class="review">' + quiz.items.map((it, i) => {
         const g = quiz.given[i], ok = !!(g && g.ok);
@@ -615,6 +620,7 @@ main > * + * { margin-top: 1rem; }
       }).join('') + '</ol>';
     $('#q-body').innerHTML = h;
     quiz.missedRefs = missedRefs;
+    quiz.missedIdx = quiz.items.map((it, i) => (quiz.given[i] && quiz.given[i].ok) ? -1 : i).filter(i => i >= 0);
     const f = $('#r-new'); if (f) f.focus({ preventScroll: true });
   }
 
@@ -668,8 +674,13 @@ main > * + * { margin-top: 1rem; }
     quiz.right = quiz.given.filter(g => g && g.ok).length;
     const missed = quiz.items.map((it, i) => ({ it, i })).filter(x => !(quiz.given[x.i] && quiz.given[x.i].ok)).map(x => quiz.lesson === MIX ? x.it.lessonId + ':' + x.it.idx : x.it.idx);
     const att = { id: PH.uid(), date: PH.todayISO(), ts: Date.now(), lesson: quiz.lesson, right: quiz.right, total: quiz.items.length, seconds: quiz.seconds, seed: quiz.seed, missed, kind: quiz.kind };
-    /* review.html rebuilds a generated quiz from these four things, so they travel with the attempt */
-    if (quiz.gen) att.gen = { course: quiz.gen.course, topic: quiz.gen.topic, difficulty: 2, count: quiz.items.length };
+    /* review.html rebuilds a generated quiz from these four things, so they travel with the attempt.
+       A retry holds only some of the original ten, so its indices are translated back to the ones they
+       came from — otherwise review would rebuild the full ten and ask the wrong questions. */
+    if (quiz.gen) {
+      att.gen = { course: quiz.gen.course, topic: quiz.gen.topic, difficulty: 2, count: QUIZ_LEN };
+      if (quiz.only) att.missed = missed.map(function (i) { return quiz.only[i]; }).filter(function (i) { return Number.isInteger(i); });
+    }
     if (quiz.lesson === MIX) att.lessons = quiz.lessons || attemptedLessonIds();
     state.attempts.unshift(att);
     state.attempts = state.attempts.slice(0, MAX_HISTORY);
@@ -729,8 +740,13 @@ main > * + * { margin-top: 1rem; }
     if (b.id === 'q-check') { check(); return; }
     if (b.id === 'q-next') { next(); return; }
     if (b.id === 'q-quit' || b.id === 'r-back') { quit(); return; }
-    if (b.id === 'r-missed' && quiz) { startQuiz({ lesson: quiz.lesson, seed: newSeed(), refs: quiz.missedRefs, lessons: quiz.lessons }); return; }
-    if (b.id === 'r-same' && quiz) { startQuiz({ lesson: quiz.lesson, seed: quiz.seed, refs: quiz.refs, lessons: quiz.lessons }); return; }
+    if (b.id === 'r-missed' && quiz) {
+      /* a generated quiz is retried from its own seed, or the "missed" ones would be different questions */
+      if (quiz.gen) startQuiz({ lesson: quiz.lesson, seed: quiz.seed, only: quiz.missedIdx });
+      else startQuiz({ lesson: quiz.lesson, seed: newSeed(), refs: quiz.missedRefs, lessons: quiz.lessons });
+      return;
+    }
+    if (b.id === 'r-same' && quiz) { startQuiz({ lesson: quiz.lesson, seed: quiz.seed, refs: quiz.refs, lessons: quiz.lessons, only: quiz.only }); return; }
     if (b.id === 'r-new' && quiz) { startQuiz({ lesson: quiz.lesson, seed: newSeed(), lessons: quiz.lesson === MIX ? attemptedLessonIds() : null }); return; }
     if (b.dataset.replay) { const a = state.attempts.find(x => x.id === b.dataset.replay); if (a) startQuiz({ lesson: a.lesson, seed: a.seed, lessons: a.lessons || null }); return; }
     if (b.dataset.del) {

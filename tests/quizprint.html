@@ -89,8 +89,53 @@ f.addEventListener('load', async () => {
     const different = w.PH_QUIZ.build({ lesson: gq.lesson, seed: gq.seed + 1 });
     ok('and another seed gives different ones', different.items.map(i => i.q).join('|') !== gq.items.map(i => i.q).join('|'));
 
+    /* retrying the ones that were missed must ask those, not ten new ones */
+    const asked = gq.items.map(i => i.q);
+    for (let n = 0; n < 20; n++) {
+      const cur = w.PH_QUIZ.quiz();
+      if (!cur || cur.finished) break;
+      const it = cur.items[cur.i];
+      const buttons = $$('.choice');
+      if (!buttons.length) break;
+      buttons[n === 0 ? it.answer : (it.answer + 1) % it.choices.length].click(); await sleep(40);
+      if ($('#q-check')) { $('#q-check').click(); await sleep(60); }
+      if ($('#q-next')) { $('#q-next').click(); await sleep(60); }
+    }
+    await sleep(250);
+    ok('a finished quiz offers the ones that were missed', !!$('#r-missed') && /\(9\)/.test($('#r-missed').textContent),
+       $('#r-missed') ? $('#r-missed').textContent : 'no button');
+    $('#r-missed').click(); await sleep(250);
+    const retry = w.PH_QUIZ.quiz();
+    ok('and retrying asks exactly those', retry.items.length === 9, String(retry.items.length));
+    ok('the very same questions, not new ones', retry.items.every(it => asked.indexOf(it.q) >= 0));
+    ok('from the same seed', retry.seed === gq.seed && retry.kind === 'missed', retry.seed + ' vs ' + gq.seed);
+    /* what a retry records has to point at the original ten, or review rebuilds the wrong questions */
+    /* work through whatever is on screen, stopping when the quiz is over rather than counting on it */
+    for (let n = 0; n < 20; n++) {
+      const cur = w.PH_QUIZ.quiz();
+      if (!cur || cur.finished) break;
+      const it = cur.items[cur.i];
+      const buttons = $$('.choice');
+      if (!buttons.length) break;
+      buttons[(it.answer + 1) % it.choices.length].click(); await sleep(40);
+      if ($('#q-check')) { $('#q-check').click(); await sleep(60); }
+      if ($('#q-next')) { $('#q-next').click(); await sleep(60); }
+    }
+    await sleep(250);
+    const att = w.PH_QUIZ.state().attempts[0];
+    ok('a retry is recorded against the questions it came from',
+       att.gen && att.gen.count === 10 && att.missed.every(i => Number.isInteger(i) && i >= 0 && i < 10),
+       JSON.stringify(att && att.missed));
+    ok('and is marked as a retry', att.kind === 'missed', att.kind);
+    /* after a finished quiz the page is on its results, where there is no Quit button */
+    if ($('#q-quit')) { $('#q-quit').click(); await sleep(200); }
+    if ($('[data-startgen]')) { $('[data-startgen]').click(); await sleep(300); }
+    else if ($('#r-new')) { $('#r-new').click(); await sleep(300); }
+    const gq2 = w.PH_QUIZ.quiz();
+    ok('a new quiz can be started straight from the results', !!gq2 && !gq2.finished);
+
     /* and it prints, with its options and its answer key */
-    const gsheet = w.PH_QUIZ.sheet(gq);
+    const gsheet = w.PH_QUIZ.sheet(gq2);
     ok('a generated quiz prints', /^<!DOCTYPE html>/.test(gsheet));
     ok('with its options', /ol class="choices"/.test(gsheet));
     ok('with an answer key', /Answer key/.test(gsheet));
