@@ -41,6 +41,14 @@
   --p-danger: 84%;
 }
 
+/* ---- text size ---------------------------------------------------------------------------------
+   Everything on the site is sized in rem, so one number on the root scales the whole interface: the
+   type, the padding, the buttons and the gaps, all in proportion. Set before the first paint, like the
+   theme, so nothing jumps. "m" is the default and writes no attribute at all. */
+:root[data-size="s"]  { font-size: 93.75%; }
+:root[data-size="l"]  { font-size: 112.5%; }
+:root[data-size="xl"] { font-size: 125%; }
+
 /* ---- themes ------------------------------------------------------------------------------------
    shared.js resolves the stored choice (including "system") to one of these before the first paint. */
 :root[data-theme="dark"], :root[data-theme="midnight"],
@@ -156,16 +164,16 @@ body[data-app="books"]    { --accent:#7c5a2a; --accent-soft:rgba(124,90,42,.15);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
   box-shadow: var(--shadow); padding: .3rem; min-width: 12.5rem; display: grid; gap: .1rem;
 }
-.theme-opt {
+.theme-opt, .size-opt {
   display: flex; align-items: center; gap: .55rem; width: 100%; text-align: left;
   font: inherit; font-size: .9rem; color: inherit; background: transparent; border: 0;
   padding: .4rem .5rem; border-radius: 7px; cursor: pointer;
 }
-.theme-opt:hover { background: var(--surface-2); }
-.theme-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.theme-opt.on { background: var(--accent-soft); }
-.theme-opt .nm { flex: 1; min-width: 0; }
-.theme-opt .tick { color: var(--accent-text); font-weight: 700; width: .9rem; text-align: right; }
+.theme-opt:hover, .size-opt:hover { background: var(--surface-2); }
+.theme-opt:focus-visible, .size-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.theme-opt.on, .size-opt.on { background: var(--accent-soft); }
+.theme-opt .nm, .size-opt .nm { flex: 1; min-width: 0; }
+.theme-opt .tick, .size-opt .tick { color: var(--accent-text); font-weight: 700; width: .9rem; text-align: right; }
 /* a two-tone chip, so each theme can be told apart at a glance rather than by name alone */
 .theme-opt .sw { width: 18px; height: 18px; border-radius: 5px; flex: none; border: 1px solid var(--border); background-size: 100% 100%; }
 .sw[data-swatch="system"]   { background-image: linear-gradient(135deg, #ffffff 0 50%, #171a23 50% 100%); }
@@ -203,13 +211,21 @@ body[data-app="books"]    { --accent:#7c5a2a; --accent-soft:rgba(124,90,42,.15);
   #whoBtn { max-width: none; padding: .4rem; width: 2.1rem; height: 2.1rem; justify-content: center; }
 }
 @media (max-width: 400px) { .who-menu { right: -.4rem; width: min(14rem, calc(100vw - 1.6rem)); } }
-@media print { .theme-wrap, .who-wrap { display: none !important; } }
+/* ---- the text-size button ---- */
+.size-wrap { position: relative; display: inline-flex; flex: none; }
+#sizeBtn .aa { font-weight: 800; line-height: 1; letter-spacing: -.04em; }
+#sizeBtn .aa small { font-size: .72em; }
+.size-menu { min-width: 11.5rem; }
+.size-opt .sz { width: 1.5rem; text-align: center; font-weight: 800; color: var(--muted); }
+.size-opt.on .sz { color: var(--accent-text); }
+.sz-s { font-size: .78rem; } .sz-m { font-size: .95rem; } .sz-l { font-size: 1.12rem; } .sz-xl { font-size: 1.3rem; }
+@media print { .theme-wrap, .who-wrap, .size-wrap { display: none !important; } }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
-  font: 16px/1.5 var(--font); min-height: 100vh;
+  font: 1rem/1.5 var(--font); min-height: 100vh;   /* 1rem, not 16px, so the text size setting reaches the words too */
 }
 a { color: var(--accent-text); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -350,11 +366,20 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .divider { height: 1px; background: var(--border); margin: 1rem 0; }
 .kbd { font-family: var(--mono); font-size: .8em; padding: .1em .4em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--surface-2); color: var(--text); }   /* its own colour: inside a filled button it would inherit white on light grey */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-@media (max-width: 560px) { .topbar .title .name { display: none; } .topbar .btn .lbl { display: none; } .container { padding: 1rem .75rem 4rem; } .card { padding: 1rem; } }
+@media (max-width: 560px) {
+  .topbar .title .name { display: none; }
+  /* the label goes, the button stays — and it stays big enough to hit with a thumb */
+  .topbar .btn .lbl { display: none; }
+  .topbar .btn { min-width: 2.15rem; justify-content: center; }
+  .container { padding: 1rem .75rem 4rem; }
+  .card { padding: 1rem; }
+}
 /* The narrowest phones: the top bar carries one more control than it used to, so give back the
    padding rather than let the page scroll sideways. */
 @media (max-width: 400px) {
-  .topbar .inner { gap: .4rem; padding: .6rem .6rem; }
+  /* keep every button: let the bar take a second line rather than push the page sideways */
+  .topbar .inner { gap: .35rem; padding: .55rem .6rem; flex-wrap: wrap; row-gap: .35rem; }
+  .topbar .spacer { flex: 1 0 auto; }
   .topbar .back { padding: .3rem .5rem; }
   .topbar .title { min-width: 0; }
   .topbar .btn-sm { padding: .3rem .45rem; }

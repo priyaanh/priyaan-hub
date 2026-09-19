@@ -2,7 +2,7 @@
 <title>Profile · Practice Hub</title>
 <meta name="description" content="Your name, the colours, everything this hub has saved, and how to keep it on more than one device.">
 <link rel="stylesheet" href="shared.css">
-<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+<script>/* set the saved theme and text size before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);var z=localStorage.getItem('ph.size');if(z&&z!=='m')document.documentElement.setAttribute('data-size',z)}catch(e){}</script><style>
 main > * + * { margin-top: 1rem; }
 .row2 { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; }
 .row2 .field { flex: 1; min-width: 12rem; }
@@ -16,6 +16,16 @@ main > * + * { margin-top: 1rem; }
 .themecard.on { border-color: var(--accent-text); background: var(--accent-soft); }
 .themecard .chip { width: 30px; height: 22px; border-radius: 5px; flex: none; border: 1px solid var(--border); }
 .themecard .nm { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; }
+/* text size */
+.sizes { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.sizecard { display: flex; align-items: center; gap: .7rem; padding: .7rem .8rem; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; color: inherit; text-align: left; }
+.sizecard:hover { border-color: var(--accent-text); }
+.sizecard.on { border-color: var(--accent-text); background: var(--accent-soft); }
+.sizecard .sz { flex: none; width: 2.2rem; text-align: center; font-weight: 800; color: var(--muted); }
+.sizecard.on .sz { color: var(--accent-text); }
+.sizecard .nm { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; }
+.sz-s { font-size: .8rem; } .sz-m { font-size: 1rem; } .sz-l { font-size: 1.2rem; } .sz-xl { font-size: 1.45rem; }
 .themecard .tick { color: var(--accent-text); font-weight: 700; }
 /* data table */
 .dtable { width: 100%; border-collapse: collapse; font-size: .9rem; }
@@ -69,6 +79,13 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   <section class="card" aria-labelledby="h-colours">
     <div class="card-head"><h2 id="h-colours">Colours</h2><span class="small">Also in the top bar of every page</span></div>
     <div class="themes" id="themes"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-size">
+    <div class="card-head"><h2 id="h-size">Text size</h2><span class="small">Also in the top bar of every page</span></div>
+    <p class="muted">This scales the whole hub, not only the words: the buttons, the spacing and the
+      question cards grow with it.</p>
+    <div class="sizes" id="sizes"></div>
   </section>
 
   <section class="card" aria-labelledby="h-data">
@@ -177,6 +194,12 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   function bytes(n) { return n < 1024 ? n + ' B' : n < 1024 * 1024 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB'; }
 
   /* ===================== You ===================== */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-size-id]');
+    if (!b || !b.classList.contains('sizecard')) return;
+    PH.setSize(b.getAttribute('data-size-id'));
+    renderSizes();
+  });
   function renderYou() {
     if (!$('#gradeIn').options.length || $('#gradeIn').options.length === 1) {
       $('#gradeIn').innerHTML = '<option value="">Not saying</option>' +
@@ -211,6 +234,15 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   });
 
   /* ===================== Colours ===================== */
+  function renderSizes() {
+    var cur = PH.sizeChoice();
+    $('#sizes').innerHTML = PH.SIZES.map(function (t) {
+      return '<button type="button" class="sizecard' + (t.id === cur ? ' on' : '') + '" data-size-id="' + t.id + '"' +
+        ' aria-pressed="' + (t.id === cur ? 'true' : 'false') + '">' +
+        '<span class="sz sz-' + t.id + '" aria-hidden="true">Aa</span>' +
+        '<span class="nm">' + esc(t.name) + '</span></button>';
+    }).join('');
+  }
   function renderThemes() {
     var cur = PH.themeChoice();
     $('#themes').innerHTML = PH.THEMES.map(function (t) {
@@ -225,7 +257,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     var b = e.target.closest('[data-theme-id]');
     if (!b) return;
     PH.setTheme(b.getAttribute('data-theme-id'));
-    renderThemes();
+    renderThemes(); renderSizes();
   });
   document.addEventListener('ph:theme', renderThemes);
 
@@ -295,7 +327,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     var name = row ? row[2] : k;
     if (!confirm('Forget everything ' + name + ' has saved?\n\nThis cannot be undone. Save a copy first if you are not sure.')) return;
     try { localStorage.removeItem(k); } catch (er) {}
-    renderData(); renderYou(); renderThemes(); renderSync();
+    renderData(); renderYou(); renderThemes(); renderSizes(); renderSync();
     PH.toast(name + ' forgotten');
   });
   $('#backupBtn').addEventListener('click', function () {
@@ -327,7 +359,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
       try { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } catch (e) {}
     });
     PH.applyName();
-    renderYou(); renderThemes(); renderData(); renderSync();
+    renderYou(); renderThemes(); renderSizes(); renderData(); renderSync();
     PH.toast('Loaded ' + n + ' things — reopen the apps to see them');
     return true;
   }
@@ -472,7 +504,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     if (e.key === 'Enter' && e.target.id === 'tokenIn') { e.preventDefault(); saveToken(); }
   });
 
-  renderYou(); renderThemes(); renderData(); renderSync();
+  renderYou(); renderThemes(); renderSizes(); renderData(); renderSync();
   window.PH_PROFILE = { state: function () { return state; }, renderSync: renderSync, renderData: renderData,
     push: push, pull: pull, createStore: createStore, applyBundle: applyBundle, bundle: bundle, sizes: sizes };
 })();

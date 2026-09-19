@@ -1,10 +1,10 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Python Practice · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
-<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+<script>/* set the saved theme and text size before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);var z=localStorage.getItem('ph.size');if(z&&z!=='m')document.documentElement.setAttribute('data-size',z)}catch(e){}</script><style>
 main > * + * { margin-top: 1rem; }
 .topic-pills { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .2rem; }
-.topic-pill { font-size: .8rem; font-weight: 600; padding: .25rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+.topic-pill { font-size: .82rem; font-weight: 600; padding: .4rem .8rem; min-height: 2rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
 .topic-pill.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
 .opts { display: grid; gap: .9rem; grid-template-columns: 1fr; margin-top: 1rem; }
 @media (min-width: 760px) { .opts { grid-template-columns: auto auto 1fr; align-items: end; } }

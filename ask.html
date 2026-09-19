@@ -2,7 +2,7 @@
 <title>Ask for Practice · Practice Hub</title>
 <meta name="description" content="Say what you want to practise in your own words and get asked it, one question at a time.">
 <link rel="stylesheet" href="shared.css">
-<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+<script>/* set the saved theme and text size before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);var z=localStorage.getItem('ph.size');if(z&&z!=='m')document.documentElement.setAttribute('data-size',z)}catch(e){}</script><style>
 main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); }
 .thread { flex: 1; display: flex; flex-direction: column; gap: .8rem; padding-bottom: 1rem; }
 .msg { display: flex; gap: .6rem; align-items: flex-start; max-width: 52rem; width: 100%; }

@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Piano Practice · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
-<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+<script>/* set the saved theme and text size before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);var z=localStorage.getItem('ph.size');if(z&&z!=='m')document.documentElement.setAttribute('data-size',z)}catch(e){}</script><style>
 /* ---- layout ---- */
 main > * + * { margin-top: 1rem; }
 .grid-2 > .card { margin-top: 0; }
@@ -59,7 +59,9 @@ main > * + * { margin-top: 1rem; }
 .table tr.archived td { color: var(--muted); }
 .table tr.archived .name { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 .table .actions { white-space: nowrap; text-align: right; }
-button.pill { border: 0; cursor: pointer; font: inherit; font-size: .75rem; font-weight: 700; }
+/* it is a button, not a label: give it something to press */
+button.pill { border: 0; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; padding: .35rem .7rem; min-height: 1.9rem; }
+button.pill:hover { filter: brightness(1.06); }
 button.pill:hover { filter: brightness(.94); }
 button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .pill.polishing { background: var(--warn-soft); color: var(--warn); }

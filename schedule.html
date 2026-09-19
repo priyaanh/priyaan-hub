@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Weekly Plan · Practice Hub</title>
 <link rel="stylesheet" href="shared.css">
-<script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
+<script>/* set the saved theme and text size before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);var z=localStorage.getItem('ph.size');if(z&&z!=='m')document.documentElement.setAttribute('data-size',z)}catch(e){}</script><style>
 /* ---- Weekly Plan: page styles (built on shared.css variables) ---- */
 :root { --cat-piano:#7c5cff; --cat-dance:#e05a8a; --cat-scouts:#2f8f4e; --cat-math:#2f6fed; --cat-hindi:#e0701f; --cat-other:#667085; }
 .cat-piano { --cat: var(--cat-piano); } .cat-dance { --cat: var(--cat-dance); } .cat-scouts { --cat: var(--cat-scouts); }

@@ -198,6 +198,32 @@ window.PH = (function () {
     { id: 'forest',   name: 'Forest',          emoji: '\u{1F332}' },
     { id: 'contrast', name: 'High contrast',   emoji: '\u25D0' }
   ];
+  /* ---- text size --------------------------------------------------------------------------------
+     One stored choice, applied to the root, which scales everything sized in rem: type, padding,
+     buttons and gaps together. "m" is the default and stores nothing. */
+  var SIZES = [
+    { id: 's',  name: 'Small',       sample: 'A' },
+    { id: 'm',  name: 'Normal',      sample: 'A' },
+    { id: 'l',  name: 'Large',       sample: 'A' },
+    { id: 'xl', name: 'Extra large', sample: 'A' }
+  ];
+  var SIZE_KEY = 'ph.size';
+  function sizeChoice() {
+    try { var v = localStorage.getItem(SIZE_KEY); return SIZES.some(function (x) { return x.id === v; }) ? v : 'm'; }
+    catch (e) { return 'm'; }
+  }
+  function applySize(id) {
+    if (id === 'm') document.documentElement.removeAttribute('data-size');
+    else document.documentElement.setAttribute('data-size', id);
+    return id;
+  }
+  function setSize(id) {
+    if (!SIZES.some(function (x) { return x.id === id; })) id = 'm';
+    try { id === 'm' ? localStorage.removeItem(SIZE_KEY) : localStorage.setItem(SIZE_KEY, id); } catch (e) {}
+    applySize(id);
+    document.dispatchEvent(new CustomEvent('ph:size', { detail: { size: id } }));
+  }
+
   var THEME_KEY = 'ph.theme';
   function themeChoice() {
     try { var v = localStorage.getItem(THEME_KEY); return THEMES.some(function (t) { return t.id === v; }) ? v : 'system'; }
@@ -218,6 +244,7 @@ window.PH = (function () {
     document.dispatchEvent(new CustomEvent('ph:theme', { detail: { choice: choice } }));
   }
   applyTheme(themeChoice());
+  applySize(sizeChoice());
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyName); else applyName();
   /* keep following the device while the choice is "system" */
   try {
@@ -228,11 +255,13 @@ window.PH = (function () {
   /* another tab changed it */
   window.addEventListener('storage', function (e) {
     if (e.key === THEME_KEY) applyTheme(themeChoice());
+    if (e.key === SIZE_KEY) applySize(sizeChoice());
     if (e.key === NAME_KEY) applyName();
   });
 
   return { load, save, todayISO, addDays, daysBetween, mondayOf, fmtDate, esc, safeHTML, plainText, uid, toast, download, pickFile, rng, openChatGPT, chatGPTUrl,
     THEMES: THEMES, themeChoice: themeChoice, setTheme: setTheme,
+    SIZES: SIZES, sizeChoice: sizeChoice, setSize: setSize, applySize: applySize,
     person: person, setPerson: setPerson, hubName: hubName, applyName: applyName,
     personEmail: personEmail, setPersonEmail: setPersonEmail, validEmail: validEmail,
     schoolYear: schoolYear, setSchoolYear: setSchoolYear, GRADES_LIST: GRADES_LIST,
@@ -299,6 +328,69 @@ window.PH = (function () {
   wrap.appendChild(menu);
   var spacer = bar.querySelector('.spacer');
   if (spacer && spacer.nextSibling) bar.insertBefore(wrap, spacer.nextSibling);
+  else bar.appendChild(wrap);
+  draw();
+})();
+
+/* A text-size button beside the palette, built the same way, so every page has one. Everything is sized
+   in rem, so this scales the whole interface rather than only the words. */
+(function () {
+  var bar = document.querySelector('.topbar .inner');
+  if (!bar || document.getElementById('sizeBtn')) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'size-wrap no-print';
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-sm btn-icon';
+  btn.id = 'sizeBtn';
+  btn.setAttribute('aria-haspopup', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.innerHTML = '<span aria-hidden="true" class="aa">A<small>A</small></span>';
+  var menu = document.createElement('div');
+  menu.className = 'theme-menu size-menu';
+  menu.id = 'sizeMenu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'Text size');
+
+  function label() {
+    var cur = PH.sizeChoice();
+    var t = PH.SIZES.filter(function (x) { return x.id === cur; })[0] || PH.SIZES[1];
+    btn.setAttribute('aria-label', 'Text size: ' + t.name + '. Change it');
+    btn.title = btn.getAttribute('aria-label');
+  }
+  function draw() {
+    var cur = PH.sizeChoice();
+    menu.innerHTML = PH.SIZES.map(function (t) {
+      return '<button type="button" role="menuitemradio" class="size-opt' + (t.id === cur ? ' on' : '') + '"' +
+        ' data-size-id="' + t.id + '" aria-checked="' + (t.id === cur ? 'true' : 'false') + '">' +
+        '<span class="sz sz-' + t.id + '" aria-hidden="true">A</span>' +
+        '<span class="nm">' + PH.esc(t.name) + '</span>' +
+        '<span class="tick" aria-hidden="true">' + (t.id === cur ? '\u2713' : '') + '</span></button>';
+    }).join('');
+    label();
+  }
+  function open(yes) {
+    menu.hidden = !yes;
+    btn.setAttribute('aria-expanded', yes ? 'true' : 'false');
+    if (yes) { draw(); var first = menu.querySelector('.size-opt.on') || menu.querySelector('.size-opt'); if (first) first.focus(); }
+  }
+  btn.addEventListener('click', function (e) { e.stopPropagation(); open(menu.hidden); });
+  menu.addEventListener('click', function (e) {
+    var opt = e.target.closest('[data-size-id]');
+    if (!opt) return;
+    PH.setSize(opt.getAttribute('data-size-id'));
+    draw();
+    open(false);
+    btn.focus();
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('.size-wrap')) open(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); } });
+  document.addEventListener('ph:size', label);
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+  var themeWrap = bar.querySelector('.theme-wrap');
+  if (themeWrap) bar.insertBefore(wrap, themeWrap);
   else bar.appendChild(wrap);
   draw();
 })();

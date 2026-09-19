@@ -6,6 +6,7 @@ const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.rea
 const waitFor=async(cond,n)=>{for(let i=0;i<(n||300);i++){ if(cond()) return true; await tick(); } return cond();};
 const KEY='ph.theme';
 const snap = localStorage.getItem(KEY);
+const snapSize = localStorage.getItem('ph.size');
 const f=document.createElement('iframe'); f.style.cssText='width:1100px;height:700px;border:0'; document.body.appendChild(f);
 
 /* Records what data-theme was at the moment the document started running, which is what decides
@@ -102,6 +103,44 @@ async function go(page) {
       ['light','dark'].indexOf(d.documentElement.getAttribute('data-theme')) >= 0,
       d.documentElement.getAttribute('data-theme'));
     ok('and the page still renders', !!d.querySelector('main') && d.body.innerText.trim().length > 40);
+
+    /* ---- text size ---- */
+    /* read the frame live at every step: a cached document goes stale across a navigation */
+    const D = () => f.contentDocument, W = () => f.contentWindow;
+    const px = el => { try { return parseFloat(W().getComputedStyle(el).fontSize); } catch (e) { return NaN; } };
+    localStorage.removeItem('ph.size');
+    await go('index.html');
+    ok('every page has a size button', !!D().querySelector('#sizeBtn'));
+    ok('it says what it is for', (D().querySelector('#sizeBtn').getAttribute('aria-label') || '').indexOf('Text size') === 0,
+       D().querySelector('#sizeBtn').getAttribute('aria-label'));
+    ok('normal writes no attribute at all', !D().documentElement.getAttribute('data-size'));
+    const base = px(D().documentElement);
+    await waitFor(() => !!D().querySelector('#sizeBtn'), 200);
+    D().querySelector('#sizeBtn').click();
+    await waitFor(() => D().querySelectorAll('.size-opt').length === 4, 200);
+    ok('it offers four sizes', D().querySelectorAll('.size-opt').length === 4,
+       String(D().querySelectorAll('.size-opt').length) + ' menuHidden=' + (D().querySelector('#sizeMenu') || {}).hidden);
+    if (!D().querySelector('[data-size-id="xl"]')) { D().querySelector('#sizeBtn').click(); await waitFor(() => !!D().querySelector('[data-size-id="xl"]'), 200); }
+    D().querySelector('[data-size-id="xl"]').click();
+    await waitFor(() => D().documentElement.getAttribute('data-size') === 'xl', 200);
+    ok('picking one applies it', D().documentElement.getAttribute('data-size') === 'xl', String(D().documentElement.getAttribute('data-size')));
+    await waitFor(() => px(D().documentElement) > base + 2, 200);
+    ok('and the whole page really grows', px(D().documentElement) > base + 2, base + ' to ' + px(D().documentElement));
+    ok('the words grow with it, not only the spacing', px(D().body) > base + 2, base + ' to ' + px(D().body));
+    ok('and it is stored', localStorage.getItem('ph.size') === 'xl', String(localStorage.getItem('ph.size')));
+    await go('review.html');
+    ok('the size carries to another page', D().documentElement.getAttribute('data-size') === 'xl');
+    ok('and is set before the page runs, so nothing jumps', atParse !== null);
+    ok('the buttons are still on screen at the largest size',
+       Array.from(D().querySelectorAll('.topbar button')).filter(b => !b.closest('[hidden]')).every(b => b.getBoundingClientRect().width > 0));
+    W().PH.setSize('m');
+    await waitFor(() => !D().documentElement.getAttribute('data-size'), 200);
+    ok('going back to normal clears the attribute', !D().documentElement.getAttribute('data-size'));
+    ok('and stores nothing', localStorage.getItem('ph.size') === null, String(localStorage.getItem('ph.size')));
+    localStorage.setItem('ph.size', 'enormous');
+    await go('index.html');
+    ok('a size that does not exist falls back', !D().documentElement.getAttribute('data-size'));
+    localStorage.removeItem('ph.size');
 
     /* a light theme too, so the check is not only ever dark */
     w = f.contentWindow;

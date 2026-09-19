@@ -1,0 +1,52 @@
+<!doctype html><title>buttons</title><body style="margin:0"><script>
+/* Every page, at a desktop width and a phone width: no button may be clipped, none may shrink below a
+   size worth pressing, and the page must not scroll sideways. Collapsing a label on a phone is fine —
+   losing the button, or leaving a sliver of one, is not. */
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const PAGES=['index','ask','math','spanish','quizzes','ai','books','calendar','profile','python','progress','review','piano','badges','hindi','schedule'];
+/* a year-long activity grid cannot have thumb-sized squares; it is a chart made of buttons */
+const NOT_A_TAP_TARGET = /(^|\s)cell(\s|$)|swatch|\bsw\b/;
+const f=document.createElement('iframe'); document.body.appendChild(f);
+(async () => {
+  try {
+    for (const width of [1100, 390]) {
+      f.style.cssText = 'width:' + width + 'px;height:900px;border:0';
+      const tooSmall = [], clipped = [], wide = [];
+      for (const page of PAGES) {
+        await new Promise(res => { f.onload = res; f.src = '../' + page + '.html?w=' + width; });
+        await wait(240);
+        const d = f.contentDocument;
+        const buttons = Array.from(d.querySelectorAll('button, .btn, a.btn'));
+        buttons.forEach(b => {
+          const r = b.getBoundingClientRect();
+          if (!r.width || !r.height) return;                   /* hidden things are not on screen */
+          if (NOT_A_TAP_TARGET.test(b.className)) return;
+          if (r.height < 28 || r.width < 28) tooSmall.push(page + ' ' + (b.id || b.className).slice(0, 22) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          if (b.scrollWidth > b.clientWidth + 2 && b.clientWidth > 0) clipped.push(page + ' ' + (b.id || b.className).slice(0, 22));
+        });
+        if (d.documentElement.scrollWidth > width + 1) wide.push(page + ' ' + d.documentElement.scrollWidth);
+      }
+      ok(width + 'px: no button is too small to press', !tooSmall.length, tooSmall.slice(0, 4).join(' | '));
+      ok(width + 'px: no button has its label cut off', !clipped.length, [...new Set(clipped)].slice(0, 4).join(' | '));
+      ok(width + 'px: no page scrolls sideways', !wide.length, wide.slice(0, 4).join(' | '));
+    }
+
+    /* the top bar keeps its buttons on a phone, it just stops writing their names */
+    f.style.cssText = 'width:390px;height:900px;border:0';
+    await new Promise(res => { f.onload = res; f.src = '../ask.html?narrow=1'; });
+    await wait(240);
+    /* not the ones inside a menu that has not been opened */
+    const narrow = Array.from(f.contentDocument.querySelectorAll('.topbar button, .topbar a.btn'))
+      .filter(b => !b.closest('[hidden]'));
+    ok('the top bar still has its buttons on a phone', narrow.length >= 3, String(narrow.length));
+    ok('and every one of them is still on screen', narrow.every(b => b.getBoundingClientRect().width > 0));
+    const labels = Array.from(f.contentDocument.querySelectorAll('.topbar .lbl'));
+    ok('their written labels are what gives way', labels.length === 0 || labels.every(l => l.getBoundingClientRect().width === 0),
+       String(labels.length));
+  } catch (e) { ok('the suite ran to the end', false, e && (e.stack || e.message)); }
+  finally {
+    console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
+  }
+})();
+</script>
