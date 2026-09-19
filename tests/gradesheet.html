@@ -112,6 +112,23 @@ f.addEventListener('load', async () => {
     $('[data-mode="grade"]').click(); await tick();
     ok('mode is remembered in state', JSON.parse(w.localStorage.getItem('ph.ai.v1')).settings.mode === 'grade');
 
+    /* ---- all three CPM Integrated courses make a worksheet, in course order ---- */
+    const order = $$('[data-grade]').map(b => b.getAttribute('data-grade')).join(',');
+    ok('the grades come first and then the three courses, in order',
+       order === '4,5,6,7,8,im1,int2,int3', order);
+    for (const g of ['im1', 'int2', 'int3']) {
+      $('[data-grade="' + g + '"]').click(); await sleep(60);
+      $('#gMake').click(); await sleep(320);
+      const made = w.PH_AI.state().sets[0];
+      ok(g + ': makes a worksheet', made && made.problems.length > 0, made ? String(made.problems.length) : 'none');
+      ok(g + ': it is named after the course', /Integrated Math [123]/.test(made.title), made.title);
+      const paper = w.PH_AI.sheetHTML();
+      ok(g + ': it prints with an answer key', /^<!DOCTYPE html>/.test(paper) && /Answer key/.test(paper));
+      ok(g + ': and carries nothing from outside', !/<script|https?:\/\//.test(paper));
+      ok(g + ': with a work box for each problem', (paper.match(/class="work"/g) || []).length === made.problems.length,
+         (paper.match(/class="work"/g) || []).length + ' of ' + made.problems.length);
+    }
+
     /* ---- the same questions, answered by clicking ---- */
     for (const g of ['int2', 'int3']) {
       $('[data-grade="' + g + '"]').click(); await sleep(40);

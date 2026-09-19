@@ -10,6 +10,10 @@ main > * + * { margin-top: 1rem; }
 
 /* ---- lesson picker ---- */
 .sect-head { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin: 1rem 0 .2rem; }
+/* the chapter is named once, where it begins; the sections inside it are only numbered */
+.chap-head { font-family: var(--font-display); font-size: 1.08rem; font-weight: 600; color: var(--text);
+  margin: 1.6rem 0 .1rem; padding-bottom: .35rem; border-bottom: 1px solid var(--border); }
+.chap-head:first-child { margin-top: .2rem; }
 .sect-head:first-child { margin-top: 0; }
 .lrow { display: grid; grid-template-columns: 3.3rem minmax(0, 1fr) auto auto auto; gap: .3rem .8rem; align-items: center; padding: .6rem 0; border-top: 1px solid var(--border); }
 .lrow .lid { font-weight: 800; color: var(--accent-text); font-variant-numeric: tabular-nums; }
@@ -102,17 +106,6 @@ main > * + * { margin-top: 1rem; }
 <main class="container">
 
   <!-- Stats -->
-  <section class="card" aria-labelledby="h-stats">
-    <div class="card-head"><h2 id="h-stats">Progress</h2><span class="muted small" id="bank-title"></span></div>
-    <div class="stats">
-      <div class="stat"><div class="num" id="s-taken">0</div><div class="lbl">Quizzes taken</div></div>
-      <div class="stat"><div class="num" id="s-avg">–</div><div class="lbl">Average score</div></div>
-      <div class="stat"><div class="num" id="s-mastered">0</div><div class="lbl">Lessons mastered (9+/10)</div></div>
-      <div class="stat"><div class="num" id="s-streak">0</div><div class="lbl">Day streak</div></div>
-    </div>
-  </section>
-
-  <!-- Lesson picker -->
   <section class="card" id="picker" aria-labelledby="h-lessons">
     <div class="card-head"><h2 id="h-lessons">Lessons</h2><span class="muted small">10 questions each · new questions every time</span></div>
     <div class="tabs" id="courseTabs" role="group" aria-label="Which course"></div>
@@ -136,6 +129,17 @@ main > * + * { margin-top: 1rem; }
   </section>
 
   <!-- History -->
+  <section class="card" aria-labelledby="h-stats">
+    <div class="card-head"><h2 id="h-stats">Progress</h2><span class="muted small" id="bank-title"></span></div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="s-taken">0</div><div class="lbl">Quizzes taken</div></div>
+      <div class="stat"><div class="num" id="s-avg">–</div><div class="lbl">Average score</div></div>
+      <div class="stat"><div class="num" id="s-mastered">0</div><div class="lbl">Lessons mastered (9+/10)</div></div>
+      <div class="stat"><div class="num" id="s-streak">0</div><div class="lbl">Day streak</div></div>
+    </div>
+  </section>
+
+  <!-- Lesson picker -->
   <section class="card" id="history" aria-labelledby="h-hist">
     <div class="card-head"><h2 id="h-hist">History</h2><span class="muted small" id="hist-count"></span></div>
     <div id="hist-body"></div>
@@ -518,7 +522,14 @@ main > * + * { margin-top: 1rem; }
     if (!LESSONS.length) { host.innerHTML = '<div class="empty">The question bank did not load, so there are no quizzes to show.</div>'; $('#btn-mix').disabled = true; return; }
     const groups = {}, order = [];
     LESSONS.forEach(l => { const sec = l.id.split('.').slice(0, 2).join('.'); if (!groups[sec]) { groups[sec] = []; order.push(sec); } groups[sec].push(l); });
-    host.innerHTML = order.map(sec => '<div class="sect-head">Section ' + esc(sec) + (chapterTitleFor(sec) ? ' · ' + esc(chapterTitleFor(sec)) : '') + '</div>' + groups[sec].map(l => {
+    /* name the chapter once, where it starts, and then just number the sections inside it */
+    let lastChapter = '';
+    host.innerHTML = order.map(sec => {
+      const ch = String(sec).split('.')[0];
+      const title = ch === lastChapter ? '' : chapterTitleFor(sec);
+      lastChapter = ch;
+      return (title ? '<div class="chap-head">Chapter ' + esc(ch) + ' \u00b7 ' + esc(title) + '</div>' : '') +
+        '<div class="sect-head">Section ' + esc(sec) + '</div>' + groups[sec].map(l => {
       const best = bestOf(l.id), n = state.attempts.filter(a => a.lesson === l.id).length;
       const ratio = best ? best.right / best.total : 0;
       const pill = best ? '<span class="pill ' + (ratio >= .9 ? 'ok' : ratio >= .6 ? 'warn' : 'neutral') + '" title="Best score">' + (ratio >= .9 ? '★ ' : '') + best.right + '/' + best.total + '</span>' : '<span class="pill neutral">New</span>';
@@ -531,7 +542,8 @@ main > * + * { margin-top: 1rem; }
           '<button type="button" class="btn btn-sm btn-ghost" data-printq="' + esc(l.id) + '" title="Print this lesson as a paper quiz" aria-label="Print quiz ' + esc(l.id) + '">🖨️</button>' +
         '</span>' +
         '</div>';
-    }).join('')).join('');
+    }).join('');
+    }).join('');
     const tried = attemptedLessonIds();
     $('#mix-sub').textContent = tried.length > 1 ? '10 questions mixed from the ' + tried.length + ' lessons you have tried: ' + tried.join(', ') + '.' : tried.length === 1 ? 'Try one more lesson to unlock a real mix — for now it draws from ' + tried[0] + '.' : '10 questions drawn from all ten lessons (until you have tried some).';
   }

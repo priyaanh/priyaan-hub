@@ -11,7 +11,9 @@ f.addEventListener('load', async () => {
        && $$('[data-printq]').length >= 21);
     const heads = $$('.sect-head').map(e => e.textContent).join(' | ');
     ok('both chapters are listed', /Section 1\.1/.test(heads) && /Section 2\.1/.test(heads), heads);
-    ok('and each section says which chapter it belongs to', /Justification and Similarity/.test(heads), heads);
+    const chapHeads = $$('.chap-head').map(e => e.textContent).join(' | ');
+    ok('each chapter is named once, where it begins', /Chapter 1 · Exploring/.test(chapHeads) && /Chapter 2 · Justification/.test(chapHeads), chapHeads);
+    ok('and its sections are only numbered', !/Justification/.test(heads), heads);
     const q = w.PHQuizDebug.buildQuiz({ lesson: '1.3.2', seed: 12345 });
     const html = w.PHQuizDebug.quizSheetHTML(q);
     ok('complete document', /^<!DOCTYPE html>/.test(html) && /<\/html>$/.test(html));

@@ -563,13 +563,20 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 
   /* ---------------- by grade: generated here, no AI ---------------- */
   /* The three school grades come from grades.js; Integrated Math 1 reuses the generators in im1.js. */
+  /* Grades first, then the three Integrated courses in their own order. Integrated Math 1 comes from
+     im1.js and 2 and 3 from grades.js, which is an accident of where they were written, not something
+     anyone picking a worksheet should have to know. */
+  var LEVEL_ORDER = ['4', '5', '6', '7', '8', 'im1', 'int2', 'int3'];
   function allLevels() {
     var L = ((window.GRADES && GRADES.LEVELS) || []).slice();
     if (window.IM1 && Array.isArray(IM1.TOPICS)) {
-      L.push({ id: 'im1', name: 'Integrated Math 1', sub: 'CPM: equations, slope, systems, exponents, sequences',
+      L.push({ id: 'im1', name: 'Integrated Math 1', sub: 'CPM Core Connections Integrated I \u00b7 equations, slope, systems, exponents, sequences',
         topics: IM1.TOPICS.map(function (t) { return { id: t.id, name: t.name, description: t.description }; }) });
     }
-    return L;
+    return L.sort(function (a, b) {
+      var ia = LEVEL_ORDER.indexOf(String(a.id)), ib = LEVEL_ORDER.indexOf(String(b.id));
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
   }
   function gradeLevel() {
     var L = allLevels();
