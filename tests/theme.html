@@ -16,8 +16,8 @@ async function go(page) {
   const want = page.replace(/\?.*/, '');
   /* a unique query every time, or setting src to the URL already loaded does not navigate at all */
   f.src = '../' + page + (page.indexOf('?') < 0 ? '?' : '&') + 'n=' + (++nav);
-  const deadline = Date.now() + 15000;
-  for (let i = 0; i < 5000 && Date.now() < deadline; i++) {
+  const deadline = Date.now() + 30000;
+  for (let i = 0; i < 20000 && Date.now() < deadline; i++) {
     await tick();
     try {
       const d = f.contentDocument;
@@ -27,6 +27,12 @@ async function go(page) {
     } catch (e) {}
   }
   for (let i = 0; i < 8; i++) await tick();
+  /* Under a full run several browsers are in flight and a page can still be swapping documents here.
+     Reading documentElement while that happens is what used to make this suite throw at random. */
+  for (let i = 0; i < 400; i++) {
+    try { if (f.contentDocument && f.contentDocument.documentElement && f.contentDocument.querySelector('#themeBtn')) break; } catch (e) {}
+    await tick();
+  }
 }
 
 (async () => {

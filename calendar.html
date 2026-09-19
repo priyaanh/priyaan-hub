@@ -67,6 +67,12 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 details[open] summary { margin-bottom: .6rem; }
 .steps { margin: .4rem 0 0 1.1rem; padding: 0; font-size: .9rem; }
 .steps li { margin: .3rem 0; }
+.embed-row { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-top: .8rem; background: var(--surface); }
+.embed-row .head { display: flex; gap: .6rem; align-items: center; padding: .5rem .7rem; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.embed-row .head .nm { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.embed-row .head .kind { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.embed-row iframe { display: block; width: 100%; height: 26rem; border: 0; background: var(--surface); }
+.embed-row.folder iframe { height: 18rem; }
 @media print { .cal-frame-wrap, .quick, details, .topbar { display: none !important; } }
 </style></head>
 <body data-app="calendar">
@@ -111,7 +117,29 @@ details[open] summary { margin-bottom: .6rem; }
       </div>
     </div>
     <div class="cal-frame-wrap"><iframe id="calFrame" title="Google Calendar" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
-    <p class="muted small cal-note">Google's own calendar view. A calendar shows here when this browser is signed in to an account that can see it. Times are shown in <b id="tzName"></b>.</p>
+    <div class="row cal-note" style="gap:.5rem;flex-wrap:wrap;align-items:center">
+      <span class="muted small">Google's own calendar view, for account <b id="authLbl">1</b> of the ones signed in here. Times in <b id="tzName"></b>.</span>
+      <span class="grow"></span>
+      <button class="btn btn-sm" id="tryNextAcct">Try the next account</button>
+    </div>
+    <details class="cal-note" id="permHelp">
+      <summary>It says you do not have permission?</summary>
+      <p class="small muted">That message comes from Google, not from this page, and it almost always means one
+        of three things:</p>
+      <ol class="steps">
+        <li><b>The wrong account.</b> When several Google accounts are signed in, an embed uses the first one
+          unless it is told otherwise. Press <b>Try the next account</b> above until the calendar appears —
+          this page remembers which one worked. You can see the number in a calendar.google.com address:
+          <code>/calendar/u/<b>1</b>/r</code> is the second account.</li>
+        <li><b>Not signed in to that account at all in this browser.</b> Open
+          <a href="https://calendar.google.com/" target="_blank" rel="noopener">calendar.google.com</a>, sign in,
+          and come back.</li>
+        <li><b>Third-party cookies are blocked.</b> The frame then cannot see that you are signed in. Allow
+          cookies for <code>calendar.google.com</code> on this site, or open the calendar in its own tab.</li>
+      </ol>
+      <p class="small muted">A calendar belonging to someone else will not show at all unless they have shared
+        it with the account you are signed in as. That is Google's rule and there is no way round it here.</p>
+    </details>
   </section>
 
   <section class="card" aria-labelledby="h-accounts">
@@ -176,6 +204,30 @@ details[open] summary { margin-bottom: .6rem; }
     </details>
   </section>
 
+  <section class="card" aria-labelledby="h-embeds">
+    <div class="card-head"><h2 id="h-embeds">Other Google things</h2><span class="muted small" id="embedCount"></span></div>
+    <p class="muted">Paste a link and it appears on this page. Google allows a page to frame a
+      <b>Doc</b>, <b>Sheet</b>, <b>Slides</b>, a <b>Form</b>, a <b>Drive folder</b> and a <b>My Maps</b> map —
+      as long as the thing itself is shared or published. The link from the address bar is fine; it is
+      turned into the embedding form for you.</p>
+    <form class="add-cal" id="addEmbed">
+      <div class="field"><label for="embedUrl">Link</label>
+        <input class="input" id="embedUrl" type="url" placeholder="https://docs.google.com/document/d/…" spellcheck="false" autocomplete="off" required></div>
+      <div class="field"><label for="embedName">Label (optional)</label>
+        <input class="input" id="embedName" placeholder="Study guide, Unit 3 slides…" autocomplete="off"></div>
+      <button class="btn btn-primary" type="submit">+ Add</button>
+    </form>
+    <p class="small muted" id="embedNote"></p>
+    <div id="embedList"></div>
+    <p class="small muted" style="margin-top:.9rem"><b>Tasks, Gmail, Keep and Classroom cannot be put in a
+      frame at all</b> — they are served with a header that forbids it, so no site can show them. That is
+      why Tasks below needs the sign-in instead, and why these open in their own tab:
+      <a href="https://tasks.google.com/" target="_blank" rel="noopener">Tasks</a> ·
+      <a href="https://keep.google.com/" target="_blank" rel="noopener">Keep</a> ·
+      <a href="https://classroom.google.com/" target="_blank" rel="noopener">Classroom</a> ·
+      <a href="https://drive.google.com/" target="_blank" rel="noopener">Drive</a>.</p>
+  </section>
+
   <section class="card" aria-labelledby="h-tasks">
     <div class="card-head"><h2 id="h-tasks">Google Tasks</h2>
       <span class="row" style="gap:.4rem"><span class="muted small" id="taskStatus"></span>
@@ -232,7 +284,7 @@ details[open] summary { margin-bottom: .6rem; }
   }
   function labelFor(src) { const s = String(src); return s.includes('@') ? s.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Calendar'; }
   function blank() {
-    return { version: 2, settings: { calendars: [], mode: 'WEEK', tz: localTz, clientId: '', taskList: '' },
+    return { version: 2, settings: { calendars: [], mode: 'WEEK', tz: localTz, clientId: '', taskList: '', authuser: 0, embeds: [] },
       tasksCache: null, eventsCache: null, summary: { headline: '', sub: '' } };
   }
   function normalize(raw) {
@@ -256,6 +308,13 @@ details[open] summary { margin-bottom: .6rem; }
     if (MODES.includes(st.mode)) s.settings.mode = st.mode;
     if (typeof st.tz === 'string' && st.tz.trim()) s.settings.tz = st.tz.trim();
     if (typeof st.clientId === 'string') s.settings.clientId = st.clientId.trim();
+    if (isFinite(st.authuser)) s.settings.authuser = Math.min(9, Math.max(0, Math.round(st.authuser)));
+    if (Array.isArray(st.embeds)) s.settings.embeds = st.embeds.filter(isObj).map(function (e) {
+      return { id: typeof e.id === 'string' && e.id ? e.id : PH.uid(),
+        name: typeof e.name === 'string' ? e.name.slice(0, 60) : '',
+        url: typeof e.url === 'string' ? e.url.slice(0, 900) : '',
+        kind: typeof e.kind === 'string' ? e.kind.slice(0, 20) : 'page' };
+    }).filter(function (e) { return /^https:\/\//.test(e.url); }).slice(0, 12);
     if (typeof st.taskList === 'string') s.settings.taskList = st.taskList;
     if (isObj(raw.eventsCache) && Array.isArray(raw.eventsCache.items)) {
       s.eventsCache = { at: Number(raw.eventsCache.at) || 0,
@@ -305,15 +364,97 @@ details[open] summary { margin-bottom: .6rem; }
       showCalendars: list.length > 1 ? '1' : '0', showTabs: '0', showNav: '1', showDate: '1' });
     let q = p.toString();
     list.forEach(c => { q += '&src=' + encodeURIComponent(c.src) + '&color=' + encodeURIComponent(c.color); });
-    return 'https://calendar.google.com/calendar/embed?' + q;
+    /* The account matters. With several Google accounts signed in, an embed with no account in its path
+       resolves against the first one, and a calendar belonging to any of the others comes back as
+       "you do not have the permission to view them". The number here is Google's own account index,
+       the same one that appears in a calendar.google.com/u/1/ address. */
+    var u = Math.min(9, Math.max(0, Math.round(Number(s.authuser) || 0)));
+    return 'https://calendar.google.com/calendar/u/' + u + '/embed?' + q;
   }
   function renderEmbed() {
     const list = shown(), f = $('#calFrame');
     if (!list.length) { f.removeAttribute('src'); $('#who').textContent = cals().length ? 'Every calendar is hidden' : 'No calendar added yet'; }
     else { const url = embedURL(); if (f.getAttribute('src') !== url) f.src = url; $('#who').textContent = list.map(c => c.name).join(' · '); }
     $('#tzName').textContent = state.settings.tz;
+    $('#authLbl').textContent = String((Number(state.settings.authuser) || 0) + 1);
     document.querySelectorAll('#modeTabs .tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.mode === state.settings.mode)));
-    $('#openGcal').href = 'https://calendar.google.com/calendar/u/0/r/' + (state.settings.mode === 'MONTH' ? 'month' : state.settings.mode === 'AGENDA' ? 'agenda' : 'week');
+    $('#openGcal').href = 'https://calendar.google.com/calendar/u/' + (Number(state.settings.authuser) || 0) + '/r/' + (state.settings.mode === 'MONTH' ? 'month' : state.settings.mode === 'AGENDA' ? 'agenda' : 'week');
+  }
+
+  /* ---------------- other Google things ----------------
+     A link from the address bar is not always the link that can be framed. Each kind has its own
+     embedding form, and the ones Google refuses to frame at all are named rather than half-working. */
+  var NO_FRAME = [
+    { host: /(^|\.)tasks\.google\.com$/, name: 'Google Tasks' },
+    { host: /(^|\.)keep\.google\.com$/, name: 'Google Keep' },
+    { host: /(^|\.)mail\.google\.com$/, name: 'Gmail' },
+    { host: /(^|\.)classroom\.google\.com$/, name: 'Google Classroom' },
+    { host: /(^|\.)contacts\.google\.com$/, name: 'Google Contacts' },
+    { host: /(^|\.)photos\.google\.com$/, name: 'Google Photos' }
+  ];
+  /** A link turned into something that can sit in a frame, or a reason it cannot. */
+  function asEmbed(raw) {
+    var url;
+    try { url = new URL(String(raw).trim()); } catch (e) { return { error: 'That is not a link.' }; }
+    if (url.protocol !== 'https:') return { error: 'Only https links can be shown here.' };
+    var host = url.hostname.toLowerCase(), path = url.pathname;
+    var blocked = NO_FRAME.filter(function (b) { return b.host.test(host); })[0];
+    if (blocked) return { error: blocked.name + ' cannot be put in a frame — Google does not allow it on any site. Open it in its own tab instead.' };
+
+    if (/(^|\.)calendar\.google\.com$/.test(host)) {
+      return { error: 'Add a calendar with the box further up the page, so it gets your colours and the week view.' };
+    }
+    if (/(^|\.)docs\.google\.com$/.test(host)) {
+      var m = path.match(/^\/(document|spreadsheets|presentation|forms)\/d\/(e\/)?([^/]+)/);
+      if (!m) return { error: 'That does not look like a Doc, Sheet, Slides or Form link.' };
+      var kind = m[1], published = !!m[2], id = m[3];
+      var base = 'https://docs.google.com/' + kind + '/d/' + (published ? 'e/' : '') + id;
+      if (kind === 'document') return { url: base + '/preview', kind: 'Doc' };
+      if (kind === 'spreadsheets') return { url: base + (published ? '/pubhtml?widget=true&headers=false' : '/preview'), kind: 'Sheet' };
+      if (kind === 'presentation') return { url: base + '/embed?start=false&loop=false', kind: 'Slides' };
+      return { url: base + '/viewform?embedded=true', kind: 'Form' };
+    }
+    if (/(^|\.)drive\.google\.com$/.test(host)) {
+      var f = path.match(/\/folders\/([^/?#]+)/);
+      if (f) return { url: 'https://drive.google.com/embeddedfolderview?id=' + encodeURIComponent(f[1]) + '#grid', kind: 'Folder' };
+      var d = path.match(/\/file\/d\/([^/?#]+)/);
+      if (d) return { url: 'https://drive.google.com/file/d/' + encodeURIComponent(d[1]) + '/preview', kind: 'File' };
+      return { error: 'Use the link to a Drive folder or to one file.' };
+    }
+    if (/(^|\.)google\.com$/.test(host) && /^\/maps\/d\//.test(path)) {
+      var mid = url.searchParams.get('mid');
+      if (!mid) return { error: 'That My Maps link has no map id in it.' };
+      return { url: 'https://www.google.com/maps/d/embed?mid=' + encodeURIComponent(mid), kind: 'Map' };
+    }
+    if (/(^|\.)youtube\.com$/.test(host) || host === 'youtu.be') {
+      var v = host === 'youtu.be' ? path.slice(1) : url.searchParams.get('v');
+      if (!v) return { error: 'That YouTube link has no video id in it.' };
+      return { url: 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v), kind: 'Video' };
+    }
+    return { error: 'Only Google Docs, Sheets, Slides, Forms, Drive, My Maps and YouTube can be shown here.' };
+  }
+  function embeds() { return state.settings.embeds || (state.settings.embeds = []); }
+  function addEmbed(raw, label) {
+    var made = asEmbed(raw);
+    if (made.error) { $('#embedNote').textContent = '\u26a0\ufe0f ' + made.error; return false; }
+    if (embeds().some(function (e) { return e.url === made.url; })) { $('#embedNote').textContent = 'That one is already here.'; return false; }
+    if (embeds().length >= 12) { $('#embedNote').textContent = 'Twelve is enough for one page.'; return false; }
+    embeds().push({ id: PH.uid(), name: (label || '').trim().slice(0, 60) || made.kind, url: made.url, kind: made.kind });
+    $('#embedNote').textContent = '';
+    save(); renderEmbeds();
+    return true;
+  }
+  function renderEmbeds() {
+    var list = embeds();
+    $('#embedCount').textContent = list.length ? list.length + (list.length === 1 ? ' added' : ' added') : '';
+    $('#embedList').innerHTML = list.map(function (e) {
+      return '<div class="embed-row' + (e.kind === 'Folder' ? ' folder' : '') + '" data-embed="' + esc(e.id) + '">' +
+        '<div class="head"><span class="nm">' + esc(e.name) + '</span><span class="kind">' + esc(e.kind) + '</span>' +
+        '<a class="btn btn-sm btn-ghost" href="' + esc(e.url) + '" target="_blank" rel="noopener">Open \u2197</a>' +
+        '<button class="btn btn-sm btn-ghost btn-danger" data-unembed="' + esc(e.id) + '" aria-label="Remove ' + esc(e.name) + '">\u2715</button></div>' +
+        '<iframe src="' + esc(e.url) + '" title="' + esc(e.name) + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>' +
+        '</div>';
+    }).join('');
   }
 
   /* ---------------- accounts ---------------- */
@@ -577,6 +718,14 @@ details[open] summary { margin-bottom: .6rem; }
     var note = $('#signinNote');
     if (note) note.hidden = !!state.settings.clientId;
   }
+  /* Cycle Google's account index. Faster than explaining how to find it, and it is remembered. */
+  function tryNextAccount() {
+    state.settings.authuser = ((Number(state.settings.authuser) || 0) + 1) % 5;
+    save();
+    renderEmbed();
+    $('#permHelp').open = true;
+    PH.toast('Showing account ' + (state.settings.authuser + 1) + ' of the ones signed in here');
+  }
   function forgetAllCalendars() {
     const n = cals().length;
     if (!n) return;
@@ -586,7 +735,7 @@ details[open] summary { margin-bottom: .6rem; }
     save(); renderAll();
     PH.toast(n === 1 ? 'Account forgotten' : 'All ' + n + ' accounts forgotten');
   }
-  function renderAll() { renderCals(); renderEmbed(); renderQuick(); renderSettings(); renderTasks(); }
+  function renderAll() { renderCals(); renderEmbed(); renderEmbeds(); renderQuick(); renderSettings(); renderTasks(); }
 
   $('#modeTabs').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; state.settings.mode = b.dataset.mode; save(); renderEmbed(); });
   $('#calList').addEventListener('click', e => {
@@ -611,6 +760,17 @@ details[open] summary { margin-bottom: .6rem; }
   });
   $('#taskRefresh').addEventListener('click', loadTasks);
   $('#taskBox').addEventListener('change', e => { const c = e.target.closest('[data-task]'); if (c) toggleTask(c.dataset.task, c.checked); });
+  $('#addEmbed').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (addEmbed($('#embedUrl').value, $('#embedName').value)) { $('#embedUrl').value = ''; $('#embedName').value = ''; }
+  });
+  document.addEventListener('click', function (e) {
+    var rm = e.target.closest && e.target.closest('[data-unembed]');
+    if (!rm) return;
+    state.settings.embeds = embeds().filter(function (x) { return x.id !== rm.getAttribute('data-unembed'); });
+    save(); renderEmbeds();
+  });
+  $('#tryNextAcct').addEventListener('click', tryNextAccount);
   $('#forgetAll').addEventListener('click', forgetAllCalendars);
   $('#taskBox').addEventListener('click', e => { const d = e.target.closest('[data-deltask]'); if (d) deleteTask(d.dataset.deltask); });
   $('#taskLists').addEventListener('click', e => { const b = e.target.closest('[data-list]'); if (b) { curList = b.dataset.list; state.settings.taskList = curList; save(); loadTasks(); } });
@@ -624,7 +784,7 @@ details[open] summary { margin-bottom: .6rem; }
 
   /* Hook for the automated tests in this repo: they stub window.fetch and drive these directly, since the
      Google sign-in popup cannot run headless. Harmless in normal use — it exposes no secrets. */
-  window.PH_CAL = { loadTasks: loadTasks, loadEvents: loadEvents, signOut: signOut, renderTasks: renderTasks,
+  window.PH_CAL = { asEmbed: asEmbed, addEmbed: addEmbed, embeds: embeds, loadTasks: loadTasks, loadEvents: loadEvents, signOut: signOut, renderTasks: renderTasks,
     setToken: function (t) { token = t; }, setList: function (id) { curList = id; state.settings.taskList = id; },
     state: function () { return state; } };
 })();

@@ -1,9 +1,10 @@
 <!doctype html><title>calendar test</title><body style="margin:0"><script>
 const f = document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../calendar.html'; document.body.appendChild(f);
-const R=[]; const ok=(n,c)=>{const l=(c?'PASS ':'FAIL ')+n; R.push(l); console.log(l);}; const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);}; const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let phase = 0;
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const txt = sel => { const e = $(sel); return e ? (e.innerText || e.textContent || '').trim() : ''; };
   if (phase === 0) {
     phase = 1;
     // seed a v1 (old format: plain strings) state, then reload to check migration
@@ -51,6 +52,42 @@ f.addEventListener('load', async () => {
     ok('hub summary mentions calendars', /calendar/i.test(saved.summary.sub) || saved.summary.headline === 'Google Calendar');
     // share-help shows the first address
     ok('share help names first account', $('#shareTo').textContent.includes('@'));
+
+    /* ---- which Google account the frame uses ---- */
+    ok('the embed names an account', /\/calendar\/u\/0\/embed/.test($('#calFrame').getAttribute('src')),
+       $('#calFrame').getAttribute('src').slice(0, 60));
+    ok('the page says which account it is showing', txt('#authLbl') === '1', txt('#authLbl'));
+    $('#tryNextAcct').click(); await sleep(60);
+    ok('trying the next account moves to the next one', /\/calendar\/u\/1\/embed/.test($('#calFrame').getAttribute('src')),
+       $('#calFrame').getAttribute('src').slice(0, 60));
+    ok('and remembers it', (JSON.parse(w.localStorage.getItem('ph.calendar.v1')).settings.authuser) === 1);
+    ok('and says so', txt('#authLbl') === '2', txt('#authLbl'));
+    ok('the permission message is explained on the page', /do not have permission/i.test(txt('#permHelp')));
+    ok('and it names the three reasons', $$('#permHelp .steps li').length === 3, String($$('#permHelp .steps li').length));
+
+    /* ---- other Google things ---- */
+    const E = w.PH_CAL.asEmbed;
+    ok('a Doc link becomes a preview', E('https://docs.google.com/document/d/1AbC/edit').url === 'https://docs.google.com/document/d/1AbC/preview');
+    ok('a Slides link becomes an embed', /\/presentation\/d\/1Pq\/embed/.test(E('https://docs.google.com/presentation/d/1Pq/edit').url || ''));
+    ok('a Form link becomes the embedded form', /viewform\?embedded=true/.test(E('https://docs.google.com/forms/d/e/1F/viewform').url || ''));
+    ok('a Drive folder becomes the folder view', /embeddedfolderview\?id=1Folder/.test(E('https://drive.google.com/drive/folders/1Folder').url || ''));
+    ok('a My Maps link becomes the map embed', /maps\/d\/embed\?mid=1Map/.test(E('https://www.google.com/maps/d/viewer?mid=1Map').url || ''));
+    ok('a YouTube link uses the no-cookie player', /youtube-nocookie\.com\/embed\/abc/.test(E('https://www.youtube.com/watch?v=abc').url || ''));
+    ok('Tasks is refused, by name', /Tasks cannot be put in a frame/.test(E('https://tasks.google.com/').error || ''), E('https://tasks.google.com/').error);
+    ok('Gmail is refused too', !!E('https://mail.google.com/').error);
+    ok('a calendar link is sent to the box that handles calendars', /further up the page/.test(E('https://calendar.google.com/calendar/u/0/r').error || ''));
+    ok('http is refused', /https/.test(E('http://docs.google.com/document/d/1/edit').error || ''));
+    ok('somewhere else entirely is refused', !!E('https://example.com/x').error);
+    ok('nonsense is refused', !!E('not a link').error);
+
+    w.PH_CAL.addEmbed('https://docs.google.com/document/d/1AbC/edit', 'Study guide'); await sleep(60);
+    ok('an added thing is shown in a frame', $$('.embed-row').length === 1 && /docs\.google\.com\/document\/d\/1AbC\/preview/.test($('.embed-row iframe').src));
+    ok('and is labelled', /Study guide/.test(txt('#embedList')));
+    ok('the same one is not added twice', w.PH_CAL.addEmbed('https://docs.google.com/document/d/1AbC/edit', '') === false);
+    ok('it survives in storage', (JSON.parse(w.localStorage.getItem('ph.calendar.v1')).settings.embeds || []).length === 1);
+    $('[data-unembed]').click(); await sleep(60);
+    ok('and can be removed', $$('.embed-row').length === 0);
+    ok('the page says what cannot be framed at all', /cannot be put in a frame at all/.test(txt('body')));
 
     /* forgetting the lot, for when a saved account should not be on the device any more */
     ok('there is a way to forget every account at once', !!$('#forgetAll') && !$('#forgetAll').hidden);
