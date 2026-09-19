@@ -1,8 +1,10 @@
 <!doctype html><title>quiz print test</title><body style="margin:0"><script>
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1200px;border:0'; f.src='../quizzes.html'; document.body.appendChild(f);
 const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const txt = sel => { const e = $(sel); return e ? (e.innerText || e.textContent || '').trim() : ''; };
   try {
     /* one per lesson, however many chapters the bank holds */
     ok('every lesson row has a print button', $$('[data-printq]').length === w.CPM_QUIZZES.lessons.length
@@ -33,6 +35,68 @@ f.addEventListener('load', async () => {
     const fr = d.getElementById('printFrame');
     ok('print frame created with the sheet', !!fr && /class="prob"/.test(fr.srcdoc || ''));
     ok('page did not navigate away', !!d.querySelector('[data-printq]'));
+    /* ---- the clock can be turned off, because it rushes some people ---- */
+    w.localStorage.removeItem('ph.quiz.clock');
+    $('[data-start]').click(); await sleep(200);
+    ok('a quiz shows a clock to begin with', !$('#q-timer').hidden && $('#q-clock').getAttribute('aria-pressed') === 'true');
+    $('#q-clock').click(); await sleep(150);
+    ok('it can be turned off', $('#q-timer').hidden && $('#q-clock').getAttribute('aria-pressed') === 'false');
+    ok('and that is remembered', w.localStorage.getItem('ph.quiz.clock') === 'off');
+    ok('the button says what it will do now', /Show the clock/.test($('#q-clock').getAttribute('aria-label') || ''),
+       $('#q-clock').getAttribute('aria-label'));
+    await sleep(1100);
+    ok('and it stays hidden while the quiz runs on', $('#q-timer').hidden);
+    $('#q-clock').click(); await sleep(150);
+    ok('it comes back when asked', !$('#q-timer').hidden);
+    ok('and nothing is stored once it is back to normal', w.localStorage.getItem('ph.quiz.clock') === null);
+    $('#q-quit').click(); await sleep(200);
+
+    /* ---- the three Integrated courses ---- */
+    ok('all three courses are offered', $$('#courseTabs .tab').length === 3,
+       $$('#courseTabs .tab').map(t => t.textContent).join(' | '));
+    ok('Integrated II is the one with a written bank', /Integrated II/.test($('#courseTabs .tab.on').textContent),
+       $('#courseTabs .tab.on').textContent);
+    ok('and it shows both its lessons and its generated topics',
+       $$('[data-printq]').length >= 21 && $$('[data-startgen]').length >= 5,
+       $$('[data-printq]').length + ' lessons, ' + $$('[data-startgen]').length + ' topics');
+
+    $('[data-course="im1"]').click(); await sleep(120);
+    ok('Integrated I has topics of its own', $$('[data-startgen]').length >= 10, String($$('[data-startgen]').length));
+    ok('and no bank lessons, because there is no bank for it', $$('[data-printq]').length === 0);
+    const headText = $$('#topic-list .sect-head').map(h => h.textContent).join(' | ');
+    ok('its topics are grouped by the CPM chapter they come from',
+       /Chapter 1/.test(headText) && /Chapter 2/.test(headText), headText.slice(0, 90));
+    const chapterNos = $$('#topic-list .sect-head').map(h => Number((h.textContent.match(/Chapter (\d+)/) || [])[1] || 99));
+    ok('and the chapters are in book order', chapterNos.every((n, i) => i === 0 || n >= chapterNos[i - 1]), chapterNos.join(','));
+
+    /* a generated quiz really is a quiz: ten pick-one questions from a seed */
+    $('[data-startgen]').click(); await sleep(300);
+    const gq = w.PH_QUIZ ? w.PH_QUIZ.quiz() : null;
+    ok('starting one builds ten questions', !!gq && gq.items.length === 10, gq ? String(gq.items.length) : 'no hook');
+    ok('it remembers which topic it came from', !!gq.gen && gq.gen.course === 'im1', JSON.stringify(gq && gq.gen));
+    ok('it has a seed', gq.seed > 0, String(gq.seed));
+    ok('every question is pick-one', gq.items.every(i => i.type === 'mc' && i.choices.length >= 2),
+       gq.items.filter(i => i.type !== 'mc').length + ' not multiple choice');
+    ok('exactly one option is right each time', gq.items.every(i => i.answer >= 0 && i.answer < i.choices.length));
+    ok('no question shows its markup', !/&lt;sup&gt;|<sup>/.test(txt('.q-text')) || /<sup>/.test($('.q-text').innerHTML),
+       txt('.q-text').slice(0, 60));
+    ok('the title names the course and the topic', /Integrated I · /.test(txt('#q-title')), txt('#q-title'));
+
+    /* the same seed gives the same quiz back */
+    const again = w.PH_QUIZ.build({ lesson: gq.lesson, seed: gq.seed });
+    ok('the same seed rebuilds the same questions',
+       again.items.map(i => i.q).join('|') === gq.items.map(i => i.q).join('|'));
+    const different = w.PH_QUIZ.build({ lesson: gq.lesson, seed: gq.seed + 1 });
+    ok('and another seed gives different ones', different.items.map(i => i.q).join('|') !== gq.items.map(i => i.q).join('|'));
+
+    /* and it prints, with its options and its answer key */
+    const gsheet = w.PH_QUIZ.sheet(gq);
+    ok('a generated quiz prints', /^<!DOCTYPE html>/.test(gsheet));
+    ok('with its options', /ol class="choices"/.test(gsheet));
+    ok('with an answer key', /Answer key/.test(gsheet));
+    ok('and it is named on the paper, not called a mixed review',
+       /Integrated I/.test(gsheet) && !/Mixed review/.test(gsheet), (gsheet.match(/<h1>[^<]*<\/h1>/) || [])[0]);
+
   } catch (e) { console.log('FAIL threw: ' + e.message); }
   console.log('RESULTS ' + R.filter(function (l) { return l.indexOf('FAIL') === 0; }).length + ' failed of ' + R.length);
 });

@@ -5,8 +5,13 @@ const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.rea
 const waitFor=async(cond,n)=>{for(let i=0;i<(n||200);i++){ if(cond()) return true; await tick(); } return cond();};
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
-  const type = async (text) => { const box = $('#search'); box.value = text; box.dispatchEvent(new w.Event('input', { bubbles: true }));
-    await waitFor(() => !$('#results').hidden && !/Looking/.test($('#results').textContent), 400); };
+  /* Waiting for "not Looking" is not enough: the panel can still be showing the previous query's
+     results. When the caller says what it expects, wait for that to actually arrive. */
+  const type = async (text, expect) => {
+    const box = $('#search'); box.value = text; box.dispatchEvent(new w.Event('input', { bubbles: true }));
+    await waitFor(() => !$('#results').hidden && !/Looking/.test($('#results').textContent), 600);
+    if (expect) await waitFor(() => expect.test($('#results').textContent), 600);
+  };
   try {
     ok('a search box is on the hub', !!$('#search') && $('#results').hidden);
     ok('the index is not loaded until it is needed', !w.PH_SEARCH);
@@ -18,11 +23,11 @@ f.addEventListener('load', async () => {
     ok('finds a merit badge', /Kayaking/.test($('#results').textContent));
     ok('and links into the badge page', $('#results a').getAttribute('href') === 'badges.html#kayaking');
     // a Hindi word, typed in English
-    await type('motherland');
+    await type('motherland', /मातृभूमि/);
     ok('finds a Hindi word by its meaning', /मातृभूमि/.test($('#results').textContent));
     ok('and links to its chapter', /hindi\.html#c6-01/.test($('#results a').getAttribute('href')));
     // a Hindi word typed in Devanagari
-    await type('सिंधु');
+    await type('सिंधु', /सिंधु/);
     ok('finds a word typed in Devanagari', $$('#results a').length > 0 && /सिंधु/.test($('#results').textContent));
     // a CPM lesson
     await type('transversal');
@@ -38,12 +43,12 @@ f.addEventListener('load', async () => {
     ok('a maths topic links to the topic, not just the page', /math\.html#slope/.test($$('#results a').map(a => a.getAttribute('href')).join(' ')),
       $$('#results a').map(a => a.getAttribute('href')).join(' '));
     // an app
-    await type('metronome');
+    await type('metronome', /Piano/);
     ok('finds an app by what it does', /Piano/.test($('#results').textContent));
     // ranking and limits
     await type('e');
     ok('never floods the screen', $$('#results a').length <= 10);
-    await type('zzzznothing');
+    await type('zzzznothing', /Nothing matches/);
     ok('says when nothing matches', /Nothing matches/.test($('#results').textContent) && $$('#results a').length === 0);
     // keyboard
     await type('kayak');

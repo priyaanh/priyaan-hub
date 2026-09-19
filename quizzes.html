@@ -115,7 +115,9 @@ main > * + * { margin-top: 1rem; }
   <!-- Lesson picker -->
   <section class="card" id="picker" aria-labelledby="h-lessons">
     <div class="card-head"><h2 id="h-lessons">Lessons</h2><span class="muted small">10 questions each · new questions every time</span></div>
+    <div class="tabs" id="courseTabs" role="group" aria-label="Which course"></div>
     <div id="lesson-list"></div>
+    <div id="topic-list"></div>
     <div class="mix-row">
       <div class="grow"><b>Mixed review</b><span class="muted small" id="mix-sub">10 questions from the lessons you have already tried.</span></div>
       <button type="button" class="btn" id="btn-mix">🔀 Start mixed review</button>
@@ -124,7 +126,12 @@ main > * + * { margin-top: 1rem; }
 
   <!-- Quiz -->
   <section class="card" id="quiz-card" hidden aria-labelledby="q-title">
-    <div class="card-head"><h2 id="q-title">Quiz</h2><span class="muted small mono" id="q-timer" aria-label="Time elapsed">0:00</span></div>
+    <div class="card-head"><h2 id="q-title">Quiz</h2>
+      <span class="row" style="gap:.5rem;align-items:center">
+        <span class="muted small mono" id="q-timer" aria-label="Time elapsed">0:00</span>
+        <button type="button" class="btn btn-sm btn-ghost" id="q-clock" aria-pressed="true"
+          title="Show or hide the clock">⏱ <span class="lbl">Timer</span></button>
+      </span></div>
     <div id="q-body"></div>
   </section>
 
@@ -136,7 +143,7 @@ main > * + * { margin-top: 1rem; }
 
 </main>
 <script src="shared.js"></script>
-<script src="choices.js"></script><script src="cpm_int2_ch1.js"></script><script src="cpm_int2_ch2.js"></script>
+<script src="choices.js"></script><script src="im1.js"></script><script src="grades.js"></script><script src="cpm_int2_ch1.js"></script><script src="cpm_int2_ch2.js"></script>
 <script>
 (function () {
   'use strict';
@@ -154,8 +161,104 @@ main > * + * { margin-top: 1rem; }
   const LESSONS = BANK.lessons.filter(l => l && typeof l.id === 'string' && Array.isArray(l.questions));
   const byId = {}; LESSONS.forEach(l => { byId[l.id] = l; });
 
-  function lessonLabel(id) { return id === MIX ? 'Mixed review' : (byId[id] ? id + ' · ' + byId[id].title : id); }
-  function shortName(id) { return id === MIX ? 'Mixed' : id; }
+  /* ===================== The three Integrated courses =====================
+     Chapters 1 and 2 of Integrated II are a written bank: real CPM lessons, with diagrams. Everything
+     else here is generated from a seed, one quiz per topic, so it never runs out and the same seed
+     always gives the same questions back. A generated quiz is pick-one, built the same way every other
+     quiz on the site is built. */
+  const COURSES = [
+    { id: 'im1',  name: 'Integrated I',   short: 'I',   bank: false },
+    { id: 'int2', name: 'Integrated II',  short: 'II',  bank: true },
+    { id: 'int3', name: 'Integrated III', short: 'III', bank: false }
+  ];
+  /* A clock ticking in the corner makes some people hurry, which is the opposite of the point. It can
+     be turned off; the time is still recorded, it is simply not shown anywhere until it is turned on. */
+  const CLOCK_KEY = 'ph.quiz.clock';
+  function clockOn() {
+    try { return localStorage.getItem(CLOCK_KEY) !== 'off'; } catch (e) { return true; }
+  }
+  function setClock(on) {
+    try { on ? localStorage.removeItem(CLOCK_KEY) : localStorage.setItem(CLOCK_KEY, 'off'); } catch (e) {}
+    renderClock();
+    if (quiz && !quiz.finished) renderQuiz();
+    renderHistory();
+  }
+  function renderClock() {
+    const on = clockOn(), b = $('#q-clock'), t = $('#q-timer');
+    if (t) t.hidden = !on;
+    if (b) {
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('btn-ghost', on);
+      b.title = on ? 'Hide the clock' : 'Show the clock';
+      b.setAttribute('aria-label', on ? 'Hide the clock' : 'Show the clock');
+    }
+  }
+  const COURSE_KEY = 'ph.quiz.course';
+  function course() {
+    let id = '';
+    try { id = localStorage.getItem(COURSE_KEY) || ''; } catch (e) {}
+    return COURSES.filter(c => c.id === id)[0] || COURSES[1];
+  }
+  function setCourse(id) {
+    try { localStorage.setItem(COURSE_KEY, id); } catch (e) {}
+    renderPicker(); renderStats();
+  }
+  /** The topics a generated course can be quizzed on, with the CPM chapter where the data carries one. */
+  function courseTopics(c) {
+    if (c.id === 'im1') {
+      /* im1.js carries the real CPM chapter for each topic, so Integrated I can be read in book order */
+      return (window.IM1 ? IM1.TOPICS : []).slice()
+        .sort((a, b) => (a.chapter || 99) - (b.chapter || 99))
+        .map(t => ({ id: t.id, name: t.name, chapter: t.chapter || 99,
+          group: t.chapter ? 'Chapter ' + t.chapter + (t.unitName ? ' · ' + t.unitName : '') : 'Topics', note: t.description }));
+    }
+    const lvl = (window.GRADES ? GRADES.LEVELS : []).filter(l => l.id === c.id)[0];
+    return lvl ? lvl.topics.map(t => ({ id: t.id, name: t.name, group: c.name + ' topics', note: t.description })) : [];
+  }
+  function genId(courseId, topicId) { return courseId + ':' + topicId; }
+  function isGen(id) { return /^[a-z0-9]+:[a-z0-9]+$/.test(String(id)); }
+  function genParts(id) { const p = String(id).split(':'); return { course: p[0], topic: p[1] }; }
+  function genTopicName(id) {
+    const g = genParts(id), c = COURSES.filter(x => x.id === g.course)[0];
+    if (!c) return id;
+    const t = courseTopics(c).filter(x => x.id === g.topic)[0];
+    return c.name + ' · ' + (t ? t.name : g.topic);
+  }
+  /** Ten seeded, pick-one questions from a course topic, in the shape this page already asks. */
+  function generatedItems(courseId, topicId, seed, count) {
+    const n = count || QUIZ_LEN;
+    const opts = { count: n, difficulty: 2, seed: seed >>> 0 };
+    let ws, big;
+    try {
+      if (courseId === 'im1') {
+        ws = IM1.generate(Object.assign({ topics: [topicId] }, opts));
+        big = IM1.generate({ topics: [topicId], count: 40, difficulty: 2, seed: (opts.seed + 7919) % 4294967296 });
+      } else {
+        ws = GRADES.generate(Object.assign({ grade: courseId, topics: [topicId] }, opts));
+        big = GRADES.generate({ grade: courseId, topics: [topicId], count: 40, difficulty: 2, seed: (opts.seed + 7919) % 4294967296 });
+      }
+    } catch (e) { return []; }
+    const pool = big.problems.map(p => ({ from: p.topic, answer: p.answer }));
+    const built = PH_CHOICES.build(ws.problems.map(p => ({ from: p.topic, q: p.question, answer: p.answer, work: p.work })), pool, opts.seed);
+    return built.map((b, i) => {
+      const item = { lessonId: genId(courseId, topicId), idx: i, q: PH.safeHTML(b.q), explain: '', svg: '', unit: '' };
+      if (b.choices && b.choices.length >= 2) {
+        item.type = 'mc';
+        item.choices = b.choices.map(c => PH.safeHTML(String(c)));
+        item.answer = b.correct;
+      } else {
+        item.type = 'text';
+        item.answer = PH.plainText(b.answer);
+        item.accept = [];
+      }
+      const why = b.work ? PH.safeHTML(b.work) : '';
+      item.explain = why ? '<p>' + why + '</p>' : '<p>The answer is <b>' + PH.safeHTML(b.answer) + '</b>.</p>';
+      return item;
+    });
+  }
+
+  function lessonLabel(id) { return id === MIX ? 'Mixed review' : isGen(id) ? genTopicName(id) : (byId[id] ? id + ' · ' + byId[id].title : id); }
+  function shortName(id) { return id === MIX ? 'Mixed' : isGen(id) ? genTopicName(id).replace(/^Integrated /, 'Int ') : id; }
   function fmtTime(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
   function fmtNum(n) { const v = Number.isInteger(n) ? n : Math.round(n * 100) / 100; return String(v).replace('-', '−'); }
   function prettyAlg(s) { return String(s).replace(/\^2/g, '²').replace(/\*/g, '').replace(/\+/g, ' + ').replace(/-/g, ' − ').replace(/^ − /, '−').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')'); }
@@ -169,7 +272,7 @@ main > * + * { margin-top: 1rem; }
     const total = Math.round(Number(a.total)), right = Math.round(Number(a.right));
     if (!(total > 0) || !(right >= 0) || right > total) return null;
     const lesson = String(a.lesson || '');
-    if (lesson !== MIX && !/^\d+(\.\d+)*$/.test(lesson)) return null;
+    if (lesson !== MIX && !/^\d+(\.\d+)*$/.test(lesson) && !/^[a-z0-9]+:[a-z0-9]+$/.test(lesson)) return null;
     const ts = Number(a.ts) || (validISO(a.date) ? new Date(a.date + 'T12:00:00').getTime() : Date.now());
     const out = {
       id: String(a.id || PH.uid()),
@@ -181,6 +284,11 @@ main > * + * { margin-top: 1rem; }
       kind: a.kind === 'missed' ? 'missed' : 'full'
     };
     if (lesson === MIX && Array.isArray(a.lessons)) out.lessons = a.lessons.filter(x => typeof x === 'string').slice(0, 30);
+    if (a.gen && typeof a.gen === 'object' && typeof a.gen.course === 'string' && typeof a.gen.topic === 'string') {
+      out.gen = { course: a.gen.course.slice(0, 8), topic: a.gen.topic.slice(0, 24),
+        difficulty: [1, 2, 3].indexOf(a.gen.difficulty) >= 0 ? a.gen.difficulty : 2,
+        count: Math.min(60, Math.max(1, Math.round(Number(a.gen.count)) || 10)) };
+    }
     return out;
   }
   /** Accepts anything (null, old versions, imported files) and returns a valid state. */
@@ -240,6 +348,13 @@ main > * + * { margin-top: 1rem; }
   /** opts: { lesson, seed, refs?: ['1.1.1:3', ...] (retry missed), lessons?: [...] (mixed pool) } */
   function buildQuiz(opts) {
     const rnd = PH.rng(opts.seed);
+    /* a generated course topic: ten questions from the seed, no bank involved */
+    if (isGen(opts.lesson)) {
+      const g = genParts(opts.lesson);
+      const items = generatedItems(g.course, g.topic, opts.seed, QUIZ_LEN);
+      return { lesson: opts.lesson, lessons: null, seed: opts.seed >>> 0, kind: 'full', refs: null, gen: g,
+        items, i: 0, sel: null, checked: false, finished: false, given: [], started: Date.now(), timer: null, right: 0, seconds: 0 };
+    }
     let picked;
     if (opts.refs) {
       picked = shuffle(rnd, opts.refs.map(r => { const p = String(r).split(':'); const l = byId[p[0]]; const idx = Number(p[1]); return l && l.questions[idx] ? { lesson: l, idx, def: l.questions[idx] } : null; }).filter(Boolean));
@@ -256,7 +371,7 @@ main > * + * { margin-top: 1rem; }
 
   /* ===================== Printable paper quiz ===================== */
   function quizSheetHTML(q) {
-    const l = byId[q.lesson], title = l ? l.id + ' · ' + l.title : 'Mixed review';
+    const l = byId[q.lesson], title = l ? l.id + ' · ' + l.title : (isGen(q.lesson) ? genTopicName(q.lesson) : 'Mixed review');
     const n = q.items.length;
     const rows = q.items.map((it, i) =>
       '<li class="prob"><span class="num">' + (i + 1) + '</span><div class="body">' +
@@ -359,8 +474,42 @@ main > * + * { margin-top: 1rem; }
     const first = LESSONS.filter(l => l.id.indexOf(sec + '.') === 0)[0];
     return first ? (first.chapterTitle || (Number(String(sec).split('.')[0]) === (BANK.chapter || 1) ? BANK.title : '') || '') : '';
   }
+  function renderCourses() {
+    const cur = course().id;
+    $('#courseTabs').innerHTML = COURSES.map(c => {
+      const ready = c.bank ? LESSONS.length > 0 : courseTopics(c).length > 0;
+      return '<button type="button" class="tab' + (c.id === cur ? ' on' : '') + '" data-course="' + c.id + '"' +
+        ' aria-selected="' + (c.id === cur ? 'true' : 'false') + '"' + (ready ? '' : ' disabled') + '>' + esc(c.name) + '</button>';
+    }).join('');
+  }
+  function renderTopics() {
+    const c = course(), host = $('#topic-list');
+    const topics = courseTopics(c);
+    if (!topics.length) { host.innerHTML = ''; return; }
+    const groups = {}, order = [];
+    topics.forEach(t => { const g = t.group || 'Topics'; if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(t); });
+    host.innerHTML = order.map(g => '<div class="sect-head">' + esc(g) + '</div>' + groups[g].map(t => {
+      const id = genId(c.id, t.id), best = bestOf(id), n = state.attempts.filter(a => a.lesson === id).length;
+      const ratio = best ? best.right / best.total : 0;
+      const pill = best ? '<span class="pill ' + (ratio >= .9 ? 'ok' : ratio >= .6 ? 'warn' : 'neutral') + '" title="Best score">' +
+        (ratio >= .9 ? '★ ' : '') + best.right + '/' + best.total + '</span>' : '<span class="pill neutral">New</span>';
+      return '<div class="lrow">' +
+        '<div class="lid">' + esc(c.short) + '</div>' +
+        '<div class="lt"><b>' + esc(t.name) + '</b><div class="focus" title="' + esc(t.note || '') + '">' + esc(t.note || '') + '</div></div>' +
+        pill + '<span class="att">' + (n ? n + (n === 1 ? ' attempt' : ' attempts') : '') + '</span>' +
+        '<span class="lacts">' +
+          '<button type="button" class="btn btn-sm btn-primary" data-startgen="' + esc(id) + '">' + (n ? 'Quiz again' : 'Start quiz') + '</button>' +
+          '<button type="button" class="btn btn-sm btn-ghost" data-printgen="' + esc(id) + '" title="Print this as a paper quiz" aria-label="Print quiz">🖨️</button>' +
+        '</span></div>';
+    }).join('')).join('') +
+      '<p class="muted small" style="margin-top:.8rem">Every one of these is made from a seed, so it never runs out — and the seed is on the paper, so the same quiz can be printed again exactly.' +
+      (c.bank ? ' The lessons above are written out by hand, with their diagrams; these are generated.' : '') + '</p>';
+  }
   function renderPicker() {
+    renderCourses();
+    renderTopics();
     const host = $('#lesson-list');
+    if (!course().bank) { host.innerHTML = ''; return; }
     if (!LESSONS.length) { host.innerHTML = '<div class="empty">The question bank did not load, so there are no quizzes to show.</div>'; $('#btn-mix').disabled = true; return; }
     const groups = {}, order = [];
     LESSONS.forEach(l => { const sec = l.id.split('.').slice(0, 2).join('.'); if (!groups[sec]) { groups[sec] = []; order.push(sec); } groups[sec].push(l); });
@@ -394,7 +543,7 @@ main > * + * { margin-top: 1rem; }
         const replay = a.kind === 'full' && a.seed ? '<button type="button" class="btn btn-sm btn-ghost" data-replay="' + esc(a.id) + '" aria-label="Replay the same quiz" title="Replay the same questions">↻</button>' : '';
         return '<tr><td class="when">' + esc(PH.fmtDate(a.date)) + '</td>' +
           '<td>' + esc(lessonLabel(a.lesson)) + (a.kind === 'missed' ? '<span class="pill neutral">retry</span>' : '') + '</td>' +
-          '<td class="n"><b>' + a.right + '/' + a.total + '</b></td><td class="n hide-sm">' + fmtTime(a.seconds) + '</td>' +
+          '<td class="n"><b>' + a.right + '/' + a.total + '</b></td><td class="n hide-sm">' + (clockOn() ? fmtTime(a.seconds) : '—') + '</td>' +
           '<td class="actions">' + replay + del + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
@@ -409,7 +558,8 @@ main > * + * { margin-top: 1rem; }
     if (!quiz) return;
     const body = $('#q-body'), n = quiz.items.length;
     $('#q-title').textContent = (quiz.kind === 'missed' ? 'Retry missed · ' : '') + lessonLabel(quiz.lesson);
-    $('#q-timer').textContent = fmtTime((Date.now() - quiz.started) / 1000);
+    renderClock();
+    if (clockOn()) $('#q-timer').textContent = fmtTime((Date.now() - quiz.started) / 1000);
     if (quiz.finished) { renderResults(); return; }
     const item = quiz.items[quiz.i], g = quiz.given[quiz.i];
     const score = quiz.given.filter(x => x && x.ok).length, done = quiz.i + (quiz.checked ? 1 : 0);
@@ -451,7 +601,7 @@ main > * + * { margin-top: 1rem; }
     const mastered = quiz.kind === 'full' && quiz.lesson !== MIX && n >= QUIZ_LEN && quiz.right >= MASTER;
     const msg = quiz.right === n ? 'Perfect score! 🎉' : quiz.right >= MASTER * n / QUIZ_LEN ? 'Great work — you have this lesson down.' : quiz.right >= 6 * n / QUIZ_LEN ? 'Good. Read the explanations for the ones you missed, then try again.' : 'Keep practising — the review below shows what to look at.';
     let h = '<div class="result"><div class="big">' + quiz.right + '/' + n + '</div>' +
-      '<div class="line"><span>' + pct + '%</span><span>·</span><span>' + fmtTime(quiz.seconds) + '</span>' + (mastered ? '<span class="pill ok">★ Mastered</span>' : '') + '</div><p class="muted">' + msg + '</p></div>' +
+      '<div class="line"><span>' + pct + '%</span>' + (clockOn() ? '<span>·</span><span>' + fmtTime(quiz.seconds) + '</span>' : '') + (mastered ? '<span class="pill ok">★ Mastered</span>' : '') + '</div><p class="muted">' + msg + '</p></div>' +
       '<div class="row result-actions">' +
       (missedRefs.length ? '<button type="button" class="btn" id="r-missed">Retry missed (' + missedRefs.length + ')</button>' : '') +
       '<button type="button" class="btn" id="r-same" title="Same seed, same questions">Retake same questions</button>' +
@@ -471,7 +621,7 @@ main > * + * { margin-top: 1rem; }
   function renderAll() { renderStats(); renderPicker(); renderHistory(); if (quiz) renderQuiz(); }
 
   /* ===================== Quiz flow ===================== */
-  function tickTimer() { if (quiz && !quiz.finished) $('#q-timer').textContent = fmtTime((Date.now() - quiz.started) / 1000); }
+  function tickTimer() { if (quiz && !quiz.finished && clockOn()) $('#q-timer').textContent = fmtTime((Date.now() - quiz.started) / 1000); }
   function startQuiz(opts) {
     if (quiz && quiz.timer) clearInterval(quiz.timer);
     const q = buildQuiz(opts);
@@ -518,6 +668,8 @@ main > * + * { margin-top: 1rem; }
     quiz.right = quiz.given.filter(g => g && g.ok).length;
     const missed = quiz.items.map((it, i) => ({ it, i })).filter(x => !(quiz.given[x.i] && quiz.given[x.i].ok)).map(x => quiz.lesson === MIX ? x.it.lessonId + ':' + x.it.idx : x.it.idx);
     const att = { id: PH.uid(), date: PH.todayISO(), ts: Date.now(), lesson: quiz.lesson, right: quiz.right, total: quiz.items.length, seconds: quiz.seconds, seed: quiz.seed, missed, kind: quiz.kind };
+    /* review.html rebuilds a generated quiz from these four things, so they travel with the attempt */
+    if (quiz.gen) att.gen = { course: quiz.gen.course, topic: quiz.gen.topic, difficulty: 2, count: quiz.items.length };
     if (quiz.lesson === MIX) att.lessons = quiz.lessons || attemptedLessonIds();
     state.attempts.unshift(att);
     state.attempts = state.attempts.slice(0, MAX_HISTORY);
@@ -565,6 +717,13 @@ main > * + * { margin-top: 1rem; }
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.start) { startQuiz({ lesson: b.dataset.start, seed: newSeed() }); return; }
     if (b.dataset.printq) { printQuiz(b.dataset.printq); return; }
+    if (e.target.closest('#q-clock')) { setClock(!clockOn()); return; }
+    const ct = e.target.closest('[data-course]');
+    if (ct) { setCourse(ct.dataset.course); return; }
+    const sg = e.target.closest('[data-startgen]');
+    if (sg) { startQuiz({ lesson: sg.dataset.startgen, seed: newSeed() }); return; }
+    const pg = e.target.closest('[data-printgen]');
+    if (pg) { printQuiz(pg.dataset.printgen); return; }
     if (b.id === 'btn-mix') { const ids = attemptedLessonIds(); startQuiz({ lesson: MIX, seed: newSeed(), lessons: ids.length ? ids : LESSONS.map(l => l.id) }); return; }
     if (b.classList.contains('choice')) { select(Number(b.dataset.i)); return; }
     if (b.id === 'q-check') { check(); return; }
@@ -623,5 +782,11 @@ main > * + * { margin-top: 1rem; }
   window.addEventListener('hashchange', applyHash);
 
   window.PHQuizDebug = { migrate, checkNum, checkText, canonPoly: BANK.canonPoly, buildQuiz, quizSheetHTML, printQuiz, getQuiz: () => quiz, getState: () => state };
+  /* Hook for tests/quizprint.html, which drives these directly. Exposes nothing the page does not show. */
+  window.PH_QUIZ = { quiz: function () { return quiz; }, build: buildQuiz, sheet: quizSheetHTML,
+    clockOn: clockOn, setClock: setClock,
+    courses: COURSES, course: course, setCourse: setCourse, topics: courseTopics, genItems: generatedItems,
+    state: function () { return state; } };
+
 })();
 </script></body></html>

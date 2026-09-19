@@ -200,6 +200,20 @@ main > * + * { margin-top: 1rem; }
       });
     });
 
+    /* A lesson quiz generated from a course topic: rebuilt from its own generator, not from the bank. */
+    var GEN_COURSE = { im1: 'math', int2: 'ai', int3: 'ai' };
+    if (isObj(q)) arr(q.attempts).forEach(function (a) {
+      if (!isObj(a) || !isObj(a.gen) || !arr(a.missed).length || !GEN_COURSE[a.gen.course]) return;
+      arr(a.missed).forEach(function (i) {
+        if (!Number.isInteger(i)) return;
+        var kind = a.gen.course === 'im1' ? 'math' : 'grade';
+        push('g|' + a.gen.course + '|' + a.gen.topic + '|' + a.seed + '|' + a.total + '|' + i,
+          GEN_COURSE[a.gen.course], a.date, SOURCES[GEN_COURSE[a.gen.course]].name, a.gen.topic,
+          { kind: kind, topics: [a.gen.topic], grade: a.gen.course, count: a.total,
+            difficulty: a.gen.difficulty || 2, seed: a.seed, idx: i });
+      });
+    });
+
     var mh = PH.load('ph.math.v1', null);
     if (isObj(mh)) arr(mh.history).forEach(function (h) {
       if (!isObj(h) || !arr(h.missed).length) return;
