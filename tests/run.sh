@@ -68,7 +68,7 @@ done
 echo "▶ internal links"
 if out=$(node tests/links.js 2>&1); then echo "  ✓ $(echo "$out" | head -1 | sed 's/^PASS //')"; else fail=1; echo "$out" | sed 's/^/    /' | head -12; fi
 
-for gen in test_im1.js test_grades.js test_spanish.js test_science.js test_pyquiz.js test_quizbank.js; do
+for gen in test_im1.js test_grades.js test_spanish.js test_science.js test_choices.js test_pyquiz.js test_quizbank.js; do
   echo "▶ problem generators (node $gen)"
   if out=$(node "$gen" 2>&1); then echo "  ✓ $(echo "$out" | tail -1)"; else fail=1; echo "$out" | tail -12; fi
 done

@@ -164,6 +164,24 @@ f.addEventListener('load', async () => {
     ok('no question anywhere falls back to a typed answer', typed === 0 && asked > 100,
        typed + ' typed of ' + asked);
 
+    /* a wrong pick should be explained in relation to the answer, when that can be said truthfully */
+    let explained = 0, wrongs = 0;
+    for (const seed of [11, 202, 3003]) {
+      A.setSeed(seed); A.handle('8 grade 6 questions'); await tick();
+      while (A.run()) {
+        const q = A.run().items[A.run().i];
+        const bad = q.choices.map((c, n) => n).filter(n => !q.check('', n))[0];
+        const btns = $$('#thread [data-choice]:not([disabled])');
+        if (!btns.length) break;
+        btns[bad].click(); await tick();
+        wrongs++;
+        if (/One out\.|away from the answer|wrong sign|upside down|way round|twice the answer|half the answer|squared|decimal point/.test(recent(2))) explained++;
+      }
+    }
+    ok('a wrong pick is sometimes explained against the answer itself', explained > 0,
+       explained + ' of ' + wrongs + ' wrong picks');
+    ok('and plenty of wrong picks were made to check that', wrongs >= 12, String(wrongs));
+
     /* ---- nothing goes anywhere ---- */
     ok('the page says nothing is sent away', /leaves this device|nothing.*sent/i.test(body()));
   } catch (e) { ok('the suite ran to the end', false, e && (e.stack || e.message)); }

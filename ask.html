@@ -21,6 +21,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
 .msg .ok { color: var(--ok-text); font-weight: 700; }
 .msg .no { color: var(--danger-text); font-weight: 700; }
 .msg .why { color: var(--muted); font-size: .9rem; margin-top: .3rem; }
+.msg .pick-why { color: var(--danger-text); font-weight: 600; }
 .msg code { font-family: var(--mono); font-size: .92em; }
 .msg pre { margin: .5rem 0 0; padding: .6rem .7rem; background: var(--surface-2); border: 1px solid var(--border);
   border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: .88rem; line-height: 1.45; }
@@ -444,9 +445,12 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
       });
     }
     const chosen = it.choices && pick != null ? it.choices[pick] : text;
+    /* why that one was wrong, when something true can be said about the pick itself */
+    const aboutPick = ok ? '' : (window.PH_CHOICES ? PH_CHOICES.whyWrong(it.answer, chosen) : '');
     say('hub',
       (ok ? '<p><span class="ok">✓ Right.</span> <b>' + safeQ(String(chosen)) + '</b> is the one.</p>'
           : '<p><span class="no">✗ Not quite.</span> You picked <b>' + safeQ(String(chosen)) + '</b>. The answer is <b>' + safeQ(it.answer) + '</b>.</p>') +
+      (aboutPick ? '<div class="why pick-why">' + safeQ(aboutPick) + '</div>' : '') +
       '<div class="why">' + safeQ(reasonFor(it, ok)) + '</div>');
     advance();
   }

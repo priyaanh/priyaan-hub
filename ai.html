@@ -33,13 +33,22 @@ main > * + * { margin-top: 1rem; }
 .prob .n { font-weight: 800; color: var(--accent-text); min-width: 1.6rem; font-variant-numeric: tabular-nums; }
 .prob .qt { flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .prob .tag { font-size: .7rem; color: var(--muted); margin-top: .25rem; }
-.choices { display: grid; gap: .35rem; margin: .55rem 0 0; }
-.choice { display: flex; gap: .5rem; align-items: flex-start; text-align: left; padding: .45rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; color: inherit; width: 100%; }
+.choices { display: grid; gap: .5rem; margin: .7rem 0 0; }
+.choice { display: flex; gap: .7rem; align-items: center; text-align: left; padding: .7rem .8rem; border: 2px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; font-size: 1.02rem;
+  font-weight: 600; color: inherit; width: 100%; transition: background .12s, border-color .12s, transform .08s; }
 .choice:hover { border-color: var(--accent-text); background: var(--surface-2); }
-.choice .lt { font-weight: 700; color: var(--muted); flex: none; }
-.choice.pick { border-color: var(--accent-text); background: var(--accent-soft); }
+.choice:active { transform: translateY(1px); }
+.choice:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.choice[disabled] { cursor: default; }
+.choice .lt { flex: none; width: 1.8rem; height: 1.8rem; display: grid; place-items: center; border-radius: 7px;
+  background: var(--surface-2); font-weight: 800; font-size: .88rem; color: var(--muted); }
+.choice.pick { border-color: var(--accent); background: var(--accent-soft); }
 .choice.ok { border-color: var(--ok); background: var(--ok-soft); }
+.choice.ok .lt { background: var(--ok); color: #fff; }
 .choice.no { border-color: var(--danger); background: var(--danger-soft); }
+.choice.no .lt { background: var(--danger); color: #fff; }
+.explain .pickwhy { color: var(--danger-text); }
 .ans-row { display: flex; gap: .4rem; margin-top: .5rem; }
 .ans-row .input { flex: 1; min-width: 0; font-family: var(--mono); }
 .explain { margin-top: .45rem; font-size: .88rem; border-top: 1px dashed var(--border); padding-top: .4rem; }
@@ -108,6 +117,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     </div>
     <div class="gen-actions">
       <button class="btn btn-primary" id="gMake">✨ Make the worksheet</button>
+      <button class="btn btn-primary" id="gQuiz" title="The same questions, answered by clicking">🔘 Quiz on screen</button>
       <button class="btn" id="gPacket" title="Five different sheets, one for each school day">🗓️ Week's packet</button>
       <span class="note" id="gNote"></span>
     </div>
@@ -209,7 +219,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
   </section>
 </main>
 <iframe id="printFrame" title="Printable worksheet" aria-hidden="true"></iframe>
-<script src="shared.js"></script><script src="grades.js"></script><script src="im1.js"></script><script>
+<script src="shared.js"></script><script src="choices.js"></script><script src="grades.js"></script><script src="im1.js"></script><script>
 (function () {
   'use strict';
   const KEY = 'ph.ai.v1';                                  // API keys live under their own keys so Export never includes them
@@ -583,7 +593,24 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
       b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
     if (!$('#gSeed').value) $('#gSeed').value = (Math.random() * 999999 | 0) + 1;
   }
-  function makeGradeSheet() {
+  /** Options for a grade sheet, so it can be answered by clicking rather than typing. The wrong ones are
+      real answers to other questions of the same topic, from a second draw of the same generator. */
+  function withChoices(lvl, ws, chosen, opts) {
+    if (!window.PH_CHOICES) return ws.problems;
+    var big;
+    try {
+      var seed2 = (ws.seed + 7919) % 4294967296;
+      big = lvl.id === 'im1'
+        ? IM1.generate({ topics: opts.topics, count: 40, difficulty: opts.difficulty, seed: seed2 })
+        : GRADES.generate({ grade: lvl.id, topics: chosen, count: 40, difficulty: opts.difficulty, seed: seed2 });
+    } catch (e) { big = { problems: [] }; }
+    var pool = big.problems.map(function (p) { return { from: p.topic, answer: p.answer }; });
+    return PH_CHOICES.build(ws.problems.map(function (p) {
+      return { topic: p.topic, topicName: p.topicName, from: p.topic, q: p.question, question: p.question,
+        answer: p.answer, work: p.work };
+    }), pool, ws.seed);
+  }
+  function makeGradeSheet(asQuiz) {
     var lvl = gradeLevel(); if (!lvl) return;
     var chosen = state.settings.gradeTopics.filter(function (t) { return lvl.topics.some(function (x) { return x.id === t; }); });
     var opts = { topics: chosen.length ? chosen : null, count: state.settings.gradeCount,
@@ -595,11 +622,21 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     var names = {}; lvl.topics.forEach(function (t) { names[t.id] = t.name; });
     var used = [];
     ws.problems.forEach(function (p) { if (used.indexOf(names[p.topic]) < 0) used.push(names[p.topic]); });
-    var set = { id: PH.uid(), date: PH.todayISO(), kind: 'worksheet',
-      title: lvl.name + ' practice', source: lvl.name, summary: used.join(' · '), score: null, by: lvl.name + ' generator',
-      problems: ws.problems.map(function (p) { return { question: p.question, answer: p.answer, work: p.work, topic: names[p.topic] || p.topic, choices: [] }; }) };
+    /* A quiz is the same questions with something to click. The answer has to appear among the options
+       exactly as it is written, because that is what marking compares. */
+    var built = asQuiz ? withChoices(lvl, ws, chosen, opts) : null;
+    var set = { id: PH.uid(), date: PH.todayISO(), kind: asQuiz ? 'quiz' : 'worksheet',
+      title: lvl.name + (asQuiz ? ' quiz' : ' practice'), source: lvl.name, summary: used.join(' · '),
+      score: null, by: lvl.name + ' generator',
+      problems: ws.problems.map(function (p, i) {
+        var made = built && built[i];
+        return { question: p.question, answer: p.answer, work: p.work, topic: names[p.topic] || p.topic,
+          choices: (made && made.choices) ? made.choices.slice() : [] };
+      }) };
     state.sets.unshift(set); state.sets = state.sets.slice(0, 60); save();
-    $('#gNote').innerHTML = '<span class="copied">✅ ' + set.problems.length + ' problems · seed ' + ws.seed + '</span>';
+    var withOptions = set.problems.filter(function (p) { return p.choices.length; }).length;
+    $('#gNote').innerHTML = '<span class="copied">✅ ' + set.problems.length + (asQuiz ? ' questions' : ' problems') +
+      ' · seed ' + ws.seed + (asQuiz && withOptions < set.problems.length ? ' · ' + (set.problems.length - withOptions) + ' to type' : '') + '</span>';
     show(set); renderSaved();
   }
 
@@ -705,7 +742,13 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
         inner += '<div class="ans-row"><input class="input" data-typed="' + i + '" placeholder="Your answer" value="' + esc(m ? m.typed : '') + '">' +
           '<button class="btn btn-sm" data-checki="' + i + '">Check</button></div>';
       }
-      if (m || showAns) inner += '<div class="explain"><b>Answer:</b> ' + esc(p.answer) + (p.work ? '<br><span class="muted">' + esc(p.work) + '</span>' : '') + '</div>';
+      if (m || showAns) {
+        /* when the pick was wrong, say what it was in relation to the answer before giving the reason */
+        var picked = m && !m.ok ? (m.typed != null ? m.typed : (p.choices[m.pick] != null ? p.choices[m.pick] : '')) : '';
+        var about = picked && window.PH_CHOICES ? PH_CHOICES.whyWrong(p.answer, picked) : '';
+        inner += '<div class="explain">' + (about ? '<b class="pickwhy">' + esc(about) + '</b><br>' : '') +
+          '<b>Answer:</b> ' + esc(p.answer) + (p.work ? '<br><span class="muted">' + esc(p.work) + '</span>' : '') + '</div>';
+      }
       return '<li class="prob' + (m ? (m.ok ? ' right' : ' wrong') : '') + '">' + inner + '</li>';
     }).join('');
     const done = Object.keys(marks).length, right = Object.keys(marks).filter(k => marks[k].ok).length;
@@ -862,6 +905,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     if (gd) { state.settings.gradeDiff = Number(gd.dataset.gdiff); save(); renderGrade(); return; }
     if (e.target.closest('#gNewSeed')) { $('#gSeed').value = (Math.random() * 999999 | 0) + 1; return; }
     if (e.target.closest('#gMake')) { makeGradeSheet(); return; }
+    if (e.target.closest('#gQuiz')) { makeGradeSheet(true); return; }
     if (e.target.closest('#gPacket')) { makePacket(); return; }
     const pt = e.target.closest('[data-prov]');
     if (pt) { state.settings.provider = pt.dataset.prov; apiKey = readKey(state.settings.provider); save(); renderControls(); return; }

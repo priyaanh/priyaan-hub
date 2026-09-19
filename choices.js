@@ -156,6 +156,65 @@
     });
   }
 
-  return { build: build, shapeOf: shapeOf, classOf: classOf, groupOf: groupOf, numOf: numOf, nudge: nudge,
+  /* ---------------------------------------------------------------- why that one was wrong -----------
+     Said only when something true can be said. A generator knows why the right answer is right; what it
+     cannot know is what someone was thinking when they picked a particular wrong one. These are the
+     relationships that can be read straight off the two values, and nothing is invented beyond them. */
+  function pointOf(a) {
+    var m = key(a).replace(MINUS, '-').match(/^\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)$/);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }
+  function fracOf(a) {
+    var m = key(a).replace(MINUS, '-').match(/^(-?\d+)\/(\d+)$/);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }
+  function whyWrong(answer, picked) {
+    var A = String(answer == null ? '' : answer), P = String(picked == null ? '' : picked);
+    if (!A || !P || key(A) === key(P)) return '';
+
+    var pa = pointOf(A), pp = pointOf(P);
+    if (pa && pp) {
+      if (pa[0] === pp[1] && pa[1] === pp[0]) return 'Those are the right two numbers the wrong way round \u2014 x comes first.';
+      if (pa[0] === -pp[0] && pa[1] === pp[1]) return 'The y value is right; the x value has the wrong sign.';
+      if (pa[0] === pp[0] && pa[1] === -pp[1]) return 'The x value is right; the y value has the wrong sign.';
+      if (pa[0] === -pp[0] && pa[1] === -pp[1]) return 'Both signs are the other way round.';
+      if (pa[0] === pp[0]) return 'The x value is right, so it is the y value to look at again.';
+      if (pa[1] === pp[1]) return 'The y value is right, so it is the x value to look at again.';
+      return '';
+    }
+
+    var fa = fracOf(A), fp = fracOf(P);
+    if (fa && fp && fa[0] === fp[1] && fa[1] === fp[0]) return 'That is the answer turned upside down.';
+
+    /* "x = 3" is a number with a label on it; compare the numbers */
+    var unlabel = function (v) { return String(v).replace(/^\s*[a-z]\s*=\s*/i, ''); };
+    var na = numOf(unlabel(A)), np = numOf(unlabel(P));
+    if (na !== null && np !== null && na !== np) {
+      if (na === -np) return 'The right size, but the wrong sign.';
+      if (na !== 0 && np !== 0) {
+        var t = na / np;
+        if (t === 2) return 'That is half the answer \u2014 something was not doubled.';
+        if (t === 0.5) return 'That is twice the answer \u2014 something was doubled that should not have been.';
+        if (np * np === na) return 'That is the number the answer came from \u2014 it still has to be squared.';
+        if (na * na === np) return 'That one has been squared when it should not have been.';
+        if (t === 4 || t === 9 || t === 16 || t === 25) return 'That is the answer divided by ' + t + '.';
+        if (t === 10 || t === 100) return 'That is out by a factor of ' + t + ' \u2014 check the decimal point.';
+        if (t === 0.1 || t === 0.01) return 'That is out by a factor of ' + Math.round(1 / t) + ' \u2014 check the decimal point.';
+      }
+      var d = Math.abs(na - np);
+      if (d === 1) return 'One out.';
+      if (Number.isInteger(d) && d <= 3) return 'That is ' + d + ' away from the answer.';
+      return '';
+    }
+
+    /* two short pieces of writing: say whether it was close, without pretending to know why */
+    var ka = key(A), kp = key(P);
+    if (ka.split(' ').length <= 3 && kp.split(' ').length <= 3) {
+      if (ka.indexOf(kp) >= 0 || kp.indexOf(ka) >= 0) return 'Close \u2014 but not quite the whole of it.';
+    }
+    return '';
+  }
+
+  return { build: build, whyWrong: whyWrong, shapeOf: shapeOf, classOf: classOf, groupOf: groupOf, numOf: numOf, nudge: nudge,
     liftLettered: liftLettered, answerKey: key, rng: rng };
 });

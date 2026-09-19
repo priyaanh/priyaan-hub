@@ -2,8 +2,10 @@
 const f=document.createElement('iframe'); f.style.cssText='width:1280px;height:1400px;border:0'; f.src='../ai.html'; document.body.appendChild(f);
 const R=[]; const ok=(n,c,detail)=>{const l=(c?'PASS ':'FAIL ')+n+(c||!detail?'':' :: '+detail); R.push(l); console.log(l);};
 const tick=()=>new Promise(r=>{const fr=new FileReader(); fr.onloadend=r; fr.readAsText(new Blob(['x']));});
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 f.addEventListener('load', async () => {
   const w=f.contentWindow, d=f.contentDocument, $=s=>d.querySelector(s), $$=s=>Array.from(d.querySelectorAll(s));
+  const txt = sel => { const e = $(sel); return e ? (e.innerText || e.textContent || '').trim() : ''; };
   let snap=null; try { snap=w.localStorage.getItem('ph.ai.v1'); w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
   try {
     ok('grade mode is what you land on', !$('#gradeCard').hidden && $('[data-mode="grade"]').classList.contains('on'));
@@ -109,6 +111,44 @@ f.addEventListener('load', async () => {
     ok('switching to PDF mode restores that UI', $('#gradeCard').hidden && !$('#setupCard').hidden);
     $('[data-mode="grade"]').click(); await tick();
     ok('mode is remembered in state', JSON.parse(w.localStorage.getItem('ph.ai.v1')).settings.mode === 'grade');
+
+    /* ---- the same questions, answered by clicking ---- */
+    for (const g of ['int2', 'int3']) {
+      $('[data-grade="' + g + '"]').click(); await sleep(40);
+      $('#gQuiz').click(); await sleep(260);
+      const set = w.PH_AI.state().sets[0];
+      ok(g + ': a quiz is made', set.kind === 'quiz' && set.problems.length > 0, set.kind + ' ' + set.problems.length);
+      ok(g + ': every question has options', set.problems.every(p => p.choices.length >= 2),
+         set.problems.filter(p => !p.choices.length).length + ' without options');
+      ok(g + ': the answer is among them, exactly as written',
+         set.problems.every(p => p.choices.indexOf(p.answer) >= 0),
+         set.problems.filter(p => p.choices.indexOf(p.answer) < 0).map(p => p.answer).slice(0, 2).join(' | '));
+      ok(g + ': no option is offered twice',
+         set.problems.every(p => new Set(p.choices.map(c => String(c).toLowerCase().trim())).size === p.choices.length));
+      ok(g + ': the options are buttons on the page', $$('#plist [data-pick]').length >= set.problems.length * 2,
+         String($$('#plist [data-pick]').length));
+      ok(g + ': it is titled as a quiz', /quiz/i.test(set.title), set.title);
+    }
+
+    /* clicking the right one marks it right, and a wrong one marks it wrong */
+    const set = w.PH_AI.state().sets[0];
+    const rightAt = set.problems[0].choices.indexOf(set.problems[0].answer);
+    $('[data-pick="0:' + rightAt + '"]').click(); await sleep(60);
+    ok('picking the right option is marked right', $$('#plist .prob.right').length === 1, String($$('#plist .prob.right').length));
+    ok('and the answer is shown with its reason', /Answer:/.test(txt('#plist')));
+    const wrongAt = set.problems[1].choices.findIndex(c => c !== set.problems[1].answer);
+    $('[data-pick="1:' + wrongAt + '"]').click(); await sleep(60);
+    ok('picking a wrong option is marked wrong', $$('#plist .prob.wrong').length === 1, String($$('#plist .prob.wrong').length));
+    ok('an answered question cannot be answered again', $$('#plist [data-pick][disabled]').length >= 4);
+    ok('the score line counts them', /1 right of 2 answered/.test(txt('#scoreLbl')), txt('#scoreLbl'));
+
+    /* it still prints and downloads, with the options and a key */
+    const sheet = w.PH_AI.sheetHTML();
+    ok('the printed quiz lists its options', /ol class="choices"/.test(sheet));
+    ok('and still has an answer key', /class="key"/.test(sheet) || /Answer key/.test(sheet));
+    ok('and is a whole document', /^<!DOCTYPE html>/.test(sheet) && /<\/html>\s*$/.test(sheet.trim()));
+    ok('and carries nothing from outside', !/<script|https?:\/\//.test(sheet));
+
   } catch (e) { ok('suite ran without throwing', false, e.message); }
   try { if (snap) w.localStorage.setItem('ph.ai.v1', snap); else w.localStorage.removeItem('ph.ai.v1'); } catch(e){}
   console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);

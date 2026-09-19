@@ -338,7 +338,10 @@ main > * + * { margin-top: 1rem; }
       v.hidden = false;
       v.className = 'verdict ' + (marked.ok ? 'ok' : 'no');
       v.innerHTML = marked.ok ? '✓ Correct' : '✗ Not quite <span class="was">— the answer is <b>' + ES.safeHTML(p.answer) + '</b></span>';
-      if (p.work) { w.hidden = false; w.innerHTML = ES.safeHTML(p.work); } else w.hidden = true;
+      /* say how the one that was picked relates to the right one, when that can be said honestly */
+      var about = marked.ok ? '' : (window.PH_CHOICES ? PH_CHOICES.whyWrong(p.answer, marked.typed) : '');
+      var reason = [about, p.work].filter(Boolean).join(' ');
+      if (reason) { w.hidden = false; w.innerHTML = ES.safeHTML(reason); } else w.hidden = true;
     } else if (revealed) {
       v.hidden = false; v.className = 'verdict no';
       v.innerHTML = '<span class="was">The answer is <b>' + ES.safeHTML(p.answer) + '</b></span>';

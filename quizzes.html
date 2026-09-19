@@ -55,6 +55,7 @@ main > * + * { margin-top: 1rem; }
 .choice.correct .key { background: var(--ok); color: #fff; }
 .choice.wrong, .choice.wrong:hover { border-color: var(--danger); background: var(--danger-soft); }
 .choice.wrong .key { background: var(--danger); color: #fff; }
+.feedback .pickwhy { color: var(--danger-text); font-weight: 600; margin: .3rem 0; }
 .choice:disabled { cursor: default; opacity: .7; }
 .choice.correct:disabled, .choice.wrong:disabled { opacity: 1; }
 .answer-row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
@@ -135,7 +136,7 @@ main > * + * { margin-top: 1rem; }
 
 </main>
 <script src="shared.js"></script>
-<script src="cpm_int2_ch1.js"></script><script src="cpm_int2_ch2.js"></script>
+<script src="choices.js"></script><script src="cpm_int2_ch1.js"></script><script src="cpm_int2_ch2.js"></script>
 <script>
 (function () {
   'use strict';
@@ -427,8 +428,12 @@ main > * + * { margin-top: 1rem; }
         (item.unit ? '<span class="unit muted">' + esc(item.unit) + '</span>' : '') + '</div>';
     }
     if (quiz.checked) {
+      /* what was picked, said in relation to the right answer, before the reason the answer is right */
+      const givenText = g ? (item.type === 'mc' ? (item.choices[g.given] != null ? item.choices[g.given] : '') : String(g.given)) : '';
+      const aboutPick = (!g || g.ok || !window.PH_CHOICES) ? '' : PH_CHOICES.whyWrong(fmtAnswer(item), givenText);
       h += '<div class="feedback ' + (g.ok ? 'ok' : 'bad') + '" role="status">' +
-        '<b class="' + (g.ok ? 'good' : 'nope') + '">' + (g.ok ? '✓ Correct!' : '✗ Not quite. The answer is ' + fmtAnswer(item) + '.') + '</b>' + item.explain + '</div>';
+        '<b class="' + (g.ok ? 'good' : 'nope') + '">' + (g.ok ? '✓ Correct!' : '✗ Not quite. The answer is ' + fmtAnswer(item) + '.') + '</b>' +
+        (aboutPick ? '<div class="pickwhy">' + esc(aboutPick) + '</div>' : '') + item.explain + '</div>';
     }
     h += '<div class="q-actions"><button type="button" class="btn btn-ghost" id="q-quit">Quit</button><span class="spacer"></span>' +
       '<span class="muted small kbd-hint">' + (item.type === 'mc' && !quiz.checked ? '<span class="kbd">1</span>–<span class="kbd">4</span> pick · ' : '') + '<span class="kbd">Enter</span> ' + (quiz.checked ? 'next' : 'check') + '</span>' +
