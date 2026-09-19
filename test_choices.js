@@ -21,10 +21,18 @@ function assert(cond, msg) {
     ['{1, 2, 4}', 'set'], ['x = 6', 'eq:x='], ['y > 3', 'eq:y>'], ['bread', 'text:1'],
     ['to eat lunch', 'text:3'], ['a very long sentence indeed here', 'text:4']
   ];
+  /* a measurement is its number AND its unit: an area must never be offered for a length */
+  shapes.push(['48 cm', 'num:cm'], ['94 cm\u00b2', 'num:cm\u00b2'], ['176\u03c0 cm\u00b2', 'pi:cm\u00b2'],
+    ['36\u03c0', 'pi'], ['2,601', 'num'], ['12 miles', 'num:miles'], ['90\u00b0', 'num:\u00b0'],
+    ['2x + 1', 'text:3'], ['y = 2x + 1', 'eq:y=']);
   shapes.forEach(([v, want]) => assert(C.shapeOf(v) === want, 'shapeOf("' + v + '") gave ' + C.shapeOf(v) + ', wanted ' + want));
   assert(C.classOf('frac') === 'num' && C.classOf('money') === 'num', 'fractions and money count as numbers');
   assert(C.classOf('text:1') === 'text' && C.classOf('text:4') === 'text', 'words count as words');
-  assert(C.numOf('3/4') === 0.75 && C.numOf('−$3.00') === -3 && C.numOf('bread') === null, 'reading a number out of an answer');
+  assert(C.numOf('3/4') === 0.75 && C.numOf('\u2212$3.00') === -3 && C.numOf('bread') === null, 'reading a number out of an answer');
+  assert(C.numOf('48 cm') === 48 && C.numOf('2,601') === 2601, 'a number is a number whatever follows it');
+  assert(C.numOf('2x + 1') === null, 'the 2 in an expression is not the value of the expression');
+  assert(C.nudge('48 cm', 0) === '49 cm', 'a made-up option keeps the unit: ' + C.nudge('48 cm', 0));
+  assert(/\u03c0 cm\u00b2$/.test(C.nudge('176\u03c0 cm\u00b2', 0)), 'and keeps \u03c0 too: ' + C.nudge('176\u03c0 cm\u00b2', 0));
 }
 
 /* ---------------------------------------------------------------- building the options ------------ */
@@ -33,6 +41,9 @@ function assert(cond, msg) {
   for (let i = 1; i <= 20; i++) pool.push({ from: 'Slope', answer: String(i) });
   ['to run', 'to sleep', 'to open', 'to write'].forEach(a => pool.push({ from: 'Vocab', answer: a }));
 
+  ['12 cm', '20 cm', '32 cm', '5 cm'].forEach(a => pool.push({ from: 'Shapes', answer: a }));
+  ['144 cm\u00b2', '36 cm\u00b2', '81 cm\u00b2'].forEach(a => pool.push({ from: 'Shapes', answer: a }));
+  ['36\u03c0 cm\u00b2', '49\u03c0 cm\u00b2', '16\u03c0 cm\u00b2'].forEach(a => pool.push({ from: 'Shapes', answer: a }));
   const items = [{ from: 'Slope', answer: '7' }, { from: 'Vocab', answer: 'to eat' }];
   const built = C.build(items, pool, 42);
   assert(built.length === 2, 'one built item per item in');
@@ -46,6 +57,13 @@ function assert(cond, msg) {
   assert(words.every(c => /^to /.test(c)), 'a word answer is offered beside other words: ' + JSON.stringify(words));
   const nums = built[0].choices;
   assert(nums.every(c => /^\d+$/.test(c)), 'a number answer is offered beside other numbers: ' + JSON.stringify(nums));
+
+  /* the unit is part of the question: a length may only be offered other lengths */
+  const measured = C.build([{ from: 'Shapes', answer: '48 cm' }, { from: 'Shapes', answer: '100 cm\u00b2' },
+    { from: 'Shapes', answer: '25\u03c0 cm\u00b2' }], pool, 7);
+  assert(measured[0].choices.every(c => /\d+ cm$/.test(c)), 'a length gets lengths: ' + JSON.stringify(measured[0].choices));
+  assert(measured[1].choices.every(c => /\d+ cm\u00b2$/.test(c) && !/\u03c0/.test(c)), 'an area gets areas: ' + JSON.stringify(measured[1].choices));
+  assert(measured[2].choices.every(c => /\u03c0 cm\u00b2$/.test(c)), 'an area in \u03c0 gets areas in \u03c0: ' + JSON.stringify(measured[2].choices));
 
   /* the same inputs always give the same options, so a round can be asked again exactly */
   assert(JSON.stringify(C.build(items, pool, 42)) === JSON.stringify(C.build(items, pool, 42)), 'same seed, same options');

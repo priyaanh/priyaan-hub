@@ -331,21 +331,21 @@ main > * + * { margin-top: 1rem; }
     $('#qTopic').textContent = p.topicName;
     $('#qNum').textContent = 'Question ' + (round.i + 1) + ' of ' + round.items.length;
     $('#roundLbl').textContent = 'Round seed ' + round.ws.seed + ' · level ' + round.ws.difficulty;
-    $('#qText').innerHTML = ES.safeHTML(p.q == null ? p.question : p.q);
+    $('#qText').innerHTML = PH.safeHTML(p.q == null ? p.question : p.q);
     $('#progressBar').style.width = Math.round(round.i / round.items.length * 100) + '%';
     const v = $('#verdict'), w = $('#why');
     if (marked) {
       v.hidden = false;
       v.className = 'verdict ' + (marked.ok ? 'ok' : 'no');
-      v.innerHTML = marked.ok ? '✓ Correct' : '✗ Not quite <span class="was">— the answer is <b>' + ES.safeHTML(p.answer) + '</b></span>';
+      v.innerHTML = marked.ok ? '✓ Correct' : '✗ Not quite <span class="was">— the answer is <b>' + PH.safeHTML(p.answer) + '</b></span>';
       /* say how the one that was picked relates to the right one, when that can be said honestly */
       var about = marked.ok ? '' : (window.PH_CHOICES ? PH_CHOICES.whyWrong(p.answer, marked.typed) : '');
       var reason = [about, p.work].filter(Boolean).join(' ');
-      if (reason) { w.hidden = false; w.innerHTML = ES.safeHTML(reason); } else w.hidden = true;
+      if (reason) { w.hidden = false; w.innerHTML = PH.safeHTML(reason); } else w.hidden = true;
     } else if (revealed) {
       v.hidden = false; v.className = 'verdict no';
-      v.innerHTML = '<span class="was">The answer is <b>' + ES.safeHTML(p.answer) + '</b></span>';
-      if (p.work) { w.hidden = false; w.innerHTML = ES.safeHTML(p.work); } else w.hidden = true;
+      v.innerHTML = '<span class="was">The answer is <b>' + PH.safeHTML(p.answer) + '</b></span>';
+      if (p.work) { w.hidden = false; w.innerHTML = PH.safeHTML(p.work); } else w.hidden = true;
     } else { v.hidden = true; w.hidden = true; }
     const picking = !!(p.choices && p.choices.length);
     $('#choices').hidden = !picking;
@@ -359,7 +359,7 @@ main > * + * { margin-top: 1rem; }
         if (marked || revealed) { if (i === right) cls = ' is-right'; else if (marked && marked.pick === i) cls = ' is-wrong'; }
         return '<button type="button" class="pick' + cls + '" role="radio" aria-checked="' + (marked && marked.pick === i) + '"' +
           ' data-choice="' + i + '"' + (marked || revealed ? ' disabled' : '') + '>' +
-          '<span class="k">' + LETTERS[i] + '</span><span>' + ES.safeHTML(String(c)) + '</span></button>';
+          '<span class="k">' + LETTERS[i] + '</span><span>' + PH.safeHTML(String(c)) + '</span></button>';
       }).join('');
       $('#nextBtn2').hidden = !marked && !revealed;
       $('#pickHint').textContent = (marked || revealed) ? 'Enter for the next one' : 'Tap one, or press A\u2013' + LETTERS[p.choices.length - 1];
@@ -413,9 +413,9 @@ main > * + * { margin-top: 1rem; }
     $('#answersBtn').setAttribute('aria-pressed', String(showAns));
     if (!sheet) { $('#wsList').innerHTML = ''; return; }
     $('#wsList').innerHTML = sheet.problems.map((p, i) =>
-      '<li class="prob"><div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + ES.safeHTML(p.question) +
+      '<li class="prob"><div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + PH.safeHTML(p.question) +
       '<div class="tag">' + esc(p.topicName) + '</div></div></div>' +
-      (showAns ? '<div class="showans"><b>Answer:</b> ' + ES.safeHTML(p.answer) + (p.work ? '<br><span class="muted">' + ES.safeHTML(p.work) + '</span>' : '') + '</div>' : '') +
+      (showAns ? '<div class="showans"><b>Answer:</b> ' + PH.safeHTML(p.answer) + (p.work ? '<br><span class="muted">' + PH.safeHTML(p.work) + '</span>' : '') + '</div>' : '') +
       '</li>').join('');
   }
   function sheetHTML() {

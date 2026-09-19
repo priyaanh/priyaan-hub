@@ -28,29 +28,52 @@
 
   /* What KIND of answer this is. Wrong options have to be the same kind as the right one, or the
      question answers itself: a number beside three equations is not a choice, it is a giveaway. */
+  /* A measurement is a number and a unit, and the unit is part of what kind of answer it is. Without
+     this, "48 cm", "176π cm²" and "2,601" all counted as the same kind, and a length question could be
+     offered an area as one of its choices. */
+  var NUM_UNIT = /^(-?\$?\d[\d,]*(?:\.\d+)?(?:\s*\/\s*\d+)?)\s*(π)?\s*(.*)$/;
+  function splitUnit(t) {
+    var m = t.match(NUM_UNIT);
+    if (!m) return null;
+    return { num: m[1].replace(/[\s,]/g, ''), pi: !!m[2], unit: (m[3] || '').trim() };
+  }
+  /* "cm", "cm²", "miles", "°" are units. "x + 1" is the rest of an expression, and reading the 2 out of
+     "2x + 1" as a number is how "y = 2x + 1" came to be called one out from "y = 3x − 2". */
+  function looksLikeUnit(u) {
+    if (!u) return false;
+    if (/^[°%²³]+$/.test(u)) return true;
+    return u.length <= 20 && /^[a-zµ°²³\/.\s]+$/i.test(u) && !/[+=×÷−-]/.test(u) && !/\d/.test(u) && /[a-z]{2}/i.test(u);
+  }
   function shapeOf(a) {
     var t = key(a).replace(MINUS, '-');
-    if (/^-?\d+(\.\d+)?$/.test(t)) return 'num';
+    if (/^-?\d[\d,]*(\.\d+)?$/.test(t)) return 'num';
     if (/^-?\d+\/\d+$/.test(t)) return 'frac';
-    if (/^-?\$/.test(t)) return 'money';
-    if (/%$/.test(t)) return 'percent';
+    if (/^-?\$[\d.,]+$/.test(t)) return 'money';
+    if (/^-?[\d.,]+%$/.test(t)) return 'percent';
     if (/^\(.*,.*\)$/.test(t)) return 'point';
     if (/^\{.*\}$/.test(t)) return 'set';
     var eq = t.match(/^([a-z][a-z0-9()]*)\s*(=|<=|>=|<|>)/);
     if (eq) return 'eq:' + eq[1] + eq[2];
+    var su = splitUnit(t);
+    if (su && (su.pi || looksLikeUnit(su.unit))) return (su.pi ? 'pi' : 'num') + (su.unit ? ':' + su.unit : '');
     return 'text:' + Math.min(4, t.split(' ').length);
   }
   /* Coarser than the shape: words with words, numbers with numbers. Used only when nothing of exactly
      the same shape turned up, so a lone answer still gets three plausible neighbours rather than none. */
   function classOf(shape) {
-    if (shape === 'num' || shape === 'frac' || shape === 'money' || shape === 'percent') return 'num';
+    if (shape.indexOf('pi') === 0) return 'pi';
+    if (shape === 'frac' || shape === 'money' || shape === 'percent' || shape.indexOf('num') === 0) return 'num';
     return shape.indexOf('text:') === 0 ? 'text' : shape;
   }
+  /* The number in an answer, whatever is written after it: 48, "48 cm" and "$48.00" are all 48. */
   function numOf(a) {
-    var t = key(a).replace(MINUS, '-').replace(/[$,%]/g, '');
-    var fr = t.match(/^(-?\d+)\/(\d+)$/);
+    var t = key(a).replace(MINUS, '-').replace(/[$,%]/g, '').trim();
+    var fr = t.match(/^(-?\d+)\s*\/\s*(\d+)$/);
     if (fr) return Number(fr[1]) / Number(fr[2]);
-    return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
+    if (/^-?\d[\d,]*(\.\d+)?$/.test(t)) return Number(t.replace(/,/g, ''));
+    var su = splitUnit(t);
+    if (su && (su.pi || looksLikeUnit(su.unit)) && /^-?\d+(\.\d+)?$/.test(su.num)) return Number(su.num);
+    return null;
   }
   /* Rebuilt from the number rather than patched into the text, so "−$3.00" becomes "−$5.00", never "−$−5". */
   function reformat(sample, value) {
@@ -72,8 +95,12 @@
       return (top < 0 ? (String(ans).indexOf('−') >= 0 ? '−' : '-') : '') + Math.abs(top) + '/' + fr[2];
     }
     var v = numOf(ans);
-    if (v !== null) return reformat(ans, Number.isInteger(v) ? v + d : Math.round((v + d) * 100) / 100);
-    return String(ans) + ['s', 'es', 'n', 'o'][n % 4];
+    if (v === null) return String(ans) + ['s', 'es', 'n', 'o'][n % 4];
+    /* keep whatever came after the number — cm, cm², π cm² — or the option changes its meaning */
+    var head = String(ans).match(/^\s*[−-]?\$?[\d,.]+(?:\s*\/\s*\d+)?/);
+    var tail = head ? String(ans).slice(head[0].length) : '';
+    var made = reformat(head ? head[0] : String(ans), Number.isInteger(v) ? v + d : Math.round((v + d) * 100) / 100);
+    return made + tail;
   }
 
   /* Some generators write the options into the question itself and expect the letter back --

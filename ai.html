@@ -729,14 +729,14 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     $('#plist').className = 'plist' + (quiz || practising ? '' : ' two');
     $('#plist').innerHTML = cur.problems.map((p, i) => {
       const m = marks[i];
-      let inner = '<div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + esc(p.question) +
+      let inner = '<div class="qline"><span class="n">' + (i + 1) + '.</span><div class="qt">' + PH.safeHTML(p.question) +
         (p.topic ? '<div class="tag">' + esc(p.topic) + '</div>' : '') + '</div></div>';
       if (answering && p.choices.length) {
         inner += '<div class="choices">' + p.choices.map((c, j) => {
           let cls = '';
           if (m) { if (c === p.answer) cls = ' ok'; else if (m.pick === j) cls = ' no'; }
           return '<button class="choice' + cls + '" data-pick="' + i + ':' + j + '"' + (m ? ' disabled' : '') + '>' +
-            '<span class="lt">' + 'ABCD'[j] + '</span><span>' + esc(c) + '</span></button>';
+            '<span class="lt">' + 'ABCD'[j] + '</span><span>' + PH.safeHTML(c) + '</span></button>';
         }).join('') + '</div>';
       } else if (answering) {
         inner += '<div class="ans-row"><input class="input" data-typed="' + i + '" placeholder="Your answer" value="' + esc(m ? m.typed : '') + '">' +
@@ -747,7 +747,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
         var picked = m && !m.ok ? (m.typed != null ? m.typed : (p.choices[m.pick] != null ? p.choices[m.pick] : '')) : '';
         var about = picked && window.PH_CHOICES ? PH_CHOICES.whyWrong(p.answer, picked) : '';
         inner += '<div class="explain">' + (about ? '<b class="pickwhy">' + esc(about) + '</b><br>' : '') +
-          '<b>Answer:</b> ' + esc(p.answer) + (p.work ? '<br><span class="muted">' + esc(p.work) + '</span>' : '') + '</div>';
+          '<b>Answer:</b> ' + PH.safeHTML(p.answer) + (p.work ? '<br><span class="muted">' + PH.safeHTML(p.work) + '</span>' : '') + '</div>';
       }
       return '<li class="prob' + (m ? (m.ok ? ' right' : ' wrong') : '') + '">' + inner + '</li>';
     }).join('');

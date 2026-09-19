@@ -5,14 +5,18 @@
 <script>/* set the saved theme before anything paints */try{var t=localStorage.getItem('ph.theme');if(t==='system'||!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><style>
 main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); }
 .thread { flex: 1; display: flex; flex-direction: column; gap: .8rem; padding-bottom: 1rem; }
-.msg { display: flex; gap: .6rem; align-items: flex-start; max-width: 52rem; }
-.msg .who { flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 1rem; background: var(--surface-2); border: 1px solid var(--border); }
-.msg .bubble { border-radius: var(--radius-sm); padding: .7rem .85rem; line-height: 1.55; overflow-wrap: anywhere; min-width: 0; }
+.msg { display: flex; gap: .6rem; align-items: flex-start; max-width: 52rem; width: 100%; }
+.msg .who { display: none; }
+.msg .bubble { border-radius: var(--radius-sm); padding: .85rem 1rem; line-height: 1.55; overflow-wrap: anywhere; min-width: 0; flex: 1; }
 .msg.hub .bubble { background: var(--surface); border: 1px solid var(--border); }
-.msg.you { align-self: flex-end; flex-direction: row-reverse; }
-.msg.you .bubble { background: var(--accent-soft); border: 1px solid var(--accent-text); }
-.msg.you .who { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-text); }
+/* a question is the thing being asked, so it gets the full column and a rule of its own */
+.msg.q .bubble { border-top: 3px solid var(--accent); padding-top: .8rem; }
+.msg.mark .bubble { border-left: 3px solid var(--border); background: transparent; border-right: 0; border-top: 0; border-bottom: 0;
+  border-radius: 0; padding: .2rem 0 .2rem .9rem; }
+.msg.mark.right .bubble { border-left-color: var(--ok); }
+.msg.mark.wrong .bubble { border-left-color: var(--danger); }
+.msg.you { align-self: flex-end; width: auto; max-width: 34rem; }
+.msg.you .bubble { background: var(--accent-soft); border: 1px solid var(--accent-text); flex: 0 1 auto; }
 .msg .bubble p { margin: 0; }
 .msg .bubble p + p { margin-top: .45rem; }
 .msg .q { font-size: 1.32rem; line-height: 1.38; font-weight: 700; letter-spacing: -.01em; }
@@ -337,7 +341,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
   ];
   function say(who, html, opts) {
     const wrap = document.createElement('div');
-    wrap.className = 'msg ' + who;
+    wrap.className = 'msg ' + who + ((opts && opts.cls) ? ' ' + opts.cls : '');
     wrap.innerHTML = '<div class="who" aria-hidden="true">' + (who === 'you' ? '🙂' : '🗨️') + '</div>' +
       '<div class="bubble">' + html + '</div>';
     $('#thread').appendChild(wrap);
@@ -383,7 +387,7 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
     const names = topicNames(req.source, h.topics);
     say('hub', '<p>Right — <b>' + items.length + '</b> question' + (items.length === 1 ? '' : 's') +
       ' on <b>' + esc(names) + '</b>, level ' + difficulty + '.</p>' +
-      '<p class="muted small">Answer in the box. Say <b>skip</b> to move on, <b>answer</b> to be told, or <b>stop</b> to finish.</p>');
+      '<p class="muted small">Tap an answer, or press its letter. Say <b>skip</b> to move on, <b>answer</b> to be told, or <b>stop</b> to finish.</p>');
     askCurrent();
     renderScorebar();
   }
@@ -404,14 +408,15 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
       (it.code ? '<pre>' + esc(it.code) + '</pre>' : '') +
       (it.choices ? '<div class="choices" role="radiogroup" aria-label="Choose an answer">' + it.choices.map((c, i) =>
         '<button type="button" role="radio" aria-checked="false" data-choice="' + i + '"><span class="k">' + LETTERS[i] + '</span><span>' + safeQ(String(c)) + '</span></button>').join('') + '</div>' : '');
-    run.node = say('hub', html);
+    run.node = say('hub', html, { cls: 'q' });
     $('#keys').hidden = !it.accents || !!it.choices;
     $('#box').placeholder = it.choices ? 'Tap an answer, or type A, B, C or D' : 'Your answer';
     $('#hint').textContent = it.choices ? 'Tap an answer above, or press A–D. Say skip, answer or stop.' : 'Enter sends · Shift+Enter makes a new line';
     $('#box').focus();
   }
-  /* the generators produce a few tags of their own; everything else is escaped */
-  function safeQ(s) { return window.ES ? ES.safeHTML(s) : esc(s); }
+  /* Everything is escaped, then the handful of tags the generators really produce are put back:
+     superscripts above all, or an exponent arrives on screen as the literal text "x<sup>2</sup>". */
+  function safeQ(s) { return PH.safeHTML(s); }
 
   /** Which option someone meant: a tap, a letter, a number, or the words themselves. */
   function readPick(it, text) {
@@ -451,7 +456,8 @@ main { display: flex; flex-direction: column; min-height: calc(100vh - 3.6rem); 
       (ok ? '<p><span class="ok">✓ Right.</span> <b>' + safeQ(String(chosen)) + '</b> is the one.</p>'
           : '<p><span class="no">✗ Not quite.</span> You picked <b>' + safeQ(String(chosen)) + '</b>. The answer is <b>' + safeQ(it.answer) + '</b>.</p>') +
       (aboutPick ? '<div class="why pick-why">' + safeQ(aboutPick) + '</div>' : '') +
-      '<div class="why">' + safeQ(reasonFor(it, ok)) + '</div>');
+      '<div class="why">' + safeQ(reasonFor(it, ok)) + '</div>',
+      { cls: 'mark ' + (ok ? 'right' : 'wrong') });
     advance();
   }
   /* Why, in a sentence. Most generators hand one over; when one does not, say what the question was

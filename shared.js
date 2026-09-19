@@ -39,8 +39,10 @@ window.PH = (function () {
      "x&lt;sup&gt;2&lt;/sup&gt;" into visible tags, so escape everything and then re-allow exactly that list.
      Nothing with an attribute survives, so a payload in saved data still cannot execute. */
   var ALLOWED_TAGS = /&lt;(\/?)(sup|sub|br|em|b|i|strong)&gt;/g;
+  /* The generators also mark an aside in a question -- "(gustar)", "(e→ie)" -- with one known span. */
+  var ALLOWED_CUE = /&lt;span class=&quot;cue&quot;&gt;([\s\S]*?)&lt;\/span&gt;/g;
   var ALLOWED_ENTS = /&amp;(lt|gt|le|ge|ne|amp|nbsp|deg|times|divide|minus|plusmn|#\d{1,5});/g;
-  function safeHTML(s) { return esc(s).replace(ALLOWED_TAGS, '<$1$2>').replace(ALLOWED_ENTS, '&$1;'); }
+  function safeHTML(s) { return esc(s).replace(ALLOWED_TAGS, '<$1$2>').replace(ALLOWED_CUE, '<span class="cue">$1</span>').replace(ALLOWED_ENTS, '&$1;'); }
   /** The same text with the markup taken out, for somewhere only plain text fits. */
   function plainText(s) {
     return String(s == null ? '' : s)
