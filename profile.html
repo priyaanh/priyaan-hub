@@ -119,6 +119,27 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     </div>
   </section>
 
+  <section class="card" aria-labelledby="h-signin">
+    <div class="card-head"><h2 id="h-signin">Your name and a password</h2><span class="small" id="signInSub"></span></div>
+    <p class="muted">Once the hub has somewhere of its own to keep a copy (below), this is how it comes
+      back. Put in the same name and password on another device and everything returns: your practice,
+      your scores, the lot. The password never leaves this browser — it is turned into a key here, and
+      what travels is already locked.</p>
+    <form class="row2" id="signInForm">
+      <div class="field"><label for="whoIn2">Name</label>
+        <input class="input" id="whoIn2" maxlength="32" autocomplete="username" spellcheck="false" placeholder="Your name"></div>
+      <div class="field"><label for="passIn">Password</label>
+        <input class="input" id="passIn" type="password" maxlength="100" autocomplete="current-password" placeholder="At least four characters"></div>
+      <button class="btn btn-primary" type="submit" id="pullBtn2">↓ Bring my hub back</button>
+      <button class="btn" type="button" id="pushBtn2">↑ Save my hub</button>
+    </form>
+    <p class="small" id="signInNote"></p>
+    <p class="small muted"><b>It is a lock, not an account.</b> Several people can share one gist and
+      none of them can read another's, because each is locked with its own password. Nobody can reset
+      it for you: a forgotten password means that copy cannot be opened again, so keep the file backup
+      above as well. And a password worth having is not the one used for anything else.</p>
+  </section>
+
   <section class="card" aria-labelledby="h-sync">
     <div class="card-head"><h2 id="h-sync">Keep it in step by itself</h2><span class="small" id="syncSub"></span></div>
     <p class="muted">Optional, and only worth it if carrying a file about gets tiresome. Connecting a
@@ -139,6 +160,45 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   var TOKEN_KEY = 'ph.sync.token';       // never backed up, never synced — see PH.isSecretKey
   var BACKUP_AT = 'ph.meta.backupAt';
   var FILE = 'practice-hub.json';
+  /* ===================== A name and a password =====================
+     There is no server behind this site and there is not going to be one, so "signing in" cannot mean
+     what it means elsewhere. What it means here: the copy kept in your gist is locked with a password
+     and filed under a name, so several people can share one gist without reading each other's, and so
+     the copy is unreadable to anyone who gets hold of the gist without the password. The password is
+     never stored and never sent anywhere — it only ever turns into a key, in this browser. */
+  function slug(name) {
+    return String(name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+  }
+  function fileFor(name) { return slug(name) ? 'hub-' + slug(name) + '.json' : FILE; }
+  function b64(buf) { var b = ''; new Uint8Array(buf).forEach(function (c) { b += String.fromCharCode(c); }); return btoa(b); }
+  function unb64(str) { var raw = atob(str), out = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; }
+  function keyFrom(password, salt) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(String(password)), 'PBKDF2', false, ['deriveKey'])
+      .then(function (base) {
+        return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: 200000, hash: 'SHA-256' },
+          base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+      });
+  }
+  function lock(text, password) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return keyFrom(password, salt).then(function (key) {
+      return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(text));
+    }).then(function (ct) {
+      return JSON.stringify({ app: 'priyaan-hub', locked: 1, v: 1, salt: b64(salt), iv: b64(iv), data: b64(ct) }, null, 2);
+    });
+  }
+  function unlock(text, password) {
+    var box;
+    try { box = JSON.parse(text); } catch (e) { return Promise.reject(new Error('That file is not something this hub wrote.')); }
+    if (!box || !box.locked) return Promise.resolve(text);          /* an older, unlocked copy */
+    return keyFrom(password, unb64(box.salt)).then(function (key) {
+      return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(box.iv) }, key, unb64(box.data));
+    }).then(function (plain) { return new TextDecoder().decode(plain); })
+      .catch(function () { throw new Error('That password does not open this one.'); });
+  }
   var esc = PH.esc;
   var $ = function (s) { return document.querySelector(s); };
   var isObj = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
@@ -163,13 +223,14 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     ['ph.sync.v1',     '☁️', 'Sync',             'Where the copy is kept and when it was last written']
   ];
 
-  function blank() { return { version: 1, gist: '', at: '', pulledAt: '', auto: false, summary: { headline: '', sub: '' } }; }
+  function blank() { return { version: 1, gist: '', at: '', pulledAt: '', auto: false, who: '', summary: { headline: '', sub: '' } }; }
   function normalize(raw) {
     var s = blank();
     if (!isObj(raw)) return s;
     if (typeof raw.gist === 'string' && /^[a-f0-9]{8,64}$/i.test(raw.gist)) s.gist = raw.gist;
     if (typeof raw.at === 'string' && raw.at.length < 40) s.at = raw.at;
     if (typeof raw.pulledAt === 'string' && raw.pulledAt.length < 40) s.pulledAt = raw.pulledAt;
+    if (typeof raw.who === 'string') s.who = raw.who.slice(0, 32);   /* the name, never the password */
     s.auto = raw.auto === true;
     return s;
   }
@@ -200,6 +261,15 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     PH.setSize(b.getAttribute('data-size-id'));
     renderSizes();
   });
+  function renderSignIn() {
+    var ready = !!(state.gist && token());
+    $('#whoIn2').value = $('#whoIn2').value || PH.person() || '';
+    $('#pullBtn2').disabled = !ready;
+    $('#pushBtn2').disabled = !ready;
+    $('#signInSub').textContent = !ready ? 'Set the copy up below first'
+      : state.who ? 'Last used as ' + state.who : 'Ready';
+    $('#signInNote').textContent = ready ? '' : 'This needs the gist below, and its token on this device.';
+  }
   function renderYou() {
     if (!$('#gradeIn').options.length || $('#gradeIn').options.length === 1) {
       $('#gradeIn').innerHTML = '<option value="">Not saying</option>' +
@@ -213,6 +283,11 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     if (PH.schoolYear()) bits.push('Grade ' + PH.schoolYear());
     $('#youSub').textContent = bits.length ? bits.join(' \u00b7 ') : 'No name set yet';
   }
+  $('#signInForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    pullAs($('#whoIn2').value, $('#passIn').value);
+  });
+  $('#pushBtn2').addEventListener('click', function () { pushAs($('#whoIn2').value, $('#passIn').value); });
   $('#nameForm').addEventListener('submit', function (e) {
     e.preventDefault();
     if (PH.setPersonEmail($('#emailIn').value) === null) {
@@ -327,7 +402,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     var name = row ? row[2] : k;
     if (!confirm('Forget everything ' + name + ' has saved?\n\nThis cannot be undone. Save a copy first if you are not sure.')) return;
     try { localStorage.removeItem(k); } catch (er) {}
-    renderData(); renderYou(); renderThemes(); renderSizes(); renderSync();
+    renderData(); renderYou(); renderThemes(); renderSizes(); renderSync(); renderSignIn();
     PH.toast(name + ' forgotten');
   });
   $('#backupBtn').addEventListener('click', function () {
@@ -359,7 +434,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
       try { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); n++; } catch (e) {}
     });
     PH.applyName();
-    renderYou(); renderThemes(); renderSizes(); renderData(); renderSync();
+    renderYou(); renderThemes(); renderSizes(); renderData(); renderSync(); renderSignIn();
     PH.toast('Loaded ' + n + ' things — reopen the apps to see them');
     return true;
   }
@@ -389,7 +464,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   function saveToken() {
     var v = ($('#tokenIn').value || '').trim();
     setToken(v);
-    renderSync();
+    renderSync(); renderSignIn();
     PH.toast(v ? 'Token saved on this device' : 'Token forgotten');
   }
 
@@ -415,6 +490,46 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
 
   function bundle() {
     return JSON.stringify({ app: 'priyaan-hub', exported: new Date().toISOString(), data: PH.exportable() }, null, 2);
+  }
+
+  /** Save the whole hub into the gist, under this name, locked with this password. */
+  function pushAs(name, password) {
+    if (busy || !state.gist) return;
+    if (!slug(name)) { $('#syncState').textContent = 'Put a name in first.'; return; }
+    if (String(password).length < 4) { $('#syncState').textContent = 'Use a password of at least four characters.'; return; }
+    setBusy(true, 'Locking and saving…');
+    lock(bundle(), password).then(function (locked) {
+      var files = {}; files[fileFor(name)] = { content: locked };
+      return fetch(API + '/gists/' + state.gist, { method: 'PATCH', headers: headers(), body: JSON.stringify({ files: files }) });
+    }).then(function (res) {
+      if (!res.ok) throw new Error(explain(res));
+      state.at = new Date().toISOString();
+      state.who = slug(name);
+      save(); setBusy(false); renderSync(); renderSignIn();
+      PH.toast('Saved as ' + name + ', locked with your password');
+    }).catch(function (err) { setBusy(false); $('#syncState').textContent = err.message || 'Could not reach GitHub.'; });
+  }
+  /** Bring it back on any device that has the token: the name says which one, the password opens it. */
+  function pullAs(name, password) {
+    if (busy || !state.gist) return;
+    if (!slug(name)) { $('#syncState').textContent = 'Put a name in first.'; return; }
+    setBusy(true, 'Fetching…');
+    fetch(API + '/gists/' + state.gist, { method: 'GET', headers: headers() })
+      .then(function (res) { if (!res.ok) throw new Error(explain(res)); return res.json(); })
+      .then(function (g) {
+        var file = (g.files && (g.files[fileFor(name)] || g.files[FILE]));
+        if (!file) throw new Error('Nothing saved under that name yet.');
+        if (file.truncated && file.raw_url) return fetch(file.raw_url).then(function (r) { return r.text(); });
+        return file.content;
+      })
+      .then(function (text) { return unlock(text, password); })
+      .then(function (plain) {
+        setBusy(false);
+        if (applyBundle(plain, 'your gist')) {
+          state.pulledAt = new Date().toISOString(); state.who = slug(name); save(); renderSync(); renderSignIn();
+        }
+      })
+      .catch(function (err) { setBusy(false); $('#syncState').textContent = err.message || 'Could not reach GitHub.'; });
   }
 
   function push() {
@@ -497,15 +612,16 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     if (e.target.closest('#pullBtn')) return pull();
     if (e.target.closest('#forgetToken')) {
       if (!confirm('Forget the token on this device?\n\nThe gist and everything in it stays where it is.')) return;
-      setToken(''); renderSync(); PH.toast('Token forgotten');
+      setToken(''); renderSync(); renderSignIn(); PH.toast('Token forgotten');
     }
   });
   $('#syncBody').addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target.id === 'tokenIn') { e.preventDefault(); saveToken(); }
   });
 
-  renderYou(); renderThemes(); renderSizes(); renderData(); renderSync();
+  renderYou(); renderThemes(); renderSizes(); renderData(); renderSync(); renderSignIn();
   window.PH_PROFILE = { state: function () { return state; }, renderSync: renderSync, renderData: renderData,
+    renderSignIn: renderSignIn, pushAs: pushAs, pullAs: pullAs, lock: lock, unlock: unlock, fileFor: fileFor,
     push: push, pull: pull, createStore: createStore, applyBundle: applyBundle, bundle: bundle, sizes: sizes };
 })();
 </script>

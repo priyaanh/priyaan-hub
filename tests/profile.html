@@ -163,6 +163,57 @@ f.addEventListener('load', async () => {
     const beforeKey = other.getAttribute('data-forget'), beforeVal = localStorage.getItem(beforeKey);
     other.click(); await tick();
     ok('saying no to the warning keeps it', localStorage.getItem(beforeKey) === beforeVal);
+    /* ---- a name and a password ----
+       There is no server here, so this is a lock rather than an account: the copy in the gist is
+       encrypted with a password and filed under a name. The test drives a real round trip against a
+       stubbed GitHub, and checks the thing that matters most — that what travels is unreadable. */
+    w.localStorage.setItem('ph.sync.token', 'github_pat_TESTTOKEN');
+    w.localStorage.setItem('ph.piano.v1', JSON.stringify({ version: 1, sessions: [{ d: '2026-09-01', m: 20 }], summary: {} }));
+    w.PH_PROFILE.state().gist = 'abc123def456';
+    w.PH_PROFILE.renderSync(); w.PH_PROFILE.renderSignIn();
+    await tick();
+    ok('signing in is offered once there is somewhere to save', !$('#pushBtn2').disabled && !$('#pullBtn2').disabled);
+
+    const store = {};
+    const realFetch = w.fetch;
+    w.fetch = async (url, opts) => {
+      if ((opts || {}).method === 'PATCH') { Object.assign(store, JSON.parse(opts.body).files); return { ok: true, json: async () => ({ id: 'abc123def456' }) }; }
+      return { ok: true, json: async () => ({ id: 'abc123def456', files: store }) };
+    };
+    $('#whoIn2').value = 'Alex'; $('#passIn').value = 'pear-tree-42';
+    $('#pushBtn2').click();
+    await waitFor(() => Object.keys(store).length > 0, 300);
+    const savedAs = Object.keys(store)[0];
+    ok('it is saved under the name given', savedAs === 'hub-alex.json', savedAs);
+    const written = store[savedAs].content;
+    ok('and what is written is locked', /"locked": *1/.test(written), written.slice(0, 40));
+    ok('and holds none of the data in the clear',
+       !/ph\.piano|sessions|2026-09-01/.test(written), written.slice(0, 80));
+    ok('the password itself is nowhere in it', !/pear-tree/.test(written));
+    ok('and is not stored on the device either',
+       !Object.keys(w.localStorage).some(k => (w.localStorage.getItem(k) || '').indexOf('pear-tree') >= 0));
+
+    w.localStorage.removeItem('ph.piano.v1');
+    w.confirm = () => true;
+    $('#whoIn2').value = 'Alex'; $('#passIn').value = 'pear-tree-42';
+    $('#signInForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+    await waitFor(() => !!w.localStorage.getItem('ph.piano.v1'), 400);
+    ok('the right password brings everything back', !!w.localStorage.getItem('ph.piano.v1'));
+
+    w.localStorage.removeItem('ph.piano.v1');
+    $('#passIn').value = 'not-the-password';
+    $('#signInForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+    await waitFor(() => /does not open/.test(txt('#syncState')), 400);
+    ok('a wrong password is refused, in words', /does not open/.test(txt('#syncState')), txt('#syncState'));
+    ok('and brings nothing back', !w.localStorage.getItem('ph.piano.v1'));
+
+    $('#whoIn2').value = 'Someone Else'; $('#passIn').value = 'pear-tree-42';
+    $('#signInForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+    await waitFor(() => /Nothing saved under that name/.test(txt('#syncState')), 400);
+    ok('a name nobody has saved under says so', /Nothing saved under that name/.test(txt('#syncState')), txt('#syncState'));
+    ok('so two people can share one gist without opening each other\'s', savedAs === 'hub-alex.json');
+    w.fetch = realFetch;
+
   } catch (e) { ok('suite ran without throwing', false, e.message); }
   KEYS.forEach(k => { if (snap[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, snap[k]); });
   console.log('RESULTS ' + R.filter(l => l.indexOf('FAIL') === 0).length + ' failed of ' + R.length);
