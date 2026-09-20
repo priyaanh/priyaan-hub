@@ -36,6 +36,11 @@
   /* ---------------------------------------------------------------- topics */
   var TOPICS = [
     { id: 'present',   name: 'Present tense: regular verbs', unit: 'Verbs',    description: 'Conjugate -ar, -er and -ir verbs for every subject pronoun.' },
+    { id: 'pret',      name: 'The preterite',                unit: 'Verbs',    description: 'What happened and finished: regular -ar, -er and -ir verbs in the past.' },
+    { id: 'refl',      name: 'Reflexive verbs',              unit: 'Verbs',    description: 'levantarse, ducharse, vestirse: the pronoun changes with the subject.' },
+    { id: 'saber',     name: 'Saber vs conocer',             unit: 'Verbs',    description: 'Knowing a fact or how to do something, against being acquainted with a person or place.' },
+    { id: 'poss',      name: 'Possessive adjectives',        unit: 'Grammar',  description: 'mi, tu, su, nuestro \u2014 matching what is owned rather than who owns it.' },
+    { id: 'weather',   name: 'The weather',                  unit: 'Basics',   description: 'Hace sol, hace fr\u00edo, llueve, nieva, est\u00e1 nublado.' },
     { id: 'serestar',  name: 'Ser vs estar',                 unit: 'Verbs',    description: 'Which "to be" the sentence needs, and the form that goes with its subject.' },
     { id: 'stem',      name: 'Stem-changing verbs',          unit: 'Verbs',    description: 'e→ie, o→ue and e→i verbs, which keep their plain stem for nosotros.' },
     { id: 'tener',     name: 'Tener and tener expressions',  unit: 'Verbs',    description: 'Forms of tener, tener que, and the ones English says with "to be": hambre, sed, frío, años.' },
@@ -118,6 +123,31 @@
       stem = stem.slice(0, at) + v.to + stem.slice(at + 1);
     }
     return stem + ENDINGS[kind][person];
+  }
+
+  /* ---- the preterite: regular -ar, -er and -ir verbs ---- */
+  var PRET = {
+    ar: ['é', 'aste', 'ó', 'amos', 'asteis', 'aron'],
+    er: ['í', 'iste', 'ió', 'imos', 'isteis', 'ieron'],
+    ir: ['í', 'iste', 'ió', 'imos', 'isteis', 'ieron']
+  };
+  function conjPret(inf, person) {
+    var kind = inf.slice(-2), stem = inf.slice(0, -2);
+    if (!PRET[kind]) throw new Error('not a regular verb: ' + inf);
+    return stem + PRET[kind][person];
+  }
+  var REFLEXIVE = [
+    { inf: 'levantarse', en: 'to get up' }, { inf: 'lavarse', en: 'to wash' },
+    { inf: 'ducharse', en: 'to shower' }, { inf: 'peinarse', en: 'to comb your hair' },
+    { inf: 'vestirse', en: 'to get dressed', stem: { from: 'e', to: 'i' } },
+    { inf: 'llamarse', en: 'to be called' }, { inf: 'acostarse', en: 'to go to bed', stem: { from: 'o', to: 'ue' } },
+    { inf: 'despertarse', en: 'to wake up', stem: { from: 'e', to: 'ie' } }
+  ];
+  var REFL_PRON = ['me', 'te', 'se', 'nos', 'os', 'se'];
+  function conjReflexive(v, person) {
+    var inf = v.inf.slice(0, -2);                    /* drop the -se */
+    var form = v.stem ? conjStem({ inf: inf, from: v.stem.from, to: v.stem.to }, person) : conjRegular(inf, person);
+    return REFL_PRON[person] + ' ' + form;
   }
 
   /* Irregulars written out: they are the point of the exercise, so nothing here is computed. */
@@ -533,6 +563,84 @@
       : P('Say it in English: <b>' + MONTHS[k] + '</b>', MONTHS_EN[k], [], '');
   }
 
+
+  /* ---- the preterite ---- */
+  function genPret(d, r) {
+    var v = pick(r, REGULAR), s = pick(r, subjectsFor(d));
+    var form = conjPret(v.inf, s.p);
+    if (d === 1 || chance(r, 0.5)) {
+      return P('<b>' + v.inf + '</b> (' + v.en + ') — ' + s.text + ' ______ <span class="cue">(yesterday)</span>',
+        form, [s.text + ' ' + form], 'the preterite is what happened and finished');
+    }
+    var when = pick(r, ['ayer', 'anoche', 'la semana pasada', 'el año pasado', 'el sábado']);
+    return P(cap(s.text) + ' ' + BLANK + ' ' + when + '. <span class="cue">(' + v.inf + ', preterite)</span>',
+      form, [], v.inf + ' → ' + s.text + ' ' + form);
+  }
+  /* ---- reflexive verbs ---- */
+  function genRefl(d, r) {
+    var v = pick(r, REFLEXIVE), s = pick(r, subjectsFor(d));
+    var form = conjReflexive(v, s.p);
+    if (d === 1 || chance(r, 0.55)) {
+      return P('<b>' + v.inf + '</b> (' + v.en + ') — ' + s.text + ' ______',
+        form, [s.text + ' ' + form], 'the pronoun changes with the subject: ' + REFL_PRON[s.p]);
+    }
+    var when = pick(r, ['a las siete', 'temprano', 'tarde', 'todos los días', 'antes de la escuela']);
+    return P(cap(s.text) + ' ' + BLANK + ' ' + when + '. <span class="cue">(' + v.inf + ')</span>',
+      form, [], 'reflexive: the action comes back to whoever does it');
+  }
+  /* ---- saber and conocer ---- */
+  var SABER = ['sé', 'sabes', 'sabe', 'sabemos', 'sabéis', 'saben'];
+  var CONOCER = ['conozco', 'conoces', 'conoce', 'conocemos', 'conocéis', 'conocen'];
+  var SABER_CASES = [
+    { rest: 'la respuesta', use: 'saber', why: 'saber: a fact' },
+    { rest: 'nadar', use: 'saber', why: 'saber: how to do something' },
+    { rest: 'dónde está la escuela', use: 'saber', why: 'saber: a piece of information' },
+    { rest: 'hablar español', use: 'saber', why: 'saber: a skill' },
+    { rest: 'a mi maestra', use: 'conocer', why: 'conocer: to be acquainted with a person' },
+    { rest: 'la ciudad de Madrid', use: 'conocer', why: 'conocer: to be familiar with a place' },
+    { rest: 'a los padres de Ana', use: 'conocer', why: 'conocer: people you have met' },
+    { rest: 'ese libro', use: 'conocer', why: 'conocer: something you are familiar with' }
+  ];
+  function genSaber(d, r) {
+    var c = pick(r, SABER_CASES), s = subjFor(r, d);
+    var form = (c.use === 'saber' ? SABER : CONOCER)[s.p];
+    return P(s.text + ' ' + BLANK + ' ' + c.rest + '. <span class="cue">(saber / conocer)</span>', form, [], c.why);
+  }
+  /* ---- possessive adjectives ---- */
+  var POSS = [
+    { who: 'yo', one: 'mi', many: 'mis', en: 'my' },
+    { who: 'tú', one: 'tu', many: 'tus', en: 'your' },
+    { who: 'él', one: 'su', many: 'sus', en: 'his' },
+    { who: 'ella', one: 'su', many: 'sus', en: 'her' },
+    { who: 'ellos', one: 'su', many: 'sus', en: 'their' }
+  ];
+  function genPoss(d, r) {
+    var p = pick(r, POSS), n = pick(r, NOUNS), plural_ = chance(r, 0.45);
+    if (d >= 2 && chance(r, 0.3)) {
+      /* nuestro is the one that also changes for gender */
+      var g = n.g, pl = plural_;
+      var form = 'nuestr' + (g === 'f' ? 'a' : 'o') + (pl ? 's' : '');
+      return P(BLANK + ' ' + (pl ? plural(n) : n.es) + ' <span class="cue">(our)</span>', form, [],
+        'nuestro changes for gender as well as number');
+    }
+    return P(BLANK + ' ' + (plural_ ? plural(n) : n.es) + ' <span class="cue">(' + p.en + ')</span>',
+      plural_ ? p.many : p.one, [],
+      'a possessive matches what is owned, not who owns it');
+  }
+  /* ---- the weather ---- */
+  var WEATHER = [
+    { es: 'Hace sol', en: 'It is sunny' }, { es: 'Hace frío', en: 'It is cold' },
+    { es: 'Hace calor', en: 'It is hot' }, { es: 'Hace viento', en: 'It is windy' },
+    { es: 'Hace buen tiempo', en: 'The weather is good' }, { es: 'Hace mal tiempo', en: 'The weather is bad' },
+    { es: 'Llueve', en: 'It is raining' }, { es: 'Nieva', en: 'It is snowing' },
+    { es: 'Está nublado', en: 'It is cloudy' }
+  ];
+  function genWeather(d, r) {
+    var w = pick(r, WEATHER);
+    if (chance(r, 0.5)) return P('Say it in Spanish: <b>' + w.en + '</b>', w.es, [w.es.toLowerCase()], '');
+    return P('Say it in English: <b>' + w.es + '</b>', w.en, [w.en.toLowerCase()], '');
+  }
+
   /* ---- vocabulary ---- */
   /* One list built from the tables above, so a word never has to be typed twice and can never disagree
      with itself. Where two Spanish words share an English meaning, both are accepted. */
@@ -565,9 +673,9 @@
   }
 
   var GEN = {
-    present: genPresent, serestar: genSerEstar, stem: genStem, tener: genTener, ir: genIr,
-    gustar: genGustar, gender: genGender, questions: genQuestions, numbers: genNumbers,
-    time: genTime, vocab: genVocab
+    present: genPresent, pret: genPret, serestar: genSerEstar, stem: genStem, refl: genRefl,
+    tener: genTener, ir: genIr, gustar: genGustar, saber: genSaber, gender: genGender, poss: genPoss,
+    questions: genQuestions, numbers: genNumbers, time: genTime, weather: genWeather, vocab: genVocab
   };
 
   /* ================================================================ generate */

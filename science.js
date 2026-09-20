@@ -244,6 +244,139 @@
         return MC(r, 'A higher-pitched sound has a:',
           'higher frequency', ['lower frequency', 'larger amplitude', 'longer wavelength and lower frequency'], '');
       } },
+    { id: 'body', name: 'The human body', unit: 'Life science', band: '5-8',
+      description: 'The systems that keep a body going, and which organ does which job.',
+      gen: function (r, d) {
+        var ORGANS = [
+          { organ: 'the heart', job: 'pumps blood around the body', system: 'circulatory' },
+          { organ: 'the lungs', job: 'take in oxygen and let out carbon dioxide', system: 'respiratory', many: 1 },
+          { organ: 'the stomach', job: 'breaks food down with acid', system: 'digestive' },
+          { organ: 'the brain', job: 'controls the body and makes sense of what it feels', system: 'nervous' },
+          { organ: 'the skeleton', job: 'holds the body up and protects its organs', system: 'skeletal' },
+          { organ: 'the kidneys', job: 'filter waste out of the blood', system: 'excretory', many: 1 }
+        ];
+        var SYSTEMS = ['circulatory', 'respiratory', 'digestive', 'nervous', 'skeletal', 'muscular', 'excretory'];
+        var k = ri(r, 1, d === 1 ? 3 : 5);
+        var o = pick(r, ORGANS);
+        /* "the lungs" and "the kidneys" are plural, and the question has to agree with them */
+        /* quoted as a job rather than conjugated, so one wording fits the singular and the plural */
+        if (k === 1) return MC(r, 'Which organ has this job: <b>' + o.job + '</b>?', o.organ,
+          ORGANS.map(function (x) { return x.organ; }), '');
+        if (k === 2) return MC(r, 'What ' + (o.many ? 'do' : 'does') + ' <b>' + o.organ + '</b> do?', o.job,
+          ORGANS.map(function (x) { return x.job; }), '');
+        if (k === 3) return MC(r, 'Which system ' + (o.many ? 'do' : 'does') + ' <b>' + o.organ + '</b> belong to?', o.system, SYSTEMS, '');
+        if (k === 4) return MC(r, 'Where does oxygen get into the blood?',
+          'in the lungs', ['in the stomach', 'in the heart', 'in the kidneys'],
+          'blood picks up oxygen in the lungs, then the heart pushes it round');
+        return MC(r, 'What do muscles need bones for?',
+          'something firm to pull against', ['somewhere to store energy', 'a way to carry blood', 'a place to make food'],
+          'a muscle pulls; it cannot push, so it needs a bone to move');
+      } },
+    { id: 'genes', name: 'Heredity', unit: 'Life science', band: '6-8',
+      description: 'Why children look like their parents: traits, DNA, and dominant and recessive.',
+      gen: function (r, d) {
+        var k = ri(r, 1, d === 1 ? 3 : 5);
+        if (k === 1) return MC(r, 'What carries the instructions for a living thing?',
+          'DNA', ['water', 'sunlight', 'oxygen'], 'DNA sits inside the nucleus of nearly every cell');
+        if (k === 2) return MC(r, 'What is a <b>trait</b>?',
+          'a feature passed from parents, such as eye colour',
+          ['a habit picked up from friends', 'a job an organ does', 'a change in the weather'], '');
+        if (k === 3) return MC(r, 'A <b>dominant</b> trait is one that:',
+          'shows whenever the child inherits even one copy of it',
+          ['is always the more common one', 'only shows in the second child', 'changes as a person grows'], '');
+        if (k === 4) return MC(r, 'A <b>recessive</b> trait shows when:',
+          'both copies inherited are the recessive one',
+          ['one copy is inherited', 'neither parent has the trait', 'the child is the eldest'], '');
+        return MC(r, 'Two brown-eyed parents have a blue-eyed child. How?',
+          'each parent carried a hidden copy of the blue version',
+          ['the child inherited nothing from them', 'eye colour is not inherited', 'the trait appeared from nothing'],
+          'a recessive copy can be carried without showing');
+      } },
+    { id: 'electric', name: 'Electricity & magnets', unit: 'Physical science', band: '5-8',
+      description: 'Circuits, what carries a current and what does not, and how magnets behave.',
+      gen: function (r, d) {
+        var k = ri(r, 1, d === 1 ? 3 : 5);
+        if (k === 1) return MC(r, 'What does a circuit need in order to work?',
+          'an unbroken loop from the power source and back',
+          ['a switch that is open', 'a gap somewhere in the wire', 'two bulbs, never one'], '');
+        if (k === 2) return MC(r, 'Which of these lets a current pass through easily?',
+          'copper wire', ['a rubber band', 'a glass rod', 'dry wood'], 'metals are conductors; most other things are insulators');
+        if (k === 3) return MC(r, 'What happens when two <b>north</b> poles are brought together?',
+          'they push each other away', ['they pull together', 'nothing at all', 'one of them turns into a south pole'],
+          'like poles repel, opposite poles attract');
+        if (k === 4) return MC(r, 'Switching a circuit off does what?',
+          'breaks the loop so the current stops',
+          ['uses up the last of the current', 'reverses the current', 'turns the wire into an insulator'], '');
+        return MC(r, 'Which of these is <b>not</b> attracted to a magnet?',
+          'a copper coin', ['an iron nail', 'a steel paperclip', 'a nickel disc'],
+          'iron, nickel and cobalt are magnetic; copper is not');
+      } },
+    { id: 'machines', name: 'Simple machines & work', unit: 'Physical science', band: '4-8',
+      description: 'Levers, pulleys, ramps and the rest, and what a machine actually saves you.',
+      gen: function (r, d) {
+        var MACH = [
+          { name: 'a lever', use: 'a crowbar prising a lid off' },
+          { name: 'a pulley', use: 'a rope over a wheel lifting a flag' },
+          { name: 'an inclined plane', use: 'a ramp up into a van' },
+          { name: 'a wedge', use: 'an axe splitting wood' },
+          { name: 'a screw', use: 'a bolt turning into a plank' },
+          { name: 'a wheel and axle', use: 'a doorknob turning a shaft' }
+        ];
+        var k = ri(r, 1, d === 1 ? 2 : 4);
+        var m = pick(r, MACH);
+        if (k === 1) return MC(r, 'Which simple machine is <b>' + m.use + '</b>?', m.name, MACH.map(function (x) { return x.name; }), '');
+        if (k === 2) return MC(r, 'What does a simple machine do?',
+          'spreads the same job over a longer distance, so less force is needed',
+          ['reduces the total amount of work that has to be done', 'makes energy out of nothing at all',
+           'removes friction from the job completely'],
+          'the work is much the same; the machine spreads it out');
+        if (k === 3) return MC(r, 'Why is it easier to push a load up a ramp than to lift it straight up?',
+          'the force needed is smaller, but it acts over a longer distance',
+          ['the load weighs less on a ramp', 'gravity does not act on a slope', 'friction pushes it upward'], '');
+        return MC(r, 'In science, <b>work</b> is done when:',
+          'a force moves something', ['a person feels tired', 'an object is held still', 'a machine is switched on'],
+          'holding something still is tiring, but no work is done on it');
+      } },
+    { id: 'tectonics', name: 'Plates, quakes & volcanoes', unit: 'Earth science', band: '5-8',
+      description: 'Why the ground shakes, where mountains come from, and how the continents moved.',
+      gen: function (r, d) {
+        var k = ri(r, 1, d === 1 ? 3 : 5);
+        if (k === 1) return MC(r, 'What is the Earth’s crust broken into?',
+          'plates that move slowly over the mantle',
+          ['one single solid shell', 'layers of ice', 'loose sand all the way down'], '');
+        if (k === 2) return MC(r, 'What causes most earthquakes?',
+          'plates slipping past one another', ['heavy rain', 'the Moon passing overhead', 'the Earth spinning faster'], '');
+        if (k === 3) return MC(r, 'What happens where two plates push together?',
+          'the land is forced up into mountains',
+          ['a deep hole opens up', 'the plates disappear', 'nothing, because they stop moving'], '');
+        if (k === 4) return MC(r, 'Why are the same fossils found on coastlines either side of an ocean?',
+          'those lands were once joined and have since drifted apart',
+          ['the animals swam across the ocean', 'the fossils were carried by wind', 'they formed at the same time by chance'],
+          'that evidence is what continental drift was built on');
+        return MC(r, 'What is molten rock called once it reaches the surface?',
+          'lava', ['magma', 'sediment', 'ore'], 'it is magma underground and lava above');
+      } },
+    { id: 'method', name: 'Working scientifically', unit: 'Science skills', band: '4-8',
+      description: 'Hypotheses, fair tests, what to change and what to keep the same.',
+      gen: function (r, d) {
+        var k = ri(r, 1, d === 1 ? 3 : 5);
+        if (k === 1) return MC(r, 'What is a <b>hypothesis</b>?',
+          'an answer you can test, worked out before the experiment',
+          ['the result of an experiment', 'a fact everyone agrees on', 'a question with no answer'], '');
+        if (k === 2) return MC(r, 'In a fair test, how many things should be changed at a time?',
+          'one', ['two', 'as many as possible', 'none'],
+          'change more than one and there is no telling which one mattered');
+        if (k === 3) return MC(r, 'What is the <b>control</b> in an experiment?',
+          'the one left alone, to compare the others against',
+          ['the person running it', 'the measurement taken last', 'the equipment used'], '');
+        if (k === 4) return MC(r, 'A plant experiment tests different amounts of water. What should stay the same?',
+          'the light, the soil and the kind of plant',
+          ['the amount of water', 'nothing at all', 'the day it is measured, only'], '');
+        return MC(r, 'What should happen if a result does not match the hypothesis?',
+          'the hypothesis is changed to fit what was found',
+          ['the result is ignored', 'the experiment is declared a failure', 'the numbers are adjusted'],
+          'a result that surprises you is still a result');
+      } },
     { id: 'rocks', name: 'Rocks & the Earth', unit: 'Earth science', band: '4-8',
       description: 'The three kinds of rock, how they change, and what shapes the land.',
       gen: function (r, d) {

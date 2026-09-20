@@ -187,6 +187,99 @@ function verify(p) {
     return;
   }
 
+  if (t === 'pret') {
+    /* the preterite endings, written out here rather than imported */
+    const END = { ar: ['é', 'aste', 'ó', 'amos', 'asteis', 'aron'], er: ['í', 'iste', 'ió', 'imos', 'isteis', 'ieron'],
+      ir: ['í', 'iste', 'ió', 'imos', 'isteis', 'ieron'] };
+    let inf = null, subj = null;
+    let m = q.match(/^(\S+)\s+\([^)]*\)\s+—\s+(.+?)\s+______/);
+    if (m) { inf = m[1]; subj = m[2]; }
+    else { m = q.match(/^(.+?)\s+______\s+.*\(([^,)]+), preterite\)\s*$/); if (m) { subj = m[1]; inf = m[2]; } }
+    if (!assert(inf && subj, 'pret: could not read "' + q + '"')) return;
+    const person = personOf(subj);
+    if (!assert(person !== null, 'pret: unknown subject "' + subj + '"')) return;
+    const kind = inf.slice(-2), want = inf.slice(0, -2) + (END[kind] || [])[person];
+    assert(a === want, 'pret: ' + inf + ' for "' + subj + '" should be ' + want + ', got ' + a);
+    return;
+  }
+
+  if (t === 'refl') {
+    const PRON = ['me', 'te', 'se', 'nos', 'os', 'se'];
+    let inf = null, subj = null;
+    let m = q.match(/^(\S+)\s+\([^)]*\)\s+—\s+(.+?)\s+______/);
+    if (m) { inf = m[1]; subj = m[2]; }
+    else { m = q.match(/^(.+?)\s+______\s+.*\(([^)]+)\)\s*$/); if (m) { subj = m[1]; inf = m[2]; } }
+    if (!assert(inf && subj, 'refl: could not read "' + q + '"')) return;
+    const person = personOf(subj);
+    if (!assert(person !== null, 'refl: unknown subject "' + subj + '"')) return;
+    const got = String(a).split(/\s+/);
+    if (!assert(got.length === 2, 'refl: "' + a + '" is not a pronoun and a verb')) return;
+    assert(got[0] === PRON[person], 'refl: ' + inf + ' for "' + subj + '" needs "' + PRON[person] + '", got "' + got[0] + '"');
+    /* the verb itself, with its stem change where the table says there is one */
+    const bare = inf.replace(/se$/, '');                       /* levantarse -> levantar */
+    const STEMS = { vestir: ['e', 'i'], acostar: ['o', 'ue'], despertar: ['e', 'ie'] };
+    let stem = bare.slice(0, -2);                              /* levantar -> levant */
+    const ch = STEMS[bare];
+    if (ch && person !== 3 && person !== 4) {
+      const at = stem.lastIndexOf(ch[0]);
+      if (at >= 0) stem = stem.slice(0, at) + ch[1] + stem.slice(at + 1);
+    }
+    const want = stem + ES.ENDINGS[bare.slice(-2)][person];
+    assert(got[1] === want, 'refl: ' + inf + ' for "' + subj + '" should be "' + want + '", got "' + got[1] + '"');
+    return;
+  }
+
+  if (t === 'saber') {
+    const SABER = ['sé', 'sabes', 'sabe', 'sabemos', 'sabéis', 'saben'];
+    const CONOCER = ['conozco', 'conoces', 'conoce', 'conocemos', 'conocéis', 'conocen'];
+    const m = cueless.match(/^(.+?)\s+______\s+(.+?)\.?$/);
+    if (!assert(m, 'saber: could not read "' + q + '"')) return;
+    const person = personOf(m[1]);
+    if (!assert(person !== null, 'saber: unknown subject "' + m[1] + '"')) return;
+    /* a person or a place takes conocer; a fact or a skill takes saber */
+    const rest = m[2];
+    const wantConocer = /^a /.test(rest) || /ciudad|Madrid|libro/.test(rest);
+    const want = (wantConocer ? CONOCER : SABER)[person];
+    assert(a === want, 'saber: "' + q + '" should be ' + want + ', got ' + a);
+    return;
+  }
+
+  if (t === 'poss') {
+    const m = q.match(/^______\s+(\S+)\s+\(([a-z]+)\)$/);
+    if (!assert(m, 'poss: could not read "' + q + '"')) return;
+    const word = m[1], who = m[2];
+    const singular = ES.NOUNS.filter(n => n.es === word)[0];
+    const pluralOf = ES.NOUNS.filter(n => ES.plural(n) === word)[0];
+    const noun = singular || pluralOf;
+    if (!assert(noun, 'poss: "' + word + '" is not in the noun table')) return;
+    const isPlural = !singular;
+    if (who === 'our') {
+      const want = 'nuestr' + (noun.g === 'f' ? 'a' : 'o') + (isPlural ? 's' : '');
+      assert(a === want, 'poss: our + ' + word + ' should be ' + want + ', got ' + a);
+      return;
+    }
+    const ONE = { my: 'mi', your: 'tu', his: 'su', her: 'su', their: 'su' };
+    if (!assert(ONE[who], 'poss: unknown owner "' + who + '"')) return;
+    assert(a === ONE[who] + (isPlural ? 's' : ''), 'poss: ' + who + ' + ' + word + ' should be ' +
+      ONE[who] + (isPlural ? 's' : '') + ', got ' + a);
+    return;
+  }
+
+  if (t === 'weather') {
+    const PAIRS = { 'Hace sol': 'It is sunny', 'Hace frío': 'It is cold', 'Hace calor': 'It is hot',
+      'Hace viento': 'It is windy', 'Hace buen tiempo': 'The weather is good', 'Hace mal tiempo': 'The weather is bad',
+      'Llueve': 'It is raining', 'Nieva': 'It is snowing', 'Está nublado': 'It is cloudy' };
+    const m = q.match(/^Say it in (Spanish|English):\s*(.+)$/);
+    if (!assert(m, 'weather: could not read "' + q + '"')) return;
+    if (m[1] === 'Spanish') {
+      const want = Object.keys(PAIRS).filter(k => PAIRS[k] === m[2])[0];
+      assert(a === want, 'weather: ' + m[2] + ' is ' + want + ', got ' + a);
+    } else {
+      assert(a === PAIRS[m[2]], 'weather: ' + m[2] + ' is ' + PAIRS[m[2]] + ', got ' + a);
+    }
+    return;
+  }
+
   if (t === 'serestar') {
     const m = cueless.match(/^(.+?)\s+______\s+(.+?)\.?$/);
     if (!assert(m, 'serestar: could not read "' + q + '"')) return;
