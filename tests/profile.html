@@ -166,6 +166,37 @@ f.addEventListener('load', async () => {
     const beforeKey = other.getAttribute('data-forget'), beforeVal = localStorage.getItem(beforeKey);
     other.click(); await tick();
     ok('saying no to the warning keeps it', localStorage.getItem(beforeKey) === beforeVal);
+    /* ---- a transfer link: nothing to sign into at all ---- */
+    w.localStorage.setItem('ph.piano.v1', JSON.stringify({ version: 1, sessions: [{ d: '2026-09-02', m: 25 }], summary: {} }));
+    $('#linkPass').value = 'apple';
+    $('#makeLink').click();
+    await waitFor(() => !!w.PH_PROFILE.link(), 400);
+    const link = w.PH_PROFILE.link();
+    ok('a link can be made with nothing set up', !!link && link.indexOf('#hub=') > 0, link.slice(0, 40));
+    ok('it carries none of the data in the clear', !/piano|sessions|2026-09-02/.test(link));
+    ok('and the page says how big it is', /KB/.test(txt('#linkNote')), txt('#linkNote'));
+    $('#linkPass').value = 'no';
+    $('#makeLink').click(); await tick();
+    ok('a password that is too short is refused', /at least four/.test(txt('#linkNote')), txt('#linkNote'));
+
+    /* opening it on "another device" */
+    w.localStorage.removeItem('ph.piano.v1');
+    w.history.replaceState(null, '', link);
+    w.prompt = () => 'apple';
+    w.confirm = () => true;
+    await w.PH_PROFILE.offerIncomingLink();
+    await waitFor(() => !!w.localStorage.getItem('ph.piano.v1'), 400);
+    ok('opening the link brings the hub back', !!w.localStorage.getItem('ph.piano.v1'));
+    ok('and the link is taken out of the address bar', w.location.hash === '', w.location.hash);
+
+    w.localStorage.removeItem('ph.piano.v1');
+    w.history.replaceState(null, '', link);
+    w.prompt = () => 'wrong';
+    await w.PH_PROFILE.offerIncomingLink();
+    await tick();
+    ok('a wrong password on a link brings nothing back', !w.localStorage.getItem('ph.piano.v1'));
+    w.history.replaceState(null, '', link.split('#')[0]);
+
     /* ---- a name and a password ----
        There is no server here, so this is a lock rather than an account: the copy in the gist is
        encrypted with a password and filed under a name. The test drives a real round trip against a

@@ -133,8 +133,22 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
 
   <section class="card" aria-labelledby="h-move">
     <div class="card-head"><h2 id="h-move">Or just carry a file</h2><span class="small">Nothing to set up at all</span></div>
-    <p class="muted">If you would rather not set anything up, a file does the same job by hand. It takes
-      about half a minute:</p>
+    <p class="muted">Nothing to sign into, nothing to create. Two ways, both about half a minute.</p>
+    <p class="muted"><b>A link.</b> This puts the whole hub, locked with a password, into a link you can
+      send yourself however you already send things. Open it on the other device and it comes back. The
+      part after the # never leaves the device it is on, not even to the site it points at.</p>
+    <form class="row2" id="linkForm">
+      <div class="field"><label for="linkPass">Password for the link</label>
+        <input class="input" id="linkPass" type="password" maxlength="100" autocomplete="new-password" placeholder="At least four characters"></div>
+      <button class="btn btn-primary" type="button" id="makeLink">🔗 Make a link</button>
+    </form>
+    <p class="small" id="linkNote"></p>
+    <div class="codebox" id="linkBox" hidden>
+      <div><b>Your transfer link</b><div class="small muted">Send it to yourself, open it on the other device, and put in the same password.</div></div>
+      <button class="btn btn-sm" type="button" id="copyLink">Copy the link</button>
+    </div>
+
+    <p class="muted" style="margin-top:1.2rem"><b>Or a file.</b> The same thing, as a download:</p>
     <ol class="steps">
       <li>Press <b>Save a copy</b> above. A single file lands in Downloads.</li>
       <li>Get it to the other device however you already send things — AirDrop, email it to yourself, a
@@ -272,6 +286,36 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     PH.setSize(b.getAttribute('data-size-id'));
     renderSizes();
   });
+  /* ---- a transfer link ----------------------------------------------------------------------------
+     Everything, locked, in the fragment of a link. A fragment is never sent to a server, so a link can
+     be mailed to yourself or dropped between devices without the hub, GitHub or anyone else seeing it.
+     It is long, which is fine: nobody types one, they send it. */
+  var lastLink = '';
+  function makeLink(password) {
+    if (String(password).length < 4) { $('#linkNote').textContent = '\u26a0\ufe0f Use a password of at least four characters.'; return; }
+    $('#linkNote').textContent = 'Locking\u2026';
+    return lock(bundle(), password).then(function (locked) {
+      var here = location.href.split('#')[0];
+      lastLink = here + '#hub=' + encodeURIComponent(btoa(unescape(encodeURIComponent(locked))));
+      $('#linkBox').hidden = false;
+      $('#linkNote').textContent = 'Ready \u2014 about ' + Math.max(1, Math.round(lastLink.length / 1024)) +
+        ' KB. Send it to yourself, then open it on the other device.';
+    }).catch(function (e) { $('#linkNote').textContent = e.message || 'Could not make a link.'; });
+  }
+  /** Opening a link that carries a hub: ask for the password, then put it back. */
+  function offerIncomingLink() {
+    var m = location.hash.match(/[#&]hub=([^&]+)/);
+    if (!m) return;
+    var text;
+    try { text = decodeURIComponent(escape(atob(decodeURIComponent(m[1])))); } catch (e) { return; }
+    history.replaceState(null, '', location.href.split('#')[0]);   /* do not leave it in the address bar */
+    var pass = prompt('This link is carrying a hub. What is its password?');
+    if (pass === null) return;
+    return unlock(text, pass).then(function (plain) {
+      if (applyBundle(plain, 'that link')) PH.toast('Brought back from the link');
+    }).catch(function (e) { PH.toast(e.message || 'That link could not be opened', 3500); });
+  }
+
   function renderSignIn() {
     var canSave = !!token();
     $('#whoIn2').value = $('#whoIn2').value || PH.person() || '';
@@ -301,6 +345,12 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   $('#signInForm').addEventListener('submit', function (e) {
     e.preventDefault();
     pullAs($('#whoIn2').value, $('#passIn').value, $('#codeIn').value);
+  });
+  $('#makeLink').addEventListener('click', function () { makeLink($('#linkPass').value); });
+  $('#copyLink').addEventListener('click', function () {
+    if (!lastLink) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(lastLink).then(function () { PH.toast('Link copied'); });
+    else { PH.download('practice-hub-link.txt', lastLink, 'text/plain'); PH.toast('Saved the link as a file'); }
   });
   $('#copyCode').addEventListener('click', function () {
     var code = $('#hubCode').textContent;
@@ -597,11 +647,17 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     var t = token(), host = $('#syncBody');
     if (!t) {
       host.innerHTML =
+        /* the short way: this link opens GitHub with the one permission already ticked */
+        '<p class="muted">Three clicks, about twenty seconds, once on this device.</p>' +
         '<ol class="steps">' +
-          '<li>Open <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">GitHub → fine-grained tokens</a> and press <b>Generate new token</b>.</li>' +
-          '<li>Give it any name, set <b>Expiration</b> to whatever you are comfortable with, and under <b>Account permissions</b> set <b>Gists</b> to <b>Read and write</b>. Nothing else is needed.</li>' +
-          '<li>Generate it, copy it, and paste it below. It is kept on this device only — it is left out of every backup and is never written to the gist.</li>' +
+          '<li><a class="btn btn-sm btn-primary" href="https://github.com/settings/tokens/new?scopes=gist&description=Practice%20Hub" target="_blank" rel="noopener">Open GitHub with it filled in ↗</a>' +
+            ' — the only permission it asks for, <b>gist</b>, is already ticked.</li>' +
+          '<li>Scroll down and press <b>Generate token</b>, then copy what it shows you.</li>' +
+          '<li>Paste it below. It stays on this device — it is left out of every backup and is never written to the store.</li>' +
         '</ol>' +
+        '<details style="margin:.6rem 0"><summary class="small muted">Rather use a fine-grained token?</summary>' +
+          '<p class="small muted">Open <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">fine-grained tokens</a>, ' +
+          'press <b>Generate new token</b>, and under <b>Account permissions</b> set <b>Gists</b> to <b>Read and write</b>. Nothing else is needed.</p></details>' +
         '<div class="keyrow" style="margin-top:.9rem">' +
           '<div class="field"><label for="tokenIn">GitHub token</label>' +
             '<input class="input" id="tokenIn" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></div>' +
@@ -649,8 +705,10 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   });
 
   renderYou(); renderThemes(); renderSizes(); renderData(); renderSync(); renderSignIn();
+  offerIncomingLink();
   window.PH_PROFILE = { state: function () { return state; }, renderSync: renderSync, renderData: renderData,
     renderSignIn: renderSignIn, pushAs: pushAs, pullAs: pullAs, lock: lock, unlock: unlock, fileFor: fileFor,
+    makeLink: makeLink, link: function () { return lastLink; }, offerIncomingLink: offerIncomingLink,
     push: push, pull: pull, createStore: createStore, applyBundle: applyBundle, bundle: bundle, sizes: sizes };
 })();
 </script>
