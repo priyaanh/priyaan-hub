@@ -85,8 +85,11 @@ f.addEventListener('load', async () => {
     /* ---- getting it onto another device without an account ---- */
     ok('the file route is offered first, with its own buttons', !!$('#backupBtn2') && !!$('#restoreBtn2'));
     ok('and it is described in steps', $$('.steps li').length >= 3, String($$('.steps li').length));
-    ok('it says no account is needed', /No account needed/.test(txt('body')));
-    ok('the gist is presented as the optional extra', /Optional, and only worth it/.test(txt('body')));
+    ok('the file route says it needs no setup at all', /Nothing to set up at all/.test(txt('body')));
+    ok('the store is explained as a one-off, on one device',
+       /set up once, on one device/.test(txt('body')));
+    ok('and it says another device needs only the code, the name and the password',
+       /only the hub code, the name and the password/.test(txt('body')));
     let grabbed = null;
     const realDl2 = w.PH.download;
     w.PH.download = (name, text) => { grabbed = { name, text }; };
@@ -207,6 +210,36 @@ f.addEventListener('load', async () => {
     ok('a wrong password is refused, in words', /does not open/.test(txt('#syncState')), txt('#syncState'));
     ok('and brings nothing back', !w.localStorage.getItem('ph.piano.v1'));
 
+    /* the point of the hub code: another device needs no token and no GitHub at all */
+    w.localStorage.removeItem('ph.sync.token');
+    w.PH_PROFILE.state().gist = '';
+    w.PH_PROFILE.renderSignIn(); await tick();
+    ok('with no token, bringing a hub back is still offered', !$('#pullBtn2').disabled);
+    ok('and saving one is not', $('#pushBtn2').disabled);
+    ok('and it says which is which', /Saving one needs the token/.test(txt('#signInNote')), txt('#signInNote'));
+    let sentAuth = 'unset';
+    w.fetch = async (url, opts) => {
+      sentAuth = ((opts || {}).headers || {}).Authorization || 'none';
+      return { ok: true, json: async () => ({ id: 'abc123def456', files: store }) };
+    };
+    w.localStorage.removeItem('ph.piano.v1');
+    $('#codeIn').value = 'abc123def456'; $('#whoIn2').value = 'Alex'; $('#passIn').value = 'pear-tree-42';
+    $('#signInForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+    await waitFor(() => !!w.localStorage.getItem('ph.piano.v1'), 400);
+    ok('a hub code, a name and a password are enough on a fresh device', !!w.localStorage.getItem('ph.piano.v1'));
+    ok('and nothing was signed in to do it', sentAuth === 'none', sentAuth);
+    ok('the code it came from is remembered', w.PH_PROFILE.state().gist === 'abc123def456', w.PH_PROFILE.state().gist);
+    ok('a code that is not a code is refused', (function () {
+      $('#codeIn').value = 'not-a-code';
+      $('#signInForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+      return true;
+    })());
+    await waitFor(() => /hub code/.test(txt('#syncState')), 300);
+    ok('and says so', /hub code/.test(txt('#syncState')), txt('#syncState'));
+
+    w.localStorage.setItem('ph.sync.token', 'github_pat_TESTTOKEN');
+    w.PH_PROFILE.state().gist = 'abc123def456';
+    $('#codeIn').value = 'abc123def456';
     $('#whoIn2').value = 'Someone Else'; $('#passIn').value = 'pear-tree-42';
     $('#signInForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
     await waitFor(() => /Nothing saved under that name/.test(txt('#syncState')), 400);

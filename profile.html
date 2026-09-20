@@ -17,6 +17,10 @@ main > * + * { margin-top: 1rem; }
 .themecard .chip { width: 30px; height: 22px; border-radius: 5px; flex: none; border: 1px solid var(--border); }
 .themecard .nm { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; }
 /* text size */
+.codebox { display: flex; gap: .7rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; padding: .7rem .8rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.codebox > div:first-child { flex: 1; min-width: 12rem; }
+.codebox code { font-family: var(--mono); font-size: .9rem; word-break: break-all; }
 .sizes { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .sizecard { display: flex; align-items: center; gap: .7rem; padding: .7rem .8rem; border: 1px solid var(--border);
   border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font: inherit; color: inherit; text-align: left; }
@@ -100,10 +104,37 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     </div>
   </section>
 
+  <section class="card" aria-labelledby="h-signin">
+    <div class="card-head"><h2 id="h-signin">The same hub on another device</h2><span class="small" id="signInSub"></span></div>
+    <p class="muted">Put in the same name and password on another device and everything returns: your
+      practice, your scores, the lot. The password never leaves this browser — it is turned into a key
+      here, and what travels is already locked.</p>
+    <form class="row2" id="signInForm">
+      <div class="field"><label for="codeIn">Hub code</label>
+        <input class="input" id="codeIn" maxlength="64" spellcheck="false" autocomplete="off" placeholder="From the device you saved on"></div>
+      <div class="field"><label for="whoIn2">Name</label>
+        <input class="input" id="whoIn2" maxlength="32" autocomplete="username" spellcheck="false" placeholder="Your name"></div>
+      <div class="field"><label for="passIn">Password</label>
+        <input class="input" id="passIn" type="password" maxlength="100" autocomplete="current-password" placeholder="At least four characters"></div>
+      <button class="btn btn-primary" type="submit" id="pullBtn2">↓ Bring my hub back</button>
+      <button class="btn" type="button" id="pushBtn2">↑ Save my hub</button>
+    </form>
+    <p class="small" id="signInNote"></p>
+    <div class="codebox" id="codeBox" hidden>
+      <div><b>This hub's code</b><div class="small muted">Type this on the other device, with the same name and password. Nothing else is needed there — no sign-in, no GitHub.</div></div>
+      <code id="hubCode"></code>
+      <button class="btn btn-sm" type="button" id="copyCode">Copy</button>
+    </div>
+    <p class="small muted"><b>It is a lock, not an account.</b> Several people can share one gist and
+      none of them can read another's, because each is locked with its own password. Nobody can reset
+      it for you: a forgotten password means that copy cannot be opened again, so keep the file backup
+      above as well. And a password worth having is not the one used for anything else.</p>
+  </section>
+
   <section class="card" aria-labelledby="h-move">
-    <div class="card-head"><h2 id="h-move">The same hub on another device</h2><span class="small">No account needed</span></div>
-    <p class="muted">Everything here lives in this browser, so a second device starts empty and a cleared
-      browser starts over. The quickest answer is a file, and it takes about half a minute:</p>
+    <div class="card-head"><h2 id="h-move">Or just carry a file</h2><span class="small">Nothing to set up at all</span></div>
+    <p class="muted">If you would rather not set anything up, a file does the same job by hand. It takes
+      about half a minute:</p>
     <ol class="steps">
       <li>Press <b>Save a copy</b> above. A single file lands in Downloads.</li>
       <li>Get it to the other device however you already send things — AirDrop, email it to yourself, a
@@ -119,33 +150,13 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     </div>
   </section>
 
-  <section class="card" aria-labelledby="h-signin">
-    <div class="card-head"><h2 id="h-signin">Your name and a password</h2><span class="small" id="signInSub"></span></div>
-    <p class="muted">Once the hub has somewhere of its own to keep a copy (below), this is how it comes
-      back. Put in the same name and password on another device and everything returns: your practice,
-      your scores, the lot. The password never leaves this browser — it is turned into a key here, and
-      what travels is already locked.</p>
-    <form class="row2" id="signInForm">
-      <div class="field"><label for="whoIn2">Name</label>
-        <input class="input" id="whoIn2" maxlength="32" autocomplete="username" spellcheck="false" placeholder="Your name"></div>
-      <div class="field"><label for="passIn">Password</label>
-        <input class="input" id="passIn" type="password" maxlength="100" autocomplete="current-password" placeholder="At least four characters"></div>
-      <button class="btn btn-primary" type="submit" id="pullBtn2">↓ Bring my hub back</button>
-      <button class="btn" type="button" id="pushBtn2">↑ Save my hub</button>
-    </form>
-    <p class="small" id="signInNote"></p>
-    <p class="small muted"><b>It is a lock, not an account.</b> Several people can share one gist and
-      none of them can read another's, because each is locked with its own password. Nobody can reset
-      it for you: a forgotten password means that copy cannot be opened again, so keep the file backup
-      above as well. And a password worth having is not the one used for anything else.</p>
-  </section>
-
   <section class="card" aria-labelledby="h-sync">
     <div class="card-head"><h2 id="h-sync">Keep it in step by itself</h2><span class="small" id="syncSub"></span></div>
-    <p class="muted">Optional, and only worth it if carrying a file about gets tiresome. Connecting a
-      private GitHub gist gives the hub somewhere of its own to keep the copy, so each device can push and
-      pull instead. It needs a GitHub account and a token, which takes a few minutes the first time — the
-      steps are below. Everything works perfectly well without it.</p>
+    <p class="muted">Somewhere for the copy to live, so the name and password above have something to
+      fetch. It is set up once, on one device, by whoever owns the GitHub account — a few minutes with
+      the steps below. After that every other device needs only the hub code, the name and the password:
+      no account, no token, nothing to install. Saving a new copy needs the token again, so that is worth
+      doing on whichever device is used most.</p>
     <div id="syncBody"></div>
   </section>
 
@@ -262,13 +273,17 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     renderSizes();
   });
   function renderSignIn() {
-    var ready = !!(state.gist && token());
+    var canSave = !!token();
     $('#whoIn2').value = $('#whoIn2').value || PH.person() || '';
-    $('#pullBtn2').disabled = !ready;
-    $('#pushBtn2').disabled = !ready;
-    $('#signInSub').textContent = !ready ? 'Set the copy up below first'
-      : state.who ? 'Last used as ' + state.who : 'Ready';
-    $('#signInNote').textContent = ready ? '' : 'This needs the gist below, and its token on this device.';
+    if (state.gist && !$('#codeIn').value) $('#codeIn').value = state.gist;
+    /* bringing it back needs nothing but the code, the name and the password */
+    $('#pullBtn2').disabled = false;
+    $('#pushBtn2').disabled = !canSave;
+    $('#signInSub').textContent = state.who ? 'Last used as ' + state.who : (canSave ? 'Ready' : 'Ready to bring one back');
+    $('#signInNote').textContent = canSave ? ''
+      : 'Bringing a hub back needs nothing else. Saving one needs the token below, once, on this device.';
+    $('#codeBox').hidden = !state.gist;
+    if (state.gist) $('#hubCode').textContent = state.gist;
   }
   function renderYou() {
     if (!$('#gradeIn').options.length || $('#gradeIn').options.length === 1) {
@@ -285,7 +300,12 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
   }
   $('#signInForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    pullAs($('#whoIn2').value, $('#passIn').value);
+    pullAs($('#whoIn2').value, $('#passIn').value, $('#codeIn').value);
+  });
+  $('#copyCode').addEventListener('click', function () {
+    var code = $('#hubCode').textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(function () { PH.toast('Code copied'); });
+    else { var r = document.createRange(); r.selectNode($('#hubCode')); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); PH.toast('Code selected — copy it'); }
   });
   $('#pushBtn2').addEventListener('click', function () { pushAs($('#whoIn2').value, $('#passIn').value); });
   $('#nameForm').addEventListener('submit', function (e) {
@@ -468,7 +488,7 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     PH.toast(v ? 'Token saved on this device' : 'Token forgotten');
   }
 
-  function createStore() {
+  function createStore(then) {
     if (busy) return;
     setBusy(true, 'Making a private gist…');
     fetch(API + '/gists', { method: 'POST', headers: headers(), body: JSON.stringify({
@@ -480,8 +500,9 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
     }).then(function (g) {
       state.gist = String(g.id || '');
       state.at = new Date().toISOString();
-      save(); setBusy(false); renderSync();
-      PH.toast('Made a private gist and saved everything into it');
+      save(); setBusy(false); renderSync(); renderSignIn();
+      PH.toast('Made a store for this hub');
+      if (typeof then === 'function') then();
     }).catch(function (err) {
       setBusy(false);
       $('#syncState').textContent = err.message || 'Could not reach GitHub.';
@@ -494,8 +515,11 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
 
   /** Save the whole hub into the gist, under this name, locked with this password. */
   function pushAs(name, password) {
-    if (busy || !state.gist) return;
+    if (busy) return;
+    if (!token()) { $('#syncState').textContent = 'Saving needs the token, once, on this device. The steps are below.'; return; }
     if (!slug(name)) { $('#syncState').textContent = 'Put a name in first.'; return; }
+    /* no store yet: make one, then save into it, so this is one press either way */
+    if (!state.gist) { createStore(function () { pushAs(name, password); }); return; }
     if (String(password).length < 4) { $('#syncState').textContent = 'Use a password of at least four characters.'; return; }
     setBusy(true, 'Locking and saving…');
     lock(bundle(), password).then(function (locked) {
@@ -509,12 +533,16 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
       PH.toast('Saved as ' + name + ', locked with your password');
     }).catch(function (err) { setBusy(false); $('#syncState').textContent = err.message || 'Could not reach GitHub.'; });
   }
-  /** Bring it back on any device that has the token: the name says which one, the password opens it. */
-  function pullAs(name, password) {
-    if (busy || !state.gist) return;
+  /** Bring it back on any device at all. Reading a gist needs only its id — GitHub answers an
+      unauthenticated request, from a browser, on any site — so a second device needs no token and no
+      GitHub account. The copy it reads is locked, which is what makes that safe to rely on. */
+  function pullAs(name, password, code) {
+    if (busy) return;
+    var id = String(code || state.gist || '').trim();
+    if (!/^[a-f0-9]{8,64}$/i.test(id)) { $('#syncState').textContent = 'Put in the hub code from the other device.'; return; }
     if (!slug(name)) { $('#syncState').textContent = 'Put a name in first.'; return; }
     setBusy(true, 'Fetching…');
-    fetch(API + '/gists/' + state.gist, { method: 'GET', headers: headers() })
+    fetch(API + '/gists/' + id, { method: 'GET', headers: token() ? headers() : { 'Accept': 'application/vnd.github+json' } })
       .then(function (res) { if (!res.ok) throw new Error(explain(res)); return res.json(); })
       .then(function (g) {
         var file = (g.files && (g.files[fileFor(name)] || g.files[FILE]));
@@ -525,8 +553,9 @@ code.mono { font-family: var(--mono); font-size: .85em; background: var(--surfac
       .then(function (text) { return unlock(text, password); })
       .then(function (plain) {
         setBusy(false);
-        if (applyBundle(plain, 'your gist')) {
-          state.pulledAt = new Date().toISOString(); state.who = slug(name); save(); renderSync(); renderSignIn();
+        if (applyBundle(plain, 'your hub')) {
+          state.pulledAt = new Date().toISOString(); state.who = slug(name); state.gist = id;
+          save(); renderSync(); renderSignIn();
         }
       })
       .catch(function (err) { setBusy(false); $('#syncState').textContent = err.message || 'Could not reach GitHub.'; });
