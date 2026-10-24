@@ -47,6 +47,9 @@
       { id: 'systems', title: 'Systems of equations', blurb: 'Two equations, two unknowns: solving them, and how many solutions there are.', skills: ['math8.solve-systems', 'math8.systems-solutions'] },
       { id: 'geometry', title: 'Geometry', blurb: 'The Pythagorean theorem and distance, volume of cylinders, cones and spheres, triangle angles, transformations.', skills: ['math8.pythagorean-theorem', 'math8.volume', 'math8.triangle-angles', 'math8.transformations'] },
       { id: 'data', title: 'Data and modelling', blurb: 'Two-way tables and the story a scatter plot tells.', skills: ['math8.two-way-tables', 'math8.scatter-plots'] },
+      { id: 'graphs-lines', title: 'Reading and graphing lines', blurb: 'What a graph’s axes say, which points lie on a line, and drawing a line straight from y = mx + b.', skills: ['math8.interpret-graphs', 'math8.point-on-line', 'math8.graph-lines'] },
+      { id: 'circle-trend', title: 'Circle graphs and trend lines', blurb: 'Percents and central angles in circle graphs, and trend lines that sum up a scatter plot and make predictions.', skills: ['math8.circle-graphs', 'math8.trend-lines'] },
+      { id: 'pythagoras-more', title: 'More with the Pythagorean theorem', blurb: 'Diagonals of boxes and cans in three dimensions, and the converse: testing whether a triangle is right, acute or obtuse.', skills: ['math8.pythagorean-3d', 'math8.pythagorean-converse'] },
     ],
   });
 
@@ -733,6 +736,593 @@
       const tau = kendall(q.params.pts);                         // rising vs falling pairs of dots, read straight from the points
       const want = tau > 0.4 ? 'Positive association' : tau < -0.4 ? 'Negative association' : Math.abs(tau) < 0.3 ? 'No association' : 'unclear';
       return q.answer === want || ('unclear: tau ' + tau.toFixed(2));
+    },
+  });
+
+  /* ---------- Unit 7: Reading and graphing lines ---------- */
+  const r2 = v => Math.round(v * 100) / 100;
+  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+  /** the x-term of y = mx + b for a slope mn/md: "2x", "−x", or a stacked fraction times x */
+  const slopeX = (mn, md) => { [mn, md] = M.simp(mn, md); return md === 1 ? M.term(mn, 'x') : `${mn < 0 ? '−' : ''}${F(Math.abs(mn), md)}${X}`; };
+  const lineF = (mn, md, b) => `${Y} = ${slopeX(mn, md)}${b ? ' ' + M.signed(b) : ''}`;
+  /** the slope mn/md on its own: "3", "−2", or a stacked fraction */
+  const slopeH = (mn, md) => { [mn, md] = M.simp(mn, md); return md === 1 ? N(mn) : `${mn < 0 ? '−' : ''}${F(Math.abs(mn), md)}`; };
+
+  /** a coordinate grid from −R to R, one square per unit. Lines are [mn, md, b, id] (slope mn/md); each carries
+      data-g="id" so verify() can read the drawing back. */
+  function coordSvg(o) {
+    const R = o.R || 5, S = o.S || 14, pad = 8, W = 2 * R * S + 2 * pad;
+    const px = x => r2(pad + (x + R) * S), py = y => r2(pad + (R - y) * S);
+    let g = '';
+    for (let k = -R; k <= R; k++) if (k) g += `<line class="light" x1="${px(k)}" y1="${py(-R)}" x2="${px(k)}" y2="${py(R)}"/><line class="light" x1="${px(-R)}" y1="${py(k)}" x2="${px(R)}" y2="${py(k)}"/>`;
+    g += `<line class="stroke" x1="${px(-R)}" y1="${py(0)}" x2="${px(R)}" y2="${py(0)}" stroke-width="1.5"/><line class="stroke" x1="${px(0)}" y1="${py(-R)}" x2="${px(0)}" y2="${py(R)}" stroke-width="1.5"/>`;
+    g += `<text x="${px(R) - 9}" y="${py(0) - 5}" font-size="12" font-style="italic">x</text><text x="${px(0) + 5}" y="${py(R) + 11}" font-size="12" font-style="italic">y</text>`;
+    (o.lines || []).forEach(([mn, md, b, id]) => {
+      const m = mn / md, a1 = (-R - b) / m, a2 = (R - b) / m;             // where the line leaves the top and bottom of the grid
+      const lo = Math.max(-R, Math.min(a1, a2)), hi = Math.min(R, Math.max(a1, a2));
+      g += `<line data-g="${id}" x1="${px(lo)}" y1="${py(m * lo + b)}" x2="${px(hi)}" y2="${py(m * hi + b)}" stroke="var(--primary)" stroke-width="2.5"/>`;
+    });
+    (o.dots || []).forEach(([x, y]) => { g += `<circle cx="${px(x)}" cy="${py(y)}" r="4" fill="var(--ink)"/>`; });
+    return `<svg class="figure" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}" role="img" aria-label="${o.label || 'a line on a coordinate grid'}">${g}</svg>`;
+  }
+  /** read line `id` back out of the drawing, as its two end points in grid units */
+  function readLine(html, id, R, S) {
+    const pad = 8, mm = String(html).match(new RegExp(`<line data-g="${id}" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)"`));
+    if (!mm) return null;
+    const ux = v => (Number(v) - pad) / S - R, uy = v => R - (Number(v) - pad) / S;
+    return [[ux(mm[1]), uy(mm[2])], [ux(mm[3]), uy(mm[4])]];
+  }
+  /** does the drawn line `id` lie on y = (mn/md)x + b? (both of its end points must fit) */
+  const drawnFits = (html, id, R, S, mn, md, b) => { const e = readLine(html, id, R, S); return !!e && e.every(([x, y]) => Math.abs(mn / md * x + b - y) < 0.03); };
+
+  /** a first-quadrant graph with numbered axes. o: { xmax, xstep, ymax, ystep, xl, yl, path, dots, line: [m, b], marks: [[x, y, text]] } */
+  function plotSvg(o) {
+    const L = 58, T = 12, W = 236, H = 176;
+    const px = x => r2(L + x / o.xmax * W), py = y => r2(T + H - y / o.ymax * H);
+    let g = '';
+    for (let i = 0; i * o.xstep <= o.xmax + 1e-9; i++) { const x = M.round(i * o.xstep, 6); g += `<line class="light" x1="${px(x)}" y1="${T}" x2="${px(x)}" y2="${T + H}"/><text x="${px(x)}" y="${T + H + 15}" text-anchor="middle" font-size="11">${N(x)}</text>`; }
+    for (let i = 0; i * o.ystep <= o.ymax + 1e-9; i++) { const y = M.round(i * o.ystep, 6); g += `<line class="light" x1="${L}" y1="${py(y)}" x2="${L + W}" y2="${py(y)}"/><text x="${L - 6}" y="${py(y) + 4}" text-anchor="end" font-size="11">${N(y)}</text>`; }
+    g += `<line class="stroke" x1="${L}" y1="${T + H}" x2="${L + W}" y2="${T + H}" stroke-width="1.5"/><line class="stroke" x1="${L}" y1="${T}" x2="${L}" y2="${T + H}" stroke-width="1.5"/>`;
+    g += `<text x="${L + W / 2}" y="${T + H + 34}" text-anchor="middle" font-size="12">${M.esc(o.xl)}</text><text x="14" y="${T + H / 2}" text-anchor="middle" font-size="12" transform="rotate(-90 14 ${T + H / 2})">${M.esc(o.yl)}</text>`;
+    if (o.path) g += `<polyline points="${o.path.map(([x, y]) => `${px(x)},${py(y)}`).join(' ')}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    if (o.line) {
+      const [m, b] = o.line;                                           // clip y = mx + b to the plotting area
+      let lo = 0, hi = o.xmax;
+      if (m !== 0) { const a1 = (0 - b) / m, a2 = (o.ymax - b) / m; lo = Math.max(lo, Math.min(a1, a2)); hi = Math.min(hi, Math.max(a1, a2)); }
+      g += `<line x1="${px(lo)}" y1="${py(m * lo + b)}" x2="${px(hi)}" y2="${py(m * hi + b)}" stroke="var(--warn)" stroke-width="2.5"/>`;
+    }
+    (o.dots || []).forEach(([x, y]) => { g += `<circle cx="${px(x)}" cy="${py(y)}" r="3.5" class="fill"/>`; });
+    (o.marks || []).forEach(([x, y, t]) => {                          // label each mark on the side away from the line, with a halo over the dots
+      const right = x > o.xmax / 2, room = py(y) + 18 < T + H - 4 && py(y) - 9 > T + 12;
+      const above = room ? !!o.line && (o.line[0] > 0) === right : py(y) + 18 >= T + H - 4;
+      g += `<circle cx="${px(x)}" cy="${py(y)}" r="4.5" fill="var(--ink)"/><text x="${px(x) + (right ? -8 : 8)}" y="${py(y) + (above ? -9 : 18)}" text-anchor="${right ? 'end' : 'start'}" font-size="12" font-weight="700" paint-order="stroke" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round">${t}</text>`;
+    });
+    return `<svg class="figure" viewBox="0 0 ${L + W + 16} ${T + H + 42}" width="${L + W + 16}" role="img" aria-label="${M.esc(o.label || `graph of ${o.yl} against ${o.xl}`)}">${g}</svg>`;
+  }
+
+  /** a graph with titled axes but no numbers: labelled points; each dot carries data-p="A" so verify() can read it */
+  function pointsSvg(pts, xl, yl) {
+    const X0 = 44, Y0 = 186, s = 17;
+    let g = '';
+    for (let k = 1; k <= 10; k++) g += `<line class="light" x1="${X0 + k * s}" y1="${Y0}" x2="${X0 + k * s}" y2="${Y0 - 10 * s}"/><line class="light" x1="${X0}" y1="${Y0 - k * s}" x2="${X0 + 10 * s}" y2="${Y0 - k * s}"/>`;
+    g += `<line class="stroke" x1="${X0}" y1="${Y0}" x2="${X0 + 10 * s + 8}" y2="${Y0}"/><line class="stroke" x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y0 - 10 * s - 8}"/>`;
+    g += `<path d="M${X0 + 10 * s + 14} ${Y0} l-9 -5 v10 z" fill="currentColor"/><path d="M${X0} ${Y0 - 10 * s - 14} l-5 9 h10 z" fill="currentColor"/>`;
+    pts.forEach(([x, y, lab]) => { g += `<circle data-p="${lab}" cx="${X0 + x * s}" cy="${Y0 - y * s}" r="4.5" fill="var(--primary)"/><text x="${X0 + x * s + 7}" y="${Y0 - y * s - 6}" font-size="13" font-weight="700">${lab}</text>`; });
+    g += `<text x="${X0 + 5 * s}" y="${Y0 + 22}" text-anchor="middle" font-size="13">${M.esc(xl)}</text><text x="18" y="${Y0 - 5 * s}" text-anchor="middle" font-size="13" transform="rotate(-90 18 ${Y0 - 5 * s})">${M.esc(yl)}</text>`;
+    return `<svg class="figure" viewBox="0 0 240 216" width="250" role="img" aria-label="${M.esc(`graph of ${yl} against ${xl} with labelled points`)}">${g}</svg>`;
+  }
+  /** the dots of a pointsSvg drawing, read back as { A: [x, y], … } in grid units */
+  const readPoints = html => { const out = {}; String(html).replace(/<circle data-p="(\w)" cx="([\d.]+)" cy="([\d.]+)"/g, (_, l, cx, cy) => { out[l] = [(Number(cx) - 44) / 17, (186 - Number(cy)) / 17]; }); return out; };
+
+  const GRAPH_CTX = [
+    { who: 'person', rel: 'who', xl: 'Age', yl: 'Height', most: ['oldest', 'tallest'], least: ['youngest', 'shortest'], more: ['older', 'taller'], less: ['younger', 'shorter'] },
+    { who: 'tree', rel: 'that', xl: 'Age', yl: 'Height', most: ['oldest', 'tallest'], least: ['youngest', 'shortest'], more: ['older', 'taller'], less: ['younger', 'shorter'] },
+    { who: 'bag of rice', rel: 'that', xl: 'Weight', yl: 'Price', most: ['heaviest', 'most expensive'], least: ['lightest', 'cheapest'], more: ['heavier', 'more expensive'], less: ['lighter', 'cheaper'] },
+    { who: 'car', rel: 'that', xl: 'Age of car', yl: 'Top speed', most: ['oldest', 'fastest'], least: ['newest', 'slowest'], more: ['older', 'faster'], less: ['newer', 'slower'] },
+    { who: 'house', rel: 'that', xl: 'Size', yl: 'Price', most: ['largest', 'most expensive'], least: ['smallest', 'cheapest'], more: ['larger', 'more expensive'], less: ['smaller', 'cheaper'] },
+    { who: 'dog', rel: 'that', xl: 'Weight', yl: 'Age', most: ['heaviest', 'oldest'], least: ['lightest', 'youngest'], more: ['heavier', 'older'], less: ['lighter', 'younger'] },
+  ];
+
+  /** distance from home at time t, read off the corners of a walk by straight-line interpolation */
+  const distAt = (verts, t) => { for (let i = 1; i < verts.length; i++) { const [t0, d0] = verts[i - 1], [t1, d1] = verts[i]; if (t >= t0 && t <= t1) return d0 + (d1 - d0) * (t - t0) / (t1 - t0); } return NaN; };
+  const WALK = ['Moving away from home', 'Standing still', 'Moving back toward home'];
+
+  A.skill({
+    id: 'math8.interpret-graphs', title: 'Interpreting graphs',
+    learn: p(`Before reading any point on a graph, read the <b>axes</b>: what each one measures and which way is “more”. <b>Further right means more of the horizontal quantity; higher up means more of the vertical quantity.</b> A point is one thing (a person, a bag, a moment in time) described by both quantities at once.`) +
+      p(`To compare two points, compare their positions: a point to the right of and below another has more of the horizontal quantity but less of the vertical one. On a graph of <b>distance from home against time</b>, the steepness tells the story: going up means moving away, a flat part means standing still, going down means coming back, and a steeper part means moving faster.`) +
+      example('Example', `On a graph of height against age, point C is furthest to the right and point A is highest. So C is the <b>oldest</b> person and A is the <b>tallest</b>. If B is to the right of A and lower, then B is older and shorter than A.`),
+    make(rng) {
+      const kind = rng.pick(['points', 'points', 'points', 'walk', 'walk']);
+      return kind === 'points' ? graphPoints(rng) : graphWalk(rng);
+    },
+    verify(q) {
+      const p = q.params;
+      if (p.kind === 'points') {
+        const pts = readPoints(q.prompt), labs = Object.keys(pts);
+        if (labs.length !== 5) return 'expected five dots';
+        let want;
+        if (p.ask === 'extreme') want = labs.slice().sort((u, v) => p.sign * (pts[v][p.axis] - pts[u][p.axis]))[0];   // sort, take the end
+        else { const R = pts[p.ref]; const hits = labs.filter(l => l !== p.ref && Math.sign(pts[l][0] - R[0]) === p.sx && Math.sign(pts[l][1] - R[1]) === p.sy); if (hits.length !== 1) return 'not exactly one match'; want = hits[0]; }
+        return q.answer === `Point ${want}`;
+      }
+      const { verts } = p;
+      if (p.ask === 'read') return Math.abs(distAt(verts, p.t) - q.answer) < 1e-9;
+      if (p.ask === 'segment') {
+        if (verts.some(([t]) => t > p.t0 && t < p.t1)) return 'interval spans a corner';
+        const d = distAt(verts, p.t1) - distAt(verts, p.t0);
+        return q.answer === (d > 0 ? WALK[0] : d < 0 ? WALK[2] : WALK[1]);
+      }
+      const speed = c => { const mm = c.match(/^From (\d+) to (\d+) minutes$/); const t0 = Number(mm[1]), t1 = Number(mm[2]); return Math.abs(distAt(verts, t1) - distAt(verts, t0)) / (t1 - t0); };
+      const sp = q.choices.map(speed), best = Math.max(...sp);
+      return sp.filter(v => v === best).length === 1 && speed(q.answer) === best;
+    },
+  });
+  function graphPoints(rng) {
+    const c = rng.pick(GRAPH_CTX);
+    let pts, tries = 0;
+    do {                                                   // five points, no two in the same column or row, none touching
+      const xs = rng.sample([1, 2, 3, 4, 5, 6, 7, 8, 9], 5), ys = rng.sample([1, 2, 3, 4, 5, 6, 7, 8, 9], 5);
+      pts = xs.map((x, i) => [x, ys[i], LETTERS[i]]);
+      tries++;
+    } while (tries < 100 && pts.some((a, i) => pts.some((b, j) => j > i && Math.abs(a[0] - b[0]) <= 1 && Math.abs(a[1] - b[1]) <= 1)));
+    const choices = LETTERS.map(l => `Point ${l}`);
+    const intro = `The graph compares the ${c.xl.toLowerCase()} and the ${c.yl.toLowerCase()} of five ${c.who === 'person' ? 'people' : c.who === 'bag of rice' ? 'bags of rice' : c.who + 's'}.`;
+    const axesHint = `Read the axes first. The horizontal axis shows ${c.xl.toLowerCase()}: further right means ${c.more[0]}. The vertical axis shows ${c.yl.toLowerCase()}: higher up means ${c.more[1]}.`;
+    // a two-condition question when some point has exactly one other point in one of its corners
+    const opts = [];
+    pts.forEach((P) => [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sy]) => {
+      const hits = pts.filter(Q => Q !== P && Math.sign(Q[0] - P[0]) === sx && Math.sign(Q[1] - P[1]) === sy);
+      if (hits.length === 1) opts.push({ P, sx, sy, Q: hits[0] });
+    }));
+    if (opts.length && rng.chance(0.45)) {
+      const { P, sx, sy, Q } = rng.pick(opts);
+      const wx = sx > 0 ? c.more[0] : c.less[0], wy = sy > 0 ? c.more[1] : c.less[1];
+      const answer = `Point ${Q[2]}`;
+      return { prompt: `${intro} Which point shows a ${c.who} ${c.rel} is ${wx} and ${wy} than the ${c.who} at point ${P[2]}?${pointsSvg(pts, c.xl, c.yl)}`, type: 'choice', choices, answer, keepOrder: true,
+        params: { kind: 'points', ask: 'corner', ref: P[2], sx, sy },
+        hints: [axesHint, `${M.esc(wx[0].toUpperCase() + wx.slice(1))} than ${P[2]} means to the ${sx > 0 ? 'right' : 'left'} of ${P[2]}; ${wy} means ${sy > 0 ? 'above' : 'below'} ${P[2]}. Look in that corner of the graph, measured from point ${P[2]}.`,
+          `Only one point is both to the ${sx > 0 ? 'right' : 'left'} of and ${sy > 0 ? 'above' : 'below'} ${P[2]}: <b>${answer}</b>.`] };
+    }
+    const axis = rng.int(0, 1), sign = rng.pick([1, -1]);
+    const pick = pts.slice().sort((a, b) => sign * (b[axis] - a[axis]))[0];
+    const word = (sign > 0 ? c.most : c.least)[axis];
+    const answer = `Point ${pick[2]}`;
+    const where = axis === 0 ? (sign > 0 ? 'the point furthest to the right' : 'the point furthest to the left') : (sign > 0 ? 'the highest point' : 'the lowest point');
+    return { prompt: `${intro} Which point shows the ${word} ${c.who}?${pointsSvg(pts, c.xl, c.yl)}`, type: 'choice', choices, answer, keepOrder: true,
+      params: { kind: 'points', ask: 'extreme', axis, sign },
+      hints: [axesHint, `“${word[0].toUpperCase() + word.slice(1)}” is about ${(axis === 0 ? c.xl : c.yl).toLowerCase()}, the ${axis === 0 ? 'horizontal' : 'vertical'} axis, so look for ${where}. The other axis does not matter here.`,
+        `${where[0].toUpperCase() + where.slice(1)} is <b>${answer}</b>.`] };
+  }
+  function graphWalk(rng) {
+    const name = rng.pick(NAMES), n = rng.int(3, 4);
+    const verts = [[0, 0]], types = [];
+    let t = 0, d = 0;
+    for (let i = 0; i < n; i++) {
+      const allowed = ['away', 'stop', 'back'].filter(k => k !== types[i - 1] && !(k === 'back' && d === 0) && !(k === 'away' && d >= 1200) && !(i === 0 && k !== 'away'));
+      const type = rng.pick(allowed);
+      if (type === 'away') d = Math.min(1200, d + 200 * rng.int(1, 3));
+      if (type === 'back') d = Math.max(0, d - 200 * rng.int(1, 3));
+      t += rng.pick([5, 10, 10]); verts.push([t, d]); types.push(type);
+    }
+    const xmax = Math.max(20, Math.ceil(t / 10) * 10);
+    const graph = plotSvg({ xmax, xstep: 5, ymax: 1200, ystep: 200, xl: 'Time (minutes)', yl: 'Distance from home (m)', path: verts, label: `${name}'s distance from home over time` });
+    const intro = `The graph shows ${name}'s distance from home during a walk.`;
+    const segs = types.map((ty, i) => ({ ty, t0: verts[i][0], t1: verts[i + 1][0], d0: verts[i][1], d1: verts[i + 1][1] }));
+    const moving = segs.filter(s => s.ty !== 'stop').map(s => ({ s, v: Math.abs(s.d1 - s.d0) / (s.t1 - s.t0) })).sort((a, b) => b.v - a.v);
+    const ask = rng.pick(['segment', 'segment', 'read', 'fastest']);
+    if (ask === 'fastest' && moving.length >= 2 && moving[0].v >= 1.5 * moving[1].v) {
+      const choices = segs.map(s => `From ${s.t0} to ${s.t1} minutes`), f = moving[0].s;
+      const answer = `From ${f.t0} to ${f.t1} minutes`;
+      return { prompt: `${intro} During which part of the walk was ${name} moving fastest?${graph}`, type: 'choice', choices, answer, keepOrder: true, params: { kind: 'walk', ask, verts },
+        hints: [`Moving fast means covering a lot of distance in a short time, so look for the <b>steepest</b> part of the graph, whether it goes up or down. A flat part means not moving at all.`,
+          `From ${f.t0} to ${f.t1} minutes ${name} covers ${N(Math.abs(f.d1 - f.d0))} m in ${f.t1 - f.t0} minutes, ${N(moving[0].v)} m per minute. No other part is that steep.`,
+          `<b>${answer}</b>.`] };
+    }
+    if (ask === 'read') {
+      const k = rng.int(1, n), [tk, dk] = verts[k];
+      return { prompt: `${intro} How far from home was ${name} after ${tk} minutes?${graph}`, type: 'number', answer: dk, unit: 'm', params: { kind: 'walk', ask, verts, t: tk },
+        hints: [`Find ${tk} minutes on the horizontal (time) axis and go straight up to the graph.`, `From that point, go across to the vertical axis, which shows the distance from home in metres.`, `The graph is at <b>${N(dk)} m</b> after ${tk} minutes.`] };
+    }
+    const s = rng.pick(segs);
+    const answer = s.ty === 'away' ? WALK[0] : s.ty === 'stop' ? WALK[1] : WALK[2];
+    return { prompt: `${intro} What was ${name} doing between ${s.t0} and ${s.t1} minutes?${graph}`, type: 'choice', choices: WALK.slice(), answer, keepOrder: true, params: { kind: 'walk', ask: 'segment', verts, t0: s.t0, t1: s.t1 },
+      hints: [`The vertical axis is distance <b>from home</b>. Look at whether the graph goes up, stays flat, or goes down between ${s.t0} and ${s.t1} minutes.`,
+        `The distance goes from ${N(s.d0)} m to ${N(s.d1)} m: it ${s.ty === 'away' ? 'grows, so the distance from home is increasing' : s.ty === 'stop' ? 'does not change, so time passes but the distance stays the same' : 'shrinks, so the distance from home is decreasing'}.`,
+        `<b>${answer}</b>.`] };
+  }
+
+  A.skill({
+    id: 'math8.point-on-line', title: 'Points on a line',
+    learn: p(`Every point on the graph of a rule is a <b>solution</b> of the rule: its coordinates make the equation true. So to test whether a point lies on the line ${eqn(2, 1)}, <b>substitute its ${X}-value into the rule and check that you get its ${Y}-value</b>.`) +
+      p(`For ${PT(3, 7)}: 2(3) + 1 = 7, which matches, so ${PT(3, 7)} is on the line. For ${PT(7, 3)}: 2(7) + 1 = 15, not 3, so it is not. Keep the order straight: the first number is always ${X}.`) +
+      p(`The same idea finds a missing coordinate. If ${PT(4, V('k'))} is on the line, then ${V('k')} = 2(4) + 1 = 9. If it is the ${Y}-value you know, put it in for ${Y} and solve for ${X}.`) +
+      example('Example', `${big(`Is ${PT(-2, 5)} on the line ${eqn(-3, -1)}?`)}Substitute ${X} = −2: −3(−2) − 1 = 6 − 1 = 5. That is the point's ${Y}-value, so <b>yes</b>, it is on the line.`),
+    make(rng) {
+      const kind = rng.pick(['which', 'which', 'find-y', 'find-x']);
+      const m = rng.nz(-5, 5), b = rng.int(-9, 9), rule = eqn(m, b);
+      const x = rng.int(-6, 7), y = m * x + b;
+      if (kind === 'find-y') {
+        return { prompt: `The point ${PT(x, V('k'))} lies on the line ${rule}. What is the value of ${V('k')}?`, type: 'number', answer: y, params: { kind, m, b, x },
+          hints: [`A point on the line makes the rule true, so put its ${X}-value, ${N(x)}, into the rule.`, `${Y} = ${N(m)} × ${wrap(x)} ${M.signed(b)} = ${N(m * x)} ${M.signed(b)}.`, `${V('k')} = <b>${N(y)}</b>.`] };
+      }
+      if (kind === 'find-x') {
+        return { prompt: `The point ${PT(V('k'), y)} lies on the line ${rule}. What is the value of ${V('k')}?`, type: 'number', answer: x, params: { kind, m, b, y },
+          hints: [`This time the ${Y}-value is known. Put ${Y} = ${N(y)} into the rule: ${N(y)} = ${M.poly([m, b])}.`,
+            b ? `${b > 0 ? `Subtract ${N(b)} from` : `Add ${N(-b)} to`} both sides: ${N(y - b)} = ${M.term(m, 'x')}.` : `There is no number to move: ${N(y)} = ${M.term(m, 'x')}.`,
+            `Divide by ${N(m)}: ${X} = ${N(y - b)} ÷ ${wrap(m)}, so ${V('k')} = <b>${N(x)}</b>.`] };
+      }
+      const on = ([u, v]) => m * u + b === v;
+      const cands = rng.shuffle([[y, x], [-x, y], [x, -y], [x + 1, y], [x, y + 1], [x, y - m], [x - 1, y + m]]).filter(c => !on(c));
+      const answer = PT(x, y), wrongs = distinct(answer, cands.map(c => PT(...c)), 3);
+      const w = parsePt(wrongs[0]);
+      return { prompt: `Which point lies on the line ${rule}?`, type: 'choice', choices: [answer].concat(wrongs), answer, params: { kind, m, b },
+        hints: [`For each point, substitute its ${X}-value into the rule and see whether you get its ${Y}-value.`,
+          `For ${wrongs[0]}: ${N(m)} × ${wrap(w[0])} ${M.signed(b)} = ${N(m * w[0] + b)}, not ${N(w[1])}, so that point is not on the line.`,
+          `For ${answer}: ${N(m)} × ${wrap(x)} ${M.signed(b)} = ${N(y)}, which matches. <b>${answer}</b> is on the line.`] };
+    },
+    verify(q) {
+      const { kind, m, b } = q.params;
+      if (kind === 'find-y') { const { x } = q.params; return (q.answer - b) / m === x; }        // walk back from y to x
+      if (kind === 'find-x') { const { y } = q.params; return m * q.answer + b === y; }
+      const hits = q.choices.filter(c => { const pt = parsePt(c); return pt && pt[1] - b === m * pt[0]; });
+      return hits.length === 1 && hits[0] === q.answer;
+    },
+  });
+
+  const SLOPES = [[1, 1], [2, 1], [3, 1], [-1, 1], [-2, 1], [-3, 1], [1, 2], [-1, 2], [1, 3], [-1, 3], [2, 3], [-2, 3], [3, 2], [-3, 2]];
+  /** wrong lines for y = (mn/md)x + b that come from real slips: sign of the slope, sign of b, rise and run swapped, b off by one or two */
+  function lineSlips(rng, mn, md, b) {
+    const key = ([n, d, c]) => `${n / d}|${c}`, seen = new Set([key([mn, md, b])]), out = [];
+    const cands = [[-mn, md, b], [mn, md, -b], [md * Math.sign(mn), Math.abs(mn), b], [mn, md, b + rng.pick([1, -1])], [-md * Math.sign(mn), Math.abs(mn), b], [mn, md, b + rng.pick([2, -2])], [-mn, md, -b]];
+    for (const c of cands) if (Math.abs(c[2]) <= 4 && !seen.has(key(c))) { seen.add(key(c)); out.push(c); }
+    return out;
+  }
+
+  A.skill({
+    id: 'math8.graph-lines', title: 'Graphing lines from slope-intercept form',
+    learn: p(`An equation in the form ${Y} = ${V('m')}${X} + ${V('b')} tells you how to draw its line without making a table. <b>Start at the ${Y}-intercept ${PT(0, V('b'))}, then use the slope as rise over run</b> to step to a second point, and draw the line through both.`) +
+      p(`Write the slope as a fraction: 3 is ${fracH('3', '1')}, so from the intercept go up 3 and right 1. A negative slope such as −${F(2, 3)} means go <b>down</b> 2 and right 3. Check the result: a positive slope rises from left to right, a negative slope falls.`) +
+      p(`Reading a graph works the same way backwards: the line crosses the ${Y}-axis at ${V('b')}, and counting the rise and the run between two grid points gives ${V('m')}.`) +
+      example('Example', `${big(lineF(2, 3, -1))}Plot the ${Y}-intercept ${PT(0, -1)}. The slope ${F(2, 3)} means up 2 and right 3, which lands on ${PT(3, 1)}. The line through <b>${PT(0, -1)} and ${PT(3, 1)}</b> is the graph.`),
+    make(rng) {
+      const [mn, md] = rng.pick(SLOPES), b = rng.int(-4, 4), kind = rng.pick(['pick-graph', 'pick-equation', 'next-point']);
+      const rule = lineF(mn, md, b), [flip, ...rest] = lineSlips(rng, mn, md, b), slips = [flip].concat(rng.shuffle(rest));
+      const stepHint = `The slope is ${slopeH(mn, md)}: ${mn > 0 ? 'up' : 'down'} ${Math.abs(mn)} and right ${md} from any point on the line.`;
+      if (kind === 'pick-graph') {
+        const lines = rng.shuffle([[mn, md, b]].concat(slips.slice(0, 3)));
+        const at = lines.findIndex(l => l[0] === mn && l[1] === md && l[2] === b), answer = `Graph ${LETTERS[at]}`;
+        const gallery = `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,172px));justify-content:center;gap:0 14px">${lines.map((l, i) => `<div style="text-align:center">${coordSvg({ lines: [[...l, LETTERS[i]]], label: `Graph ${LETTERS[i]}` })}<div>Graph ${LETTERS[i]}</div></div>`).join('')}</div>`;
+        return { prompt: `Which graph shows the line ${rule}? Each grid square is 1 unit.${gallery}`, type: 'choice', choices: LETTERS.slice(0, 4).map(l => `Graph ${l}`), answer, keepOrder: true, params: { kind, mn, md, b },
+          hints: [`Start with the ${Y}-intercept: the line must cross the ${Y}-axis at ${PT(0, b)}.`, `${stepHint} So ${PT(md, b + mn)} is on the line too, and it ${mn > 0 ? 'rises' : 'falls'} from left to right.`,
+            `Only one graph passes through ${PT(0, b)} and ${PT(md, b + mn)}: <b>${answer}</b>.`] };
+      }
+      if (kind === 'pick-equation') {
+        const q2 = Math.abs(b + mn) <= 5 && md <= 5 ? [md, b + mn] : [-md, b - mn];
+        const opts = [[mn, md, b]].concat(slips.slice(0, 3)).map(l => ({ l, html: lineF(...l) }));
+        const answer = opts[0].html;
+        return { prompt: `Which equation describes this line? Each grid square is 1 unit.${coordSvg({ S: 20, lines: [[mn, md, b, 'L']], dots: [[0, b], q2] })}`, type: 'choice', choices: opts.map(o => o.html), answer, params: { kind, mn, md, b, opts: opts.map(o => o.l) },
+          hints: [`The line crosses the ${Y}-axis at ${PT(0, b)}, so ${V('b')} = ${N(b)}.`,
+            `Count from the left dot to the right dot, ${q2[0] > 0 ? `${PT(0, b)} to ${PT(...q2)}` : `${PT(...q2)} to ${PT(0, b)}`}: right ${md}, ${mn > 0 ? 'up' : 'down'} ${Math.abs(mn)}. The slope is rise ÷ run = ${mn > 0 ? '' : '−'}${Math.abs(mn)} ÷ ${md} = ${M.fracText(mn, md)}, ${mn > 0 ? 'positive because the line rises' : 'negative because the line falls'}.`,
+            `The equation is <b>${answer}</b>.`] };
+      }
+      const on = ([u, v]) => md * (v - b) === mn * u;
+      const cands = [[Math.abs(mn), b + md * Math.sign(mn)], [md, b - mn], [md, mn], [-md, b + mn], [md + 1, b + mn], [md, b + mn + 1], [mn, b + md]].filter(c => !on(c) && !(c[0] === 0 && c[1] === b));
+      const answer = PT(md, b + mn), wrongs = distinct(answer, cands.map(c => PT(...c)), 3);
+      return { prompt: `To graph ${rule} without a table, start at the ${Y}-intercept ${PT(0, b)} and use the slope. Which point is also on the line?`, type: 'choice', choices: [answer].concat(wrongs), answer, params: { kind, mn, md, b },
+        hints: [`Write the slope as rise over run: ${md === 1 ? `${N(mn)} = ${fracH(N(mn), '1')}` : slopeH(mn, md)}. ${stepHint}`,
+          `From ${PT(0, b)}, go right ${md} to ${X} = ${md}, and ${mn > 0 ? 'up' : 'down'} ${Math.abs(mn)} to ${Y} = ${N(b)} ${M.signed(mn)} = ${N(b + mn)}.`,
+          `The next point is <b>${answer}</b>. (Check: ${slopeH(mn, md)} × ${md} ${M.signed(b)} = ${N(b + mn)}.)`] };
+    },
+    verify(q) {
+      const { kind, mn, md, b } = q.params;
+      if (kind === 'pick-graph') {
+        const fits = LETTERS.slice(0, 4).filter(l => drawnFits(q.prompt, l, 5, 14, mn, md, b));
+        return fits.length === 1 && q.answer === `Graph ${fits[0]}`;
+      }
+      if (kind === 'pick-equation') {
+        const fits = q.params.opts.filter(l => drawnFits(q.prompt, 'L', 5, 20, l[0], l[1], l[2]));
+        return fits.length === 1 && lineF(...fits[0]) === q.answer;
+      }
+      const hits = q.choices.filter(c => { const pt = parsePt(c); return pt && Math.abs(mn / md * pt[0] + b - pt[1]) < 1e-9; });
+      return hits.length === 1 && hits[0] === q.answer;
+    },
+  });
+
+  /* ---------- Unit 8: Circle graphs and trend lines ---------- */
+  const PIE_SETS = [
+    { q: 'how they get to school', cats: ['Walk', 'Bike', 'Bus', 'Car', 'Scooter'] },
+    { q: 'to name their favourite fruit', cats: ['Apple', 'Banana', 'Mango', 'Grapes', 'Orange'] },
+    { q: 'to name their favourite sport', cats: ['Soccer', 'Basketball', 'Swimming', 'Tennis', 'Track'] },
+    { q: 'to name their favourite season', cats: ['Spring', 'Summer', 'Autumn', 'Winter'] },
+    { q: 'what kind of pet they have', cats: ['Dog', 'Cat', 'Fish', 'Bird', 'No pet'] },
+    { q: 'which club they would join', cats: ['Art', 'Music', 'Chess', 'Drama', 'Robotics'] },
+  ];
+  const PIE_FILLS = ['var(--primary)', 'var(--ok)', 'var(--warn)', 'var(--bad)', 'var(--lvl2)'];
+  /** a circle graph; shares are percents, labels are what each sector shows beside its name */
+  function pieSvg(cats, shares, labels) {
+    const cx = 160, cy = 110, R = 76;
+    let a = -Math.PI / 2, g = '';
+    shares.forEach((s, i) => {
+      const a1 = a + s / 100 * 2 * Math.PI, mid = (a + a1) / 2;
+      g += `<path d="M${cx} ${cy} L${r2(cx + R * Math.cos(a))} ${r2(cy + R * Math.sin(a))} A${R} ${R} 0 ${s > 50 ? 1 : 0} 1 ${r2(cx + R * Math.cos(a1))} ${r2(cy + R * Math.sin(a1))} Z" fill="${PIE_FILLS[i]}" fill-opacity="0.35" stroke="currentColor" stroke-width="1.5"/>`;
+      const lx = r2(cx + (R + 12) * Math.cos(mid)), sy = Math.sin(mid), ly = r2(cy + (R + 12) * sy + (sy < -0.5 ? -10 : sy > 0.5 ? 4 : -4));
+      const anchor = Math.cos(mid) > 0.25 ? 'start' : Math.cos(mid) < -0.25 ? 'end' : 'middle';
+      g += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" font-size="12"><tspan font-weight="700">${M.esc(cats[i])}</tspan><tspan x="${lx}" dy="14">${labels[i]}</tspan></text>`;
+      a = a1;
+    });
+    return `<svg class="figure" viewBox="0 0 320 224" width="320" role="img" aria-label="circle graph">${g}</svg>`;
+  }
+
+  A.skill({
+    id: 'math8.circle-graphs', title: 'Circle graphs',
+    learn: p(`A <b>circle graph</b> (pie chart) shows how a whole splits into parts. The whole circle stands for everyone, 100% of the data, and each sector's share of the circle equals its category's share of the total.`) +
+      p(`A full turn is 360°, so <b>central angle = (part ÷ whole) × 360°</b>, and <b>percent = (part ÷ whole) × 100</b>. Going the other way, a sector's angle ÷ 360° gives its fraction of the whole: 90° is a quarter, 25%. To turn a percent back into a count, multiply it (as a decimal) by the total.`) +
+      example('Example', `${big('12 of 48 students walk to school.')}12 ÷ 48 = 0.25, so walkers are 25% of the students, and their sector has a central angle of 0.25 × 360° = <b>90°</b>.`),
+    make(rng) {
+      const set = rng.pick(PIE_SETS), k = rng.int(3, Math.min(5, set.cats.length));
+      const cats = rng.sample(set.cats, k), units = cats.map(() => 2);           // shares in steps of 5%, each at least 10%
+      for (let r = 20 - 2 * k; r > 0; r--) units[rng.int(0, k - 1)]++;
+      const T = 20 * rng.pick([2, 3, 4, 5, 6, 8, 10, 12]);
+      const pcts = units.map(u => u * 5), counts = units.map(u => u * T / 20), degs = units.map(u => u * 18);
+      const i = rng.int(0, k - 1), cat = cats[i], pct = pcts[i], count = counts[i], deg = degs[i], frac = N(pct / 100);
+      const kind = rng.pick(['angle', 'angle', 'percent', 'read-count', 'angle-percent', 'angle-count']);
+      const intro = `${N(T)} students were asked ${set.q}.`;
+      const params = { kind, T, count, pct, deg, counts, pcts };
+      if (kind === 'angle' || kind === 'percent') {
+        const table = M.table(['Answer', 'Students'], cats.map((c, j) => [c, N(counts[j])]).concat([['<b>Total</b>', `<b>${N(T)}</b>`]]));
+        const share = `${cat}: ${N(count)} of the ${N(T)} students, and ${N(count)} ÷ ${N(T)} = ${frac}.`;
+        if (kind === 'angle') return { prompt: `${intro} The results will be shown in a circle graph. What is the central angle of the “${cat}” sector?${table}`, type: 'number', answer: deg, unit: '°', params,
+          hints: [`A full circle is 360°. Each sector gets the same share of 360° as its answer has of all ${N(T)} students.`, share, `${frac} × 360° = <b>${deg}°</b>.`] };
+        return { prompt: `${intro} In a circle graph of the results, what percent of the circle is the “${cat}” sector?${table}`, type: 'number', answer: pct, unit: '%', params,
+          hints: [`The whole circle is all ${N(T)} students, so the sector's percent is the percent of students: part ÷ whole × 100.`, share, `${frac} × 100 = <b>${pct}%</b>.`] };
+      }
+      const byAngle = kind !== 'read-count';
+      const graph = pieSvg(cats, pcts, byAngle ? degs.map(d => `${d}°`) : pcts.map(v => `${v}%`));
+      if (kind === 'read-count') return { prompt: `${intro} The circle graph shows the results. How many students answered “${cat}”?${graph}`, type: 'number', answer: count, unit: 'students', params,
+        hints: [`The ${cat} sector is ${pct}% of the circle, so ${pct}% of the ${N(T)} students gave that answer.`, `${pct}% = ${frac}, and ${frac} × ${N(T)} = ${N(count)}.`, `<b>${N(count)}</b> students answered “${cat}”.`] };
+      const share = `${deg}° ÷ 360° = ${frac}${kind === 'angle-count' ? `, which is ${pct}% of the circle` : ''}.`;
+      if (kind === 'angle-percent') return { prompt: `${intro} The circle graph shows the central angle of each sector. What percent of the students answered “${cat}”?${graph}`, type: 'number', answer: pct, unit: '%', params,
+        hints: [`The whole circle, 360°, stands for all the students. Divide the ${cat} sector's angle by 360° to get its share.`, share, `${frac} = <b>${pct}%</b>.`] };
+      return { prompt: `${intro} The circle graph shows the central angle of each sector. How many students answered “${cat}”?${graph}`, type: 'number', answer: count, unit: 'students', params,
+        hints: [`The whole circle, 360°, stands for all ${N(T)} students. Find the ${cat} sector's share of 360° first.`, share, `${frac} × ${N(T)} = <b>${N(count)}</b> students.`] };
+    },
+    verify(q) {
+      const { kind, T, count, pct, deg, counts, pcts } = q.params, a = q.answer;
+      if (counts.reduce((s, c) => s + c, 0) !== T || pcts.reduce((s, c) => s + c, 0) !== 100) return 'parts do not add up to the whole';
+      if (kind === 'angle') return a * T === 360 * count;                  // cross-multiplied: a/360 = count/T
+      if (kind === 'percent') return a * T === 100 * count;
+      if (kind === 'read-count') return a * 100 === pct * T;
+      if (kind === 'angle-percent') return a * 360 === deg * 100;
+      return a * 360 === deg * T;
+    },
+  });
+
+  const TREND_CTX = [
+    { xl: 'Hours of practice', yl: 'Test score', xw: 'number of hours of practice', yw: 'test score', xmax: 10, xstep: 2, ymax: 100, ystep: 20, ms: [3, 3.5, 4, 4.5], bs: [35, 40, 45], xs: [2, 4, 6, 8, 12],
+      ask: x => `the test score of a student who practises for ${N(x)} hours`, slopeQ: 'By how many points does the predicted test score go up for each extra hour of practice?', per: 'hour of practice', unit: 'points' },
+    { xl: 'Age (weeks)', yl: 'Height (cm)', xw: 'age in weeks', yw: 'height in centimetres', xmax: 10, xstep: 2, ymax: 50, ystep: 10, ms: [2, 2.5, 3, 3.5], bs: [4, 5, 6, 8], xs: [3, 5, 7, 9, 11, 12],
+      ask: x => `the height of a plant that is ${N(x)} weeks old`, slopeQ: 'By how many centimetres does the predicted height go up for each extra week?', per: 'week', unit: 'cm' },
+    { xl: 'Temperature (°C)', yl: 'Drinks sold', xw: 'temperature in °C', yw: 'number of drinks sold', xmax: 40, xstep: 10, ymax: 200, ystep: 40, ms: [2.5, 3, 3.5], bs: [20, 30, 40], xs: [12, 18, 24, 32, 36, 42],
+      ask: x => `the number of drinks sold on a day when it is ${N(x)} °C`, slopeQ: 'By how many drinks do the predicted sales go up for each extra degree?', per: 'degree', unit: 'drinks' },
+    { xl: 'Age of car (years)', yl: 'Value ($1000s)', xw: 'age of the car in years', yw: 'value in thousands of dollars', xmax: 10, xstep: 2, ymax: 30, ystep: 5, ms: [-1.5, -2], bs: [24, 26, 28], xs: [3, 5, 6, 7, 9],
+      ask: x => `the value, in thousands of dollars, of a car that is ${N(x)} years old`, slopeQ: 'By how many thousand dollars does the predicted value go down for each extra year?', per: 'year', unit: '', say: 'thousand dollars' },
+    { xl: 'Screen time (hours)', yl: 'Sleep (hours)', xw: 'hours of screen time', yw: 'hours of sleep', xmax: 8, xstep: 2, ymax: 12, ystep: 2, ms: [-0.5, -0.75], bs: [10, 11], xs: [2, 3, 4, 5, 6],
+      ask: x => `the hours of sleep of a student with ${N(x)} hours of screen time`, slopeQ: 'By how many hours does the predicted sleep go down for each extra hour of screen time?', per: 'hour of screen time', unit: 'hours' },
+  ];
+  /** "y = 3.5x + 40" back to [3.5, 40] */
+  const parseDecEqn = html => {
+    const s = minus(A.stripTags(html)).replace(/\s+/g, ''), mm = s.match(/^y=(-?\d*\.?\d*)x([+-]\d+(?:\.\d+)?)?$/);
+    return mm ? [mm[1] === '' ? 1 : mm[1] === '-' ? -1 : Number(mm[1]), mm[2] ? Number(mm[2]) : 0] : null;
+  };
+  const sse = (pts, m, b) => pts.reduce((s, [x, y]) => s + (y - m * x - b) ** 2, 0);
+
+  A.skill({
+    id: 'math8.trend-lines', title: 'Trend lines and predictions',
+    learn: p(`When a scatter plot shows a linear association, a <b>trend line</b> (line of best fit) sums it up. A good trend line <b>follows the direction of the dots and passes through the middle of the cloud</b>, with about as many dots above it as below. It does not have to touch any dot.`) +
+      p(`Write its equation like any line: read the ${Y}-intercept where it crosses the ${Y}-axis, and find the slope from two points on the line (not two dots of data). The slope is the predicted change in ${Y} for each extra unit of ${X}.`) +
+      p(`To <b>predict</b>, substitute the ${X}-value into the equation. A prediction is an estimate: real data points sit near the line, not exactly on it.`) +
+      example('Example', `${big(`Trend line: ${eqn(3.5, 40)}`)}For a student who practises 6 hours, ${Y} = 3.5(6) + 40 = 21 + 40 = <b>61 points</b>. The slope says each extra hour goes with about 3.5 more points.`),
+    make(rng) {
+      const c = rng.pick(TREND_CTX), m = rng.pick(c.ms), b = rng.pick(c.bs), kind = rng.pick(['predict', 'predict', 'meaning', 'choose', 'read']);
+      const step = c.xmax / 20, noise = c.ymax * 0.06, ydp = c.ymax >= 100 ? 0 : 1;
+      const xs = rng.sample([...Array(19)].map((_, i) => M.round((i + 1) * step, 2)), 10).sort((u, v) => u - v);
+      const gap = c.ystep * Math.round(0.4 * c.ymax / c.ystep), shift = b + gap <= c.ymax ? gap : -gap;   // a parallel line about 40% of the axis away
+      const say = c.say || c.unit, sayU = say ? ' ' + say : '';
+      const wrongs = [[-m, M.round(b + m * c.xmax, 2)], [m, M.round(b + shift, 2)], [b, m]];
+      let pts, tries = 0;
+      do {
+        pts = xs.map(x => [x, Math.min(c.ymax * 0.98, Math.max(c.ymax * 0.02, M.round(m * x + b + rng.dec(-noise, noise, 2), ydp)))]);
+        tries++;
+      } while (tries < 50 && wrongs.some(([wm, wb]) => sse(pts, wm, wb) < 3 * sse(pts, m, b)));
+      const line = eqn(m, b), what = `where ${X} is the ${c.xw} and ${Y} is the ${c.yw}`;
+      if (kind === 'predict' || kind === 'meaning') {
+        const graph = plotSvg({ xmax: c.xmax, xstep: c.xstep, ymax: c.ymax, ystep: c.ystep, xl: c.xl, yl: c.yl, dots: pts, line: [m, b] });
+        const lead = `The trend line for this scatter plot is <span data-eq>${line}</span>, ${what}.`;
+        if (kind === 'meaning') return { prompt: `${lead} ${c.slopeQ}${graph}`, type: 'number', answer: Math.abs(m), unit: c.unit || undefined, params: { kind, m, b },
+          hints: [`In ${Y} = ${V('m')}${X} + ${V('b')}, the slope ${V('m')} is how much ${Y} changes when ${X} goes up by 1.`, `Here the slope is ${N(m)}: for each extra ${c.per}, the prediction goes ${m > 0 ? 'up' : 'down'} by ${N(Math.abs(m))}${m < 0 ? ' (the minus sign means a decrease)' : ''}.`, `<b>${N(Math.abs(m))}</b>${sayU}.`] };
+        const x = rng.pick(c.xs), y = M.round(m * x + b, 4);
+        return { prompt: `${lead} Use it to predict ${c.ask(x)}.${graph}`, type: 'number', answer: y, unit: c.unit || undefined, params: { kind, m, b, x },
+          hints: [`Substitute ${X} = ${N(x)} into the trend line equation.`, `${Y} = ${N(m)} × ${N(x)} ${M.signed(b)} = ${N(M.round(m * x, 4))} ${M.signed(b)}.`, `The trend line predicts about <b>${N(y)}</b>${sayU}.`] };
+      }
+      if (kind === 'choose') {
+        const answer = line, choices = [answer].concat(distinct(answer, wrongs.map(([wm, wb]) => eqn(wm, wb)), 3));
+        return { prompt: `Which equation is the best trend line for this scatter plot, ${what}?${plotSvg({ xmax: c.xmax, xstep: c.xstep, ymax: c.ymax, ystep: c.ystep, xl: c.xl, yl: c.yl, dots: pts })}`, type: 'choice', choices, answer, params: { kind, pts },
+          hints: [`A good trend line goes the same way as the dots and runs through the middle of the cloud.`,
+            `The dots ${m > 0 ? 'rise' : 'fall'} from left to right, so the slope must be ${m > 0 ? 'positive' : 'negative'}. Extending the cloud back to ${X} = 0, it starts near ${Y} = ${N(b)}, so the ${Y}-intercept should be about ${N(b)}.`,
+            `Check the others at ${X} = ${N(c.xmax / 2)}: the trend line should give a ${Y}-value in the middle of the dots there. ${eqn(...wrongs[1])} gives ${N(M.round(m * c.xmax / 2 + wrongs[1][1], 2))}, ${shift > 0 ? 'above' : 'below'} every dot.`,
+            `<b>${answer}</b> follows the dots.`] };
+      }
+      const xr = c.xmax, yr = M.round(m * xr + b, 4), marks = [[0, b, PT(0, b)], [xr, yr, PT(xr, yr)]];
+      const answer = line, choices = [answer].concat(distinct(answer, [eqn(M.round(yr - b, 4), b), eqn(-m, b), eqn(b, m), eqn(m, yr)], 3));
+      return { prompt: `The trend line on this scatter plot passes through the two marked points. Which equation describes the trend line, ${what}?${plotSvg({ xmax: c.xmax, xstep: c.xstep, ymax: c.ymax, ystep: c.ystep, xl: c.xl, yl: c.yl, dots: pts, line: [m, b], marks })}`, type: 'choice', choices, answer, params: { kind, marks: marks.map(k => k.slice(0, 2)) },
+        hints: [`The line crosses the ${Y}-axis at ${PT(0, b)}, so the ${Y}-intercept is ${N(b)}.`,
+          `Slope = rise ÷ run between the marked points: (${N(yr)} − ${N(b)}) ÷ (${N(xr)} − 0) = ${N(M.round(yr - b, 4))} ÷ ${N(xr)} = ${N(m)}.`,
+          `The equation is <b>${answer}</b>.`] };
+    },
+    verify(q) {
+      const p = q.params;
+      if (p.kind === 'predict' || p.kind === 'meaning') {
+        const shown = (q.prompt.match(/<span data-eq>(.*?)<\/span>/) || [])[1], e = shown && parseDecEqn(shown);   // the equation the learner sees
+        if (!e) return 'no equation in the prompt';
+        return p.kind === 'meaning' ? Math.abs(q.answer - Math.abs((e[0] * 7 + e[1]) - (e[0] * 6 + e[1]))) < 1e-9 : Math.abs(e[0] * p.x + e[1] - q.answer) < 1e-9;
+      }
+      if (p.kind === 'read') { const e = parseDecEqn(q.answer); return !!e && p.marks.every(([x, y]) => Math.abs(e[0] * x + e[1] - y) < 1e-9); }
+      const fits = q.choices.map(c => { const e = parseDecEqn(c); return e ? sse(p.pts, e[0], e[1]) : Infinity; });
+      const best = Math.min(...fits), mine = fits[q.choices.indexOf(q.answer)];
+      return mine === best && fits.filter(f => f < 2 * best).length === 1;
+    },
+  });
+
+  /* ---------- Unit 9: More with the Pythagorean theorem ---------- */
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const QUADS = [];                                                   // whole-number boxes whose long diagonal is whole too
+  for (let a = 1; a <= 12; a++) for (let b = a; b <= 12; b++) for (let c = b; c <= 12; c++) { const d = Math.sqrt(a * a + b * b + c * c); if (Number.isInteger(d)) QUADS.push([a, b, c, d]); }
+
+  /** a box in an oblique view, not to scale. A is the front bottom-left corner, C the back bottom-right, G the back top-right. */
+  function boxSvg(labs, show) {
+    const [l, w, h] = labs.map(t => t.v || 6), k = 150 / Math.max(l, w, h);
+    const sl = clamp(l * k, 80, 150), sh = clamp(h * k, 55, 120), sw = clamp(w * k * 0.55, 32, 70), dx = r2(sw * 0.87), dy = r2(sw * 0.5);
+    const x0 = 50, y0 = r2(26 + dy + sh);
+    const A = [x0, y0], B = [x0 + sl, y0], C = [x0 + sl + dx, y0 - dy], D = [x0 + dx, y0 - dy];
+    const up = P => [P[0], r2(P[1] - sh)], E = up(A), Fq = up(B), G = up(C), H = up(D);
+    const L = (P, Q, attrs) => `<line x1="${r2(P[0])}" y1="${r2(P[1])}" x2="${r2(Q[0])}" y2="${r2(Q[1])}" ${attrs}/>`;
+    let g = [[A, D], [D, C], [D, H]].map(([P, Q]) => L(P, Q, 'class="light" stroke-width="1.5" stroke-dasharray="4 3"')).join('');
+    g += [[A, B], [B, Fq], [Fq, E], [E, A], [E, H], [H, G], [G, Fq], [B, C], [C, G]].map(([P, Q]) => L(P, Q, 'class="stroke"')).join('');
+    if (show.base) g += L(A, C, 'stroke="var(--primary)" stroke-width="2" stroke-dasharray="6 4"');
+    if (show.space) g += L(A, G, 'stroke="var(--warn)" stroke-width="2.5"');
+    const t = (x, y, s, anchor) => `<text x="${r2(x)}" y="${r2(y)}" text-anchor="${anchor || 'middle'}" font-size="13">${s}</text>`;
+    g += t((A[0] + B[0]) / 2, y0 + 18, labs[0].t) + t(x0 - 8, y0 - sh / 2 + 4, labs[2].t, 'end') + t((B[0] + C[0]) / 2 + 8, (B[1] + C[1]) / 2 + 12, labs[1].t, 'start');
+    g += `<text x="${x0 - 6}" y="${y0 + 14}" text-anchor="end" font-size="13" font-weight="700">A</text><text x="${r2(C[0] + 7)}" y="${r2(C[1] + 5)}" font-size="13" font-weight="700">C</text><text x="${r2(G[0] + 6)}" y="${r2(G[1] - 4)}" font-size="13" font-weight="700">G</text>`;
+    return `<svg class="figure" viewBox="0 0 ${Math.ceil(x0 + sl + dx + 64)} ${Math.ceil(y0 + 28)}" width="${Math.ceil(x0 + sl + dx + 64)}" role="img" aria-label="a box with corners A, C and G marked">${g}</svg>`;
+  }
+  /** a cylinder with its longest rod drawn from the bottom rim to the opposite top rim */
+  function canSvg(rText, hText, ratio) {
+    const rx = 52, ry = 13, H = clamp(ratio * 104, 60, 150), cx = 80, top = 34, bot = top + H;
+    let g = `<ellipse cx="${cx}" cy="${top}" rx="${rx}" ry="${ry}" class="stroke"/>`;
+    g += `<path d="M${cx - rx} ${bot} A${rx} ${ry} 0 0 0 ${cx + rx} ${bot}" class="stroke"/><path d="M${cx - rx} ${bot} A${rx} ${ry} 0 0 1 ${cx + rx} ${bot}" class="light" fill="none" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    g += `<line x1="${cx - rx}" y1="${top}" x2="${cx - rx}" y2="${bot}" class="stroke"/><line x1="${cx + rx}" y1="${top}" x2="${cx + rx}" y2="${bot}" class="stroke"/>`;
+    g += `<line x1="${cx}" y1="${top}" x2="${cx + rx}" y2="${top}" class="stroke" stroke-width="1.5"/><circle cx="${cx}" cy="${top}" r="2.5" fill="currentColor"/>`;
+    g += `<line x1="${cx - rx}" y1="${bot}" x2="${cx + rx}" y2="${top}" stroke="var(--warn)" stroke-width="2.5"/>`;
+    g += `<text x="${cx + rx / 2}" y="${top - ry - 5}" text-anchor="middle" font-size="13">${rText}</text><text x="${cx + rx + 8}" y="${r2((top + bot) / 2 + 4)}" font-size="13">${hText}</text>`;
+    return `<svg class="figure" viewBox="0 0 210 ${Math.ceil(bot + ry + 10)}" width="210" role="img" aria-label="a cylinder with a rod from the bottom edge to the opposite top edge">${g}</svg>`;
+  }
+
+  A.skill({
+    id: 'math8.pythagorean-3d', title: 'Pythagorean theorem in three dimensions',
+    learn: p(`The longest straight line inside a box runs from one corner to the opposite corner, through the middle: the <b>space diagonal</b>. Find it by using the Pythagorean theorem <b>twice</b>.`) +
+      p(`First, the diagonal across the bottom of the box (AC) is the hypotenuse of a right triangle whose legs are the length and the width: AC² = ${S(V('l'), 2)} + ${S(V('w'), 2)}. Second, AC and the height stand at right angles, so the space diagonal AG is the hypotenuse of another right triangle: AG² = AC² + ${S(V('h'), 2)}. Put together, <b>AG² = ${S(V('l'), 2)} + ${S(V('w'), 2)} + ${S(V('h'), 2)}</b>.`) +
+      p(`The same idea finds the longest stick that fits in a can: it is the hypotenuse of a triangle with the can's height and its diameter (twice the radius) as legs.`) +
+      example('Example', `${big('A box 3 cm by 4 cm by 12 cm')}Base diagonal: 3² + 4² = 9 + 16 = 25, so AC = 5 cm. Space diagonal: 5² + 12² = 25 + 144 = 169, so AG = ${M.sqrt(169)} = <b>13 cm</b>.`),
+    make(rng) {
+      const kind = rng.pick(['space', 'space', 'base', 'rounded', 'missing', 'can']), u = rng.pick(['cm', 'cm', 'in', 'ft']);
+      const dim = v => `${N(v)} ${u}`;
+      if (kind === 'can') {
+        const t = rng.pick(TRIPLES.slice(0, 4)), k = t[2] > 13 ? 1 : rng.int(1, 2), legs = [t[0] * k, t[1] * k];
+        const d = rng.pick(legs.filter(v => v % 2 === 0)), h = legs[0] + legs[1] - d, c = t[2] * k, r = d / 2;   // the diameter is an even leg
+        return { prompt: `A can is ${dim(h)} tall and has a radius of ${dim(r)}. What is the length of the longest straight stick that fits inside it?${canSvg(`r = ${dim(r)}`, dim(h), h / d)}`, type: 'number', answer: c, unit: u, params: { kind, r, h },
+          hints: [`The longest stick runs from the bottom edge to the opposite top edge. It is the hypotenuse of a right triangle whose legs are the height and the <b>diameter</b>.`,
+            `The diameter is 2 × ${N(r)} = ${N(d)} ${u}. ${S(d, 2)} + ${S(h, 2)} = ${d * d} + ${h * h} = ${d * d + h * h}.`, `${M.sqrt(d * d + h * h)} = <b>${N(c)} ${u}</b>.`] };
+      }
+      let l, w, h;
+      if (kind === 'base') { const t = rng.pick(TRIPLES.slice(0, 3)), k = rng.int(1, t[2] > 5 ? 1 : 3); [l, w] = rng.shuffle([t[0] * k, t[1] * k]); h = rng.int(3, 14); }
+      else if (kind === 'rounded') { do { l = rng.int(4, 12); w = rng.int(2, 9); h = rng.int(2, 10); } while (Number.isInteger(Math.sqrt(l * l + w * w + h * h))); }
+      else { const qd = rng.pick(QUADS), k = qd[3] <= 9 ? rng.int(1, 3) : 1; [l, w, h] = rng.shuffle(qd.slice(0, 3)).map(v => v * k); }
+      const base2 = l * l + w * w, d2 = base2 + h * h, d = Math.sqrt(d2);
+      const labs = [{ v: l, t: dim(l) }, { v: w, t: dim(w) }, { v: h, t: kind === 'missing' ? '?' : dim(h) }];
+      const pic = boxSvg(labs, { base: true, space: kind !== 'base' });
+      const sides = `${dim(l)} long, ${dim(w)} wide${kind === 'missing' ? '' : ` and ${dim(h)} tall`}`;
+      const step1 = `First the diagonal of the base: AC² = ${S(l, 2)} + ${S(w, 2)} = ${l * l} + ${w * w} = ${base2}.`;
+      if (kind === 'base') return { prompt: `A box is ${sides}. How long is AC, the diagonal across the bottom of the box?${pic}`, type: 'number', answer: Math.sqrt(base2), unit: u, params: { kind, l, w, h },
+        hints: [`AC lies flat on the bottom face. It is the hypotenuse of a right triangle whose legs are the length and the width; the height does not matter.`, `AC² = ${S(l, 2)} + ${S(w, 2)} = ${l * l} + ${w * w} = ${base2}.`, `AC = ${M.sqrt(base2)} = <b>${N(Math.sqrt(base2))} ${u}</b>.`] };
+      if (kind === 'missing') {
+        return { prompt: `A box is ${sides}. The diagonal AG from corner A to the opposite corner G is ${dim(d)}. How tall is the box?${pic}`, type: 'number', answer: h, unit: u, params: { kind, l, w, d },
+          hints: [`Using the theorem twice gives AG² = ${S(V('l'), 2)} + ${S(V('w'), 2)} + ${S(V('h'), 2)}, so ${S(V('h'), 2)} = AG² − ${S(V('l'), 2)} − ${S(V('w'), 2)}.`,
+            `${S(V('h'), 2)} = ${S(d, 2)} − ${S(l, 2)} − ${S(w, 2)} = ${d2} − ${l * l} − ${w * w} = ${h * h}.`, `${V('h')} = ${M.sqrt(h * h)} = <b>${N(h)} ${u}</b>.`] };
+      }
+      const rounded = kind === 'rounded', ans = rounded ? M.round(d, 1) : d;
+      return { prompt: `A box is ${sides}. How long is the diagonal AG, from corner A to the opposite corner G?${rounded ? ' Round to the nearest tenth.' : ''}${pic}`, type: 'number', answer: ans, unit: u, tolerance: rounded ? 0.05 : undefined, params: { kind, l, w, h },
+        hints: [`Use the Pythagorean theorem twice. ${step1}`, `AC and the height meet at a right angle, and AG is the hypotenuse: AG² = AC² + ${S(h, 2)} = ${base2} + ${h * h} = ${d2}.`,
+          rounded ? `AG = ${M.sqrt(d2)} ≈ <b>${N(ans)} ${u}</b>.` : `AG = ${M.sqrt(d2)} = <b>${N(d)} ${u}</b>.`] };
+    },
+    verify(q) {
+      const p = q.params;
+      if (p.kind === 'can') return Math.abs(Math.hypot(2 * p.r, p.h) - q.answer) < 1e-9;
+      if (p.kind === 'base') return Math.abs(Math.hypot(p.l, p.w) - q.answer) < 1e-9;
+      if (p.kind === 'missing') return Math.abs(Math.hypot(p.l, p.w, q.answer) - p.d) < 1e-9 && q.answer > 0;
+      const d = Math.hypot(p.l, p.w, p.h);                              // the distance from (0, 0, 0) to (l, w, h)
+      return p.kind === 'rounded' ? Math.abs(d - q.answer) <= 0.05 : Math.abs(d - q.answer) < 1e-9;
+    },
+  });
+
+  /** the largest angle of a triangle in degrees, by the law of cosines */
+  const bigAngle = sides => { const [a, b, c] = sides.slice().sort((u, v) => u - v); return Math.acos((a * a + b * b - c * c) / (2 * a * b)) * 180 / Math.PI; };
+  const triKind = sides => { const [a, b, c] = sides.slice().sort((u, v) => u - v), d = a * a + b * b - c * c; return d === 0 ? 'right' : d > 0 ? 'acute' : 'obtuse'; };
+  const validTri = sides => { const [a, b, c] = sides.slice().sort((u, v) => u - v); return a > 0 && a + b > c; };
+  /** a near miss: one side of a right triangle nudged by 1 or 2, still a real triangle but no longer a right one */
+  function nudge(rng, t) {
+    for (let i = 0; i < 40; i++) { const s = t.slice(), j = rng.int(0, 2); s[j] += rng.pick([-2, -1, 1, 2]); if (validTri(s) && triKind(s) !== 'right') return s; }
+    return [t[0], t[1], t[2] + 1];
+  }
+  const CONV_CHOICES = ['Right triangle', 'Acute triangle', 'Obtuse triangle'];
+  const CORNER = ['Yes: it is exactly 90°', 'No: it is less than 90°', 'No: it is more than 90°'];
+
+  A.skill({
+    id: 'math8.pythagorean-converse', title: 'Converse of the Pythagorean theorem',
+    learn: p(`The Pythagorean theorem also works backwards. Its <b>converse</b> says: <b>if the side lengths of a triangle fit ${S(V('a'), 2)} + ${S(V('b'), 2)} = ${S(V('c'), 2)}, where ${V('c')} is the longest side, then the triangle is a right triangle</b>, with the right angle opposite the longest side.`) +
+      p(`So to test three lengths, square the two shorter sides and add, then compare with the square of the longest side. If ${S(V('a'), 2)} + ${S(V('b'), 2)} is <b>larger</b> than ${S(V('c'), 2)}, the longest side is too short to reach across a right angle, so the angle opposite it is less than 90°: an <b>acute</b> triangle. If ${S(V('a'), 2)} + ${S(V('b'), 2)} is <b>smaller</b>, that angle is more than 90°: an <b>obtuse</b> triangle.`) +
+      p(`Builders use this to check a square corner: 3 units along one edge, 4 along the other, and the diagonal between the marks must be exactly 5.`) +
+      example('Example', `${big('Sides 8, 15, 17')}The longest side is 17. 8² + 15² = 64 + 225 = 289, and 17² = 289. They are equal, so this is a <b>right triangle</b>.`),
+    make(rng) {
+      const kind = rng.pick(['classify', 'classify', 'which', 'corner']);
+      const t0 = rng.pick(TRIPLES.slice(0, 4)), k = rng.int(1, t0[2] > 13 ? 1 : 3), t = t0.map(v => v * k);
+      if (kind === 'which') {
+        const wrongs = [], seen = new Set([t.join()]);
+        for (let i = 0; i < 60 && wrongs.length < 3; i++) {
+          const kk = rng.int(1, 2), base = rng.chance(0.7) ? t : rng.pick(TRIPLES.slice(0, 3)).map(v => v * kk);   // a near miss of this triple or of another one
+          const s = nudge(rng, base).sort((a, b) => a - b);
+          if (!seen.has(s.join())) { seen.add(s.join()); wrongs.push(s); }
+        }
+        const fmt = s => s.map(N).join(', '), answer = fmt(t), w = wrongs[0], [wa, wb, wc] = w;
+        return { prompt: `Which set of side lengths makes a right triangle?`, type: 'choice', choices: [answer].concat(wrongs.map(fmt)), answer, params: { kind },
+          hints: [`For each set, add the squares of the two shorter sides and compare with the square of the longest side.`,
+            `${fmt(w)}: ${S(wa, 2)} + ${S(wb, 2)} = ${wa * wa + wb * wb}, but ${S(wc, 2)} = ${wc * wc}. Not equal, so not a right triangle.`,
+            `${answer}: ${S(t[0], 2)} + ${S(t[1], 2)} = ${t[0] * t[0] + t[1] * t[1]} = ${S(t[2], 2)}. <b>${answer}</b> makes a right triangle.`] };
+      }
+      const want = rng.pick(['right', 'acute', 'obtuse']);
+      let s = t;
+      if (want !== 'right') {
+        for (let i = 0; i < 80; i++) {
+          const cand = kind === 'corner' ? [t[0], t[1], t[2] + (want === 'acute' ? -1 : 1) * rng.int(1, 2)] : rng.chance(0.5) ? nudge(rng, t) : [rng.int(4, 15), rng.int(4, 15), rng.int(5, 20)];
+          if (validTri(cand) && triKind(cand) === want && (kind === 'corner' || new Set(cand).size === 3)) { s = cand; break; }
+        }
+      }
+      if (kind === 'corner') {
+        const [a, b, c] = s, name = rng.pick(NAMES), thing = rng.pick(['garden bed', 'picture frame', 'deck', 'tabletop', 'sandbox']), u = rng.pick(['ft', 'in', 'cm']);
+        const sum = a * a + b * b, cc = c * c, res = sum === cc ? 0 : sum > cc ? 1 : 2;
+        return { prompt: `${name} wants to check that a corner of a ${thing} is a right angle. ${name} marks a point ${N(a)} ${u} along one edge from the corner and a point ${N(b)} ${u} along the other edge, then measures the diagonal between the two marks: ${N(c)} ${u}. Is the corner a right angle?`, type: 'choice', choices: CORNER.slice(), answer: CORNER[res], keepOrder: true, params: { kind, s },
+          hints: [`The two edges and the diagonal make a triangle, and the corner is the angle opposite the diagonal. Compare ${S(N(a), 2)} + ${S(N(b), 2)} with ${S(N(c), 2)}.`,
+            `${S(N(a), 2)} + ${S(N(b), 2)} = ${a * a} + ${b * b} = ${sum}, and ${S(N(c), 2)} = ${cc}.`,
+            res === 0 ? `They are equal, so by the converse of the Pythagorean theorem the corner is square. <b>${CORNER[0]}</b>.` : res === 1 ? `${sum} &gt; ${cc}: the diagonal is shorter than it would be for a right angle, so the corner is pinched in. <b>${CORNER[1]}</b>.` : `${sum} &lt; ${cc}: the diagonal is longer than it would be for a right angle, so the corner is opened out. <b>${CORNER[2]}</b>.`] };
+      }
+      const shown = rng.shuffle(s), [a, b, c] = s.slice().sort((u, v) => u - v), sum = a * a + b * b, cc = c * c;
+      const answer = CONV_CHOICES[{ right: 0, acute: 1, obtuse: 2 }[triKind(s)]];
+      return { prompt: `A triangle has sides of length ${M.list(shown.map(N))}. What kind of triangle is it?`, type: 'choice', choices: CONV_CHOICES.slice(), answer, keepOrder: true, params: { kind, s },
+        hints: [`The longest side is ${N(c)}. Compare ${S(a, 2)} + ${S(b, 2)} with ${S(c, 2)}.`, `${S(a, 2)} + ${S(b, 2)} = ${a * a} + ${b * b} = ${sum}, and ${S(c, 2)} = ${cc}.`,
+          sum === cc ? `They are equal, so by the converse of the Pythagorean theorem it is a <b>right triangle</b>.` : sum > cc ? `${sum} &gt; ${cc}, so the angle opposite the longest side is less than 90°: an <b>acute triangle</b>.` : `${sum} &lt; ${cc}, so the angle opposite the longest side is more than 90°: an <b>obtuse triangle</b>.`] };
+    },
+    verify(q) {
+      const p = q.params, kindOf = deg => Math.abs(deg - 90) < 1e-7 ? 0 : deg < 90 ? 1 : 2;
+      if (p.kind === 'which') {
+        const rights = q.choices.filter(c => { const s = c.split(', ').map(Number); return validTri(s) && Math.abs(bigAngle(s) - 90) < 1e-7; });
+        return rights.length === 1 && rights[0] === q.answer && q.choices.every(c => validTri(c.split(', ').map(Number)));
+      }
+      if (!validTri(p.s)) return 'not a triangle';
+      if (p.kind === 'corner') {                                         // the corner is the angle opposite the diagonal, the third length
+        const [a, b, c] = p.s, deg = Math.acos((a * a + b * b - c * c) / (2 * a * b)) * 180 / Math.PI;
+        return q.answer === CORNER[kindOf(deg)];
+      }
+      return q.answer === CONV_CHOICES[kindOf(bigAngle(p.s))];
     },
   });
 

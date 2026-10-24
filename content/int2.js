@@ -76,6 +76,12 @@
       { id: 'triangles', title: 'Similarity and right triangles', blurb: 'Scale factors, the Pythagorean theorem, special right triangles, and trigonometric ratios.', skills: ['int2.similar-triangles', 'int2.pythagorean-theorem', 'int2.special-right-triangles', 'int2.trig-ratios', 'int2.solve-right-triangles'] },
       { id: 'circles', title: 'Circles', blurb: 'Arcs and sectors, inscribed angles, and the equation of a circle.', skills: ['int2.arc-sector', 'int2.inscribed-angles', 'int2.circle-equation'] },
       { id: 'probability', title: 'Probability', blurb: '“And” and “or”, conditional probability from two-way tables, and expected value.', skills: ['int2.compound-probability', 'int2.conditional-probability', 'int2.expected-value'] },
+      { id: 'logic-proof', title: 'Logic and proof', blurb: 'Conjectures and counterexamples, converses, proof by contradiction, and the reason behind each step of a proof.', skills: ['int2.counterexamples', 'int2.converses', 'int2.proof-by-contradiction', 'int2.proof-reasons'] },
+      { id: 'parabolas-more', title: 'More about parabolas', blurb: 'Writing a quadratic from its x-intercepts, quadratic inequalities, and the parabola as a focus and a directrix.', skills: ['int2.write-quadratic', 'int2.quadratic-inequalities', 'int2.focus-directrix'] },
+      { id: 'quads-centers', title: 'Quadrilaterals and triangle centers', blurb: 'Sides, angles and diagonals of parallelograms, rectangles and rhombuses, and the centroid, circumcenter and incenter of a triangle.', skills: ['int2.quadrilateral-properties', 'int2.triangle-centers'] },
+      { id: 'area-volume-probability', title: 'Area, similar solids and geometric probability', blurb: 'The area of a regular polygon from its apothem, how area and volume scale in similar solids, and probability as a ratio of lengths or areas.', skills: ['int2.regular-polygon-area', 'int2.similar-solids', 'int2.geometric-probability'] },
+      { id: 'circle-lines', title: 'Circles: chords, tangents and secants', blurb: 'The perpendicular from the center to a chord, chords that cross, tangent lines, and the angles and lengths made by tangents and secants.', skills: ['int2.chords', 'int2.intersecting-chords', 'int2.tangent-lines', 'int2.tangents-secants'] },
+      { id: 'tangent-ratio', title: 'The tangent ratio', blurb: 'Slope ratios as the tangent of an angle, finding missing legs, and heights and distances from angles of elevation and depression.', skills: ['int2.tangent-ratio', 'int2.tangent-applications'] },
     ],
   });
 
@@ -950,6 +956,1227 @@
       }
       let total = 0; P.vals.forEach(v => { total += v - P.cost; });     // net result of one spin on each section, averaged
       return Math.abs(total / P.vals.length - q.answer) < 0.0051;
+    },
+  });
+
+  /* ---------- Unit 9: Logic and proof ---------- */
+  const isPrime = n => { if (!Number.isInteger(n) || n < 2) return false; for (let f = 2; f * f <= n; f++) if (n % f === 0) return false; return true; };
+  const isOdd = n => Math.abs(n % 2) === 1;
+  const close = (x, y) => Math.abs(x - y) < 1e-6;
+  const nV = V('n'), ell = V('ℓ'), mV = V('m');
+  /** a parallelogram with sides w and h (cm) and one angle a, described in words */
+  const shapeTxt = s => s.a === 90 ? (s.w === s.h ? `a square with ${s.w} cm sides` : `a ${s.w} cm by ${s.h} cm rectangle`)
+    : s.w === s.h ? `a rhombus with ${s.a}° and ${180 - s.a}° angles` : `a parallelogram with ${s.w} cm and ${s.h} cm sides and a ${s.a}° angle`;
+  /* Conjectures: h is the hypothesis, c the conclusion. The case lists are sorted by hand (ce = counterexamples,
+     sup = cases that fit, nh = cases where the hypothesis is false); verify() re-checks them with h and c. */
+  const CONJ = [
+    { s: `If ${nV} is a prime number, then ${nV} is odd.`, h: isPrime, c: isOdd, ce: [2], sup: [3, 5, 7, 11, 13, 17, 19, 23], nh: [1, 9, 15, 21, 25, 4, 6, 8] },
+    { s: `If ${nV} is a multiple of 4, then ${nV} is a multiple of 8.`, h: n => n % 4 === 0, c: n => n % 8 === 0, ce: [4, 12, 20, 28, 36, 44], sup: [8, 16, 24, 32, 40, 48], nh: [2, 6, 10, 14, 18, 22] },
+    { s: `If ${sq(nV)} &gt; 25, then ${nV} &gt; 5.`, h: n => n * n > 25, c: n => n > 5, ce: [-6, -7, -8, -9, -10], sup: [6, 7, 8, 9, 10], nh: [-5, -4, -3, -1, 0, 2, 4, 5] },
+    { s: `If ${nV} is an integer, then ${sq(nV)} &gt; ${nV}.`, h: n => Number.isInteger(n), c: n => n * n > n, ce: [0, 1], sup: [2, 3, 4, 5, -1, -2, -3], nh: [] },
+    { s: `If ${nV} is odd, then ${nV} + 2 is prime.`, h: isOdd, c: n => isPrime(n + 2), ce: [7, 13, 19, 23, 25], sup: [1, 3, 5, 9, 11, 15, 17], nh: [2, 4, 6, 8, 10, 12] },
+    { s: `If ${nV} is divisible by 3, then ${nV} is divisible by 6.`, h: n => n % 3 === 0, c: n => n % 6 === 0, ce: [3, 9, 15, 21, 27, 33], sup: [6, 12, 18, 24, 30, 36], nh: [4, 8, 10, 14, 16, 20] },
+    { s: `If ${nV} is a whole number, then ${M.poly([1, 1, 11], 'n')} is prime.`, h: n => Number.isInteger(n) && n >= 0, c: n => isPrime(n * n + n + 11), ce: [10, 11], sup: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nh: [] },
+    { s: 'If the sum of two whole numbers is even, then both numbers are even.', t: 'pair', h: ([a, b]) => (a + b) % 2 === 0, c: ([a, b]) => a % 2 === 0 && b % 2 === 0,
+      ce: [[3, 5], [1, 7], [5, 9], [7, 11], [9, 13]], sup: [[2, 4], [6, 8], [4, 10], [2, 12]], nh: [[3, 4], [5, 8], [2, 7], [6, 9]] },
+    { s: 'If the product of two integers is positive, then both integers are positive.', t: 'pair', h: ([a, b]) => a * b > 0, c: ([a, b]) => a > 0 && b > 0,
+      ce: [[-3, -4], [-2, -5], [-6, -1], [-7, -2]], sup: [[3, 4], [2, 5], [6, 1], [7, 2]], nh: [[-3, 4], [2, -5], [-6, 1], [7, -2]] },
+    { s: 'If two angles are supplementary, then one of them is obtuse.', t: 'ang', h: ([a, b]) => a + b === 180, c: ([a, b]) => a > 90 || b > 90,
+      ce: [[90, 90]], sup: [[100, 80], [120, 60], [135, 45], [150, 30]], nh: [[60, 30], [120, 70], [45, 45], [100, 100]] },
+    { s: 'If two angles are both acute, then together they make an acute angle.', t: 'ang', h: ([a, b]) => a < 90 && b < 90, c: ([a, b]) => a + b < 90,
+      ce: [[50, 60], [45, 70], [80, 30], [60, 60]], sup: [[20, 30], [10, 40], [35, 25], [15, 60]], nh: [[100, 20], [120, 30], [95, 10]] },
+    { s: 'If a quadrilateral has four right angles, then it is a square.', t: 'quad', h: q => q.a === 90, c: q => q.a === 90 && q.w === q.h,
+      ce: [{ w: 3, h: 5, a: 90 }, { w: 2, h: 6, a: 90 }, { w: 4, h: 7, a: 90 }], sup: [{ w: 3, h: 3, a: 90 }, { w: 5, h: 5, a: 90 }], nh: [{ w: 4, h: 4, a: 60 }, { w: 3, h: 5, a: 70 }, { w: 5, h: 5, a: 120 }] },
+    { s: 'If a quadrilateral has four congruent sides, then it is a square.', t: 'quad', h: q => q.w === q.h, c: q => q.a === 90 && q.w === q.h,
+      ce: [{ w: 4, h: 4, a: 60 }, { w: 5, h: 5, a: 70 }, { w: 3, h: 3, a: 120 }], sup: [{ w: 3, h: 3, a: 90 }, { w: 6, h: 6, a: 90 }], nh: [{ w: 3, h: 5, a: 90 }, { w: 4, h: 6, a: 110 }] },
+  ];
+  const caseTxt = (t, x) => t === 'pair' ? `the pair ${N(x[0])} and ${N(x[1])}` : t === 'ang' ? `angles of ${N(x[0])}° and ${N(x[1])}°` : t === 'quad' ? shapeTxt(x) : `${nV} = ${N(x)}`;
+  const partsTxt = (cj, x) => `For ${caseTxt(cj.t, x)}, the “if” part is ${cj.h(x) ? 'true' : 'false'} and the “then” part is ${cj.c(x) ? 'true' : 'false'}.`;
+  const SHOWS = ['It is a counterexample, so the conjecture is false.', 'It fits the conjecture, but one example cannot prove it.', 'It proves that the conjecture is always true.', 'It does not test the conjecture: the “if” part is false.'];
+
+  A.skill({
+    id: 'int2.counterexamples', title: 'Conjectures and counterexamples',
+    learn: p(`A <b>conjecture</b> is a statement you believe because of a pattern, but have not proved. Many are written as <b>if-then statements</b>, such as “If ${nV} is a multiple of 4, then ${nV} is even.” The “if” part is the <b>hypothesis</b> and the “then” part is the <b>conclusion</b>.`) +
+      p(`Examples that fit a conjecture make it believable, but no number of examples proves it. One <b>counterexample</b> is enough to prove it false: <b>a case that makes the hypothesis true and the conclusion false</b>. A case where the hypothesis is false does not test the conjecture at all, because the statement promises nothing about it.`) +
+      example('Example', `${big('If a number is prime, then it is odd.')}Try 7: prime and odd, so it fits, but that proves nothing. Try 9: not prime, so it does not test the claim. Try 2: prime but not odd, so <b>2 is a counterexample</b>, and the conjecture is false.`),
+    make(rng) {
+      const ci = rng.int(0, CONJ.length - 1), cj = CONJ[ci], intro = `<p>Conjecture: “${cj.s}”</p>`;
+      if (rng.chance(0.55)) {
+        const ce = rng.pick(cj.ce);
+        let others;
+        if (cj.nh.length) {
+          const s2 = rng.sample(cj.sup, 2), n2 = rng.sample(cj.nh, 2);
+          others = rng.bool() ? [s2[0], s2[1], n2[0]] : [s2[0], n2[0], n2[1]];
+        } else others = rng.sample(cj.sup, 3);
+        const opts = [ce].concat(others).map(x => ({ t: caseTxt(cj.t, x), x }));
+        return { prompt: `${intro}Which of these is a counterexample?`, type: 'choice', answer: opts[0].t, choices: rng.shuffle(opts.map(o => o.t)), params: { ci, kind: 'find', opts },
+          hints: ['A counterexample must make the “if” part true and the “then” part false.', others.map(x => partsTxt(cj, x)).join(' ') + ' None of these breaks the conjecture.',
+            `${partsTxt(cj, ce)} So <b>${opts[0].t}</b> gives a counterexample, and the conjecture is false.`] };
+      }
+      const kind = rng.pick(['ce', 'sup', 'nh'].filter(k => cj[k].length)), x = rng.pick(cj[kind]);
+      const ans = SHOWS[kind === 'ce' ? 0 : kind === 'sup' ? 1 : 3];
+      const why = kind === 'ce' ? 'The “if” part holds but the “then” part fails, so the conjecture breaks.'
+        : kind === 'sup' ? 'The case fits, but some other case might not, so one example cannot prove the conjecture.'
+          : 'The conjecture only promises something when the “if” part is true, so this case tells you nothing.';
+      return { prompt: `${intro}${rng.pick(NAMES)} tries ${caseTxt(cj.t, x)}. What does this example show?`, type: 'choice', answer: ans, choices: SHOWS, keepOrder: true, params: { ci, kind: 'judge', x },
+        hints: ['Check the “if” part first, then the “then” part.', partsTxt(cj, x), `${why} <b>${ans}</b>`] };
+    },
+    verify(q) {
+      const P = q.params, cj = CONJ[P.ci], isCE = x => cj.h(x) && !cj.c(x);
+      if (P.kind === 'find') { const o = P.opts.find(y => y.t === q.answer); return !!o && isCE(o.x) && P.opts.filter(y => isCE(y.x)).length === 1; }
+      return q.answer === SHOWS[isCE(P.x) ? 0 : cj.h(P.x) ? 1 : 3];
+    },
+  });
+
+  /* Converses. Each statement "If S P, then it Q" is true by design; x describes a counterexample when the
+     converse is false. verify() checks every truth value against a small world of numbers or shapes. */
+  const vsub = (p1, p2) => [p1[0] - p2[0], p1[1] - p2[1]], vdot = (u, v) => u[0] * v[0] + u[1] * v[1], vcross = (u, v) => u[0] * v[1] - u[1] * v[0];
+  /** what can be said about the quadrilateral with these vertices, in order */
+  function quadInfo(P) {
+    const s = [0, 1, 2, 3].map(i => vsub(P[(i + 1) % 4], P[i])), d1 = vsub(P[2], P[0]), d2 = vsub(P[3], P[1]);
+    const eqSides = s.every(v => vdot(v, v) === vdot(s[0], s[0])), right = [0, 1, 2, 3].every(i => vdot(s[i], s[(i + 1) % 4]) === 0);
+    const para = vcross(s[0], s[2]) === 0 && vcross(s[1], s[3]) === 0;
+    return { eqSides, right, para, square: eqSides && right, rhombus: eqSides, rectangle: right, perpDiag: vdot(d1, d2) === 0, eqDiag: vdot(d1, d1) === vdot(d2, d2),
+      bisect: P[0][0] + P[2][0] === P[1][0] + P[3][0] && P[0][1] + P[2][1] === P[1][1] + P[3][1], oneParallel: vcross(s[0], s[2]) === 0 || vcross(s[1], s[3]) === 0 };
+  }
+  /** the angle opposite each side of a triangle, by the law of cosines */
+  const triAngles = ([a, b, c]) => [[a, b, c], [b, c, a], [c, a, b]].map(([x, y, z]) => Math.acos((y * y + z * z - x * x) / (2 * y * z)) * 180 / Math.PI);
+  function triInfo(t) {
+    const g = triAngles(t), s = t.slice().sort((x, y) => x - y), two = arr => close(arr[0], arr[1]) || close(arr[1], arr[2]) || close(arr[0], arr[2]);
+    return { equi: close(t[0], t[1]) && close(t[1], t[2]), iso: two(t), congAng: two(g), right: g.some(x => close(x, 90)), acute2: g.filter(x => x < 90 - 1e-6).length >= 2, pyth: close(s[0] * s[0] + s[1] * s[1], s[2] * s[2]) };
+  }
+  const lineAngle = m => 90 - Math.atan(m) * 180 / Math.PI;           // angle between a line of slope m and a vertical transversal
+  const WORLD = {
+    num: Array.from({ length: 151 }, (_, i) => i - 30),
+    whole: Array.from({ length: 121 }, (_, i) => i),
+    tri: [[5, 5, 5], [5, 5, 8], [5, 5, 6], [3, 4, 5], [5, 12, 13], [5, 6, 7], [3, 5, 7], [1, 1, Math.SQRT2], [4, 4, 7]].map(triInfo),
+    quad: [[[0, 0], [4, 0], [4, 4], [0, 4]], [[0, 0], [6, 0], [6, 3], [0, 3]], [[0, 0], [5, 0], [8, 4], [3, 4]], [[0, 0], [6, 0], [8, 3], [2, 3]],
+      [[0, 0], [3, -2], [8, 0], [3, 2]], [[0, 0], [8, 0], [6, 3], [2, 3]], [[0, 0], [7, 0], [5, 3], [1, 3]], [[0, 0], [6, 1], [5, 4], [1, 3]]].map(quadInfo),
+    ang: [{ a: 40, b: 40, rel: 'vertical' }, { a: 90, b: 90, rel: 'vertical' }, { a: 130, b: 130, rel: 'vertical' }, { a: 40, b: 140, rel: 'linear' }, { a: 90, b: 90, rel: 'linear' },
+      { a: 120, b: 60, rel: 'linear' }, { a: 40, b: 40, rel: 'apart' }, { a: 70, b: 110, rel: 'apart' }, { a: 30, b: 60, rel: 'adjacent' }],
+    lines: [[0.5, 0.5], [0.5, 1], [2, 2], [-1, 1], [0, 0], [0, 3]].map(([m1, m2]) => ({ par: m1 === m2, t1: lineAngle(m1), t2: lineAngle(m2) })),
+    tripair: [[[3, 4, 5], [3, 4, 5]], [[3, 4, 5], [6, 8, 10]], [[5, 5, 5], [7, 7, 7]], [[4, 5, 6], [4, 5, 7]], [[5, 5, 8], [5, 5, 8]]],
+  };
+  const abc = `${sq(V('a'))} + ${sq(V('b'))} = ${sq(V('c'))}`;
+  const CONV = [
+    { S: 'a number', P: 'is a multiple of 10', nP: 'is not a multiple of 10', Q: 'is even', nQ: 'is not even', w: 'num', p: n => n % 10 === 0, q: n => n % 2 === 0, x: '12 is even, but it is not a multiple of 10' },
+    { S: 'a whole number', P: 'is divisible by 6', nP: 'is not divisible by 6', Q: 'is divisible by 3', nQ: 'is not divisible by 3', w: 'whole', p: n => n % 6 === 0, q: n => n % 3 === 0, x: '9 is divisible by 3, but not by 6' },
+    { S: 'a whole number', P: 'ends in 0', nP: 'does not end in 0', Q: 'is divisible by 5', nQ: 'is not divisible by 5', w: 'whole', p: n => String(n).endsWith('0'), q: n => n % 5 === 0, x: '15 is divisible by 5, but it ends in 5' },
+    { S: 'a whole number', P: 'is divisible by both 2 and 3', nP: 'is not divisible by both 2 and 3', Q: 'is divisible by 6', nQ: 'is not divisible by 6', w: 'whole', p: n => n % 2 === 0 && n % 3 === 0, q: n => n % 6 === 0 },
+    { S: 'a number', P: 'is negative', nP: 'is not negative', Q: 'has a positive square', nQ: 'does not have a positive square', w: 'num', p: n => n < 0, q: n => n * n > 0, x: '3 has a positive square, 9, but 3 is not negative' },
+    { S: 'a triangle', P: 'is equilateral', nP: 'is not equilateral', Q: 'is isosceles', nQ: 'is not isosceles', w: 'tri', p: t => t.equi, q: t => t.iso, x: 'a triangle with sides 5, 5 and 8 is isosceles, but it is not equilateral' },
+    { S: 'a triangle', P: 'has two congruent sides', nP: 'does not have two congruent sides', Q: 'has two congruent angles', nQ: 'does not have two congruent angles', w: 'tri', p: t => t.iso, q: t => t.congAng },
+    { S: 'a triangle', P: 'is a right triangle', nP: 'is not a right triangle', Q: 'has two acute angles', nQ: 'does not have two acute angles', w: 'tri', p: t => t.right, q: t => t.acute2, x: 'an equilateral triangle has two (in fact three) acute angles, but no right angle' },
+    { S: `a triangle with sides ${V('a')}, ${V('b')} and longest side ${V('c')}`, P: 'is a right triangle', nP: 'is not a right triangle', Q: `has ${abc}`, nQ: `does not have ${abc}`, w: 'tri', p: t => t.right, q: t => t.pyth },
+    { S: 'a quadrilateral', P: 'is a square', nP: 'is not a square', Q: 'has four right angles', nQ: 'does not have four right angles', w: 'quad', p: s => s.square, q: s => s.right, x: 'a 3 by 6 rectangle has four right angles, but it is not a square' },
+    { S: 'a quadrilateral', P: 'is a rhombus', nP: 'is not a rhombus', Q: 'has perpendicular diagonals', nQ: 'does not have perpendicular diagonals', w: 'quad', p: s => s.rhombus, q: s => s.perpDiag, x: 'a kite that is not a rhombus has perpendicular diagonals' },
+    { S: 'a quadrilateral', P: 'is a parallelogram', nP: 'is not a parallelogram', Q: 'has diagonals that bisect each other', nQ: 'does not have diagonals that bisect each other', w: 'quad', p: s => s.para, q: s => s.bisect },
+    { S: 'a quadrilateral', P: 'is a rectangle', nP: 'is not a rectangle', Q: 'has congruent diagonals', nQ: 'does not have congruent diagonals', w: 'quad', p: s => s.rectangle, q: s => s.eqDiag, x: 'an isosceles trapezoid has congruent diagonals, but it is not a rectangle' },
+    { S: 'a quadrilateral', P: 'is a rhombus', nP: 'is not a rhombus', Q: 'has four congruent sides', nQ: 'does not have four congruent sides', w: 'quad', p: s => s.rhombus, q: s => s.eqSides },
+    { S: 'two angles', it: 'they', P: 'are vertical angles', nP: 'are not vertical angles', Q: 'are congruent', nQ: 'are not congruent', w: 'ang', p: g => g.rel === 'vertical', q: g => g.a === g.b, x: 'two separate 40° angles are congruent, but they are not vertical angles' },
+    { S: 'two angles', it: 'they', P: 'form a linear pair', nP: 'do not form a linear pair', Q: 'are supplementary', nQ: 'are not supplementary', w: 'ang', p: g => g.rel === 'linear', q: g => g.a + g.b === 180, x: 'a 70° angle and a 110° angle far apart are supplementary, but they do not form a linear pair' },
+    { S: 'two lines cut by a transversal', it: 'they', P: 'are parallel', nP: 'are not parallel', Q: 'form congruent alternate interior angles', nQ: 'do not form congruent alternate interior angles', w: 'lines', p: l => l.par, q: l => close(l.t1, l.t2) },
+    { S: 'two lines cut by a transversal', it: 'they', P: 'are parallel', nP: 'are not parallel', Q: 'form congruent corresponding angles', nQ: 'do not form congruent corresponding angles', w: 'lines', p: l => l.par, q: l => close(l.t1, l.t2) },
+    { S: 'two lines cut by a transversal', it: 'they', P: 'are parallel', nP: 'are not parallel', Q: 'form supplementary same-side interior angles', nQ: 'do not form supplementary same-side interior angles', w: 'lines', p: l => l.par, q: l => close(l.t1 + (180 - l.t2), 180) },
+    { S: 'two triangles', it: 'they', P: 'are congruent', nP: 'are not congruent', Q: 'have congruent corresponding angles', nQ: 'do not have congruent corresponding angles', w: 'tripair',
+      p: ([s, t]) => s.every((x, i) => x === t[i]), q: ([s, t]) => triAngles(s).every((x, i) => close(x, triAngles(t)[i])), x: 'triangles with sides 3, 4, 5 and 6, 8, 10 have the same angles, but they are not congruent' },
+  ];
+  const ifThen = (it, a, b) => `If ${it.S} ${a}, then ${it.it || 'it'} ${b}.`;
+  const holds = (it, fwd) => WORLD[it.w].every(w => fwd ? !it.p(w) || it.q(w) : !it.q(w) || it.p(w));
+  const TRUTHS = ['Both the statement and its converse are true.', 'The statement is true, but its converse is false.', 'The statement is false, but its converse is true.', 'Both the statement and its converse are false.'];
+
+  A.skill({
+    id: 'int2.converses', title: 'Converses of conditional statements',
+    learn: p(`A <b>conditional statement</b> has the form “If ${V('p')}, then ${V('q')}.” Its <b>converse</b> swaps the two parts: <b>“If ${V('q')}, then ${V('p')}.”</b> Nothing else changes, and no “not” is added. (Adding “not” to both parts gives a different statement, the inverse.)`) +
+      p(`A true statement can have a false converse. “If a number is a multiple of 10, then it is even” is true, but its converse “If a number is even, then it is a multiple of 10” is false: 12 is a counterexample. So <b>a converse must be checked on its own</b>. Many geometry theorems come in true pairs: the parallel-line angle theorems and their converses are all true, and that is how you prove two lines are parallel.`) +
+      example('Example', `${big('If two lines cut by a transversal are parallel, then they form congruent corresponding angles.')}Converse: <b>If two lines cut by a transversal form congruent corresponding angles, then they are parallel.</b> Both are true.`),
+    make(rng) {
+      const ii = rng.int(0, CONV.length - 1), it = CONV[ii], flip = rng.bool();
+      const [H, C, nH, nC] = flip ? [it.Q, it.P, it.nQ, it.nP] : [it.P, it.Q, it.nP, it.nQ];
+      const stmt = ifThen(it, H, C), conv = ifThen(it, C, H);
+      if (rng.chance(0.5)) {
+        const choices = [conv, ifThen(it, nH, nC), ifThen(it, nC, nH), stmt];
+        return { prompt: `What is the converse of this statement?${big(stmt)}`, type: 'choice', answer: conv, choices: rng.shuffle(choices), params: { ii, kind: 'write', stmt },
+          hints: ['The converse swaps the “if” part and the “then” part. It does not add any “not”.', `The “if” part is “${it.S} ${H}”. The “then” part is “${it.it || 'it'} ${C}”.`, `Swap them: <b>${conv}</b>`] };
+      }
+      const convFalse = !!it.x, stmtTrue = !(flip && convFalse), convTrue = !(convFalse && !flip);
+      const ans = TRUTHS[stmtTrue ? (convTrue ? 0 : 1) : (convTrue ? 2 : 3)];
+      const judge = (what, ok) => ok ? `The ${what} is true: no case makes its “if” part true and its “then” part false.` : `The ${what} is false: ${it.x}.`;
+      return { prompt: `Statement: “${stmt}”<br>Converse: “${conv}”<br>Which is true?`, type: 'choice', answer: ans, choices: TRUTHS, keepOrder: true, params: { ii, kind: 'judge', flip },
+        hints: ['Test each one separately: look for a case that makes the “if” part true and the “then” part false.', judge('statement', stmtTrue), judge('converse', convTrue), `<b>${ans}</b>`] };
+    },
+    verify(q) {
+      const P = q.params, it = CONV[P.ii];
+      if (P.kind === 'write') {                                         // pull the statement apart and swap its clauses
+        const m = P.stmt.match(/^If (.+), then (.+)\.$/), pro = (it.it || 'it') + ' ';
+        if (!m || !m[1].startsWith(it.S + ' ') || !m[2].startsWith(pro)) return false;
+        return q.answer === `If ${it.S} ${m[2].slice(pro.length)}, then ${pro}${m[1].slice(it.S.length + 1)}.`;
+      }
+      const fwd = holds(it, true), back = holds(it, false), sT = P.flip ? back : fwd, cT = P.flip ? fwd : back;
+      return q.answer === TRUTHS[sT ? (cT ? 0 : 1) : (cT ? 2 : 3)];
+    },
+  });
+
+  /* Proof by contradiction: the opening assumption and the contradiction, for statements with clear answers. */
+  const PBC = [
+    { pr: 'A triangle cannot have two obtuse angles.', as: 'Suppose a triangle has two obtuse angles.',
+      wa: ['Suppose a triangle has no obtuse angles.', 'Suppose a triangle has exactly one obtuse angle.', 'Suppose a triangle cannot have two obtuse angles.'],
+      co: 'The two obtuse angles alone would add to more than 180°.', wc: ['Each obtuse angle would be greater than 90°.', 'The third angle of the triangle would have to be acute.', 'The longest side would be opposite the largest angle.'] },
+    { pr: `${R(2)} is irrational.`, as: `Suppose ${R(2)} is rational, so ${R(2)} = ${F(V('a'), V('b'))} in lowest terms.`,
+      wa: [`Suppose ${R(2)} is irrational, so it is not a fraction.`, `Suppose ${R(2)} is a whole number between 1 and 2.`, `Suppose ${R(2)} is a negative number.`],
+      co: `Then ${V('a')} and ${V('b')} would both be even, so the fraction was not in lowest terms.`, wc: [`Then ${sq(V('a'))} would equal 2${sq(V('b'))}, so ${sq(V('a'))} would be an even number.`, `Then ${R(2)} would be about 1.414, between 1 and 2.`, `Then ${V('b')} could not be zero, because we cannot divide by zero.`] },
+    { g: `Lines ${ell} and ${mV} are cut by a transversal, and the alternate interior angles are not congruent.`, pr: `${ell} and ${mV} are not parallel.`, as: `Suppose ${ell} and ${mV} are parallel.`,
+      wa: [`Suppose ${ell} and ${mV} are not parallel.`, 'Suppose the alternate interior angles are congruent.', `Suppose ${ell} and ${mV} are perpendicular.`],
+      co: 'That forces congruent alternate interior angles, against the given.', wc: [`Then ${ell} and ${mV} would never meet, however far they are extended.`, `Then the transversal would have to cross both ${ell} and ${mV}.`, `Then ${ell} and ${mV} would point in the same direction everywhere.`] },
+    { g: `${sq(nV)} is even, where ${nV} is a whole number.`, pr: `${nV} is even.`, as: `Suppose ${nV} is odd.`,
+      wa: [`Suppose ${nV} is even.`, `Suppose ${sq(nV)} is odd.`, `Suppose ${nV} is zero.`],
+      co: `Then ${sq(nV)} would be odd, but it is given as even.`, wc: [`Then ${nV} + 1 would be an even number.`, `Then ${sq(nV)} would be larger than ${nV}.`, `Then ${nV} would leave a remainder of 1 when divided by 2.`] },
+    { pr: 'There is no largest whole number.', as: `Suppose there is a largest whole number, ${V('N')}.`,
+      wa: ['Suppose there is no largest whole number.', 'Suppose there is a smallest whole number, 0.', 'Suppose every whole number is even.'],
+      co: `Then ${V('N')} + 1 would be a whole number larger than the largest one.`, wc: [`Then ${V('N')} would have to be a whole number.`, `Then ${V('N')} − 1 would be a whole number smaller than ${V('N')}.`, `Then ${V('N')} could be a very large number.`] },
+    { g: 'In △ABC, AB ≠ AC.', pr: '∠B and ∠C are not congruent.', as: 'Suppose ∠B ≅ ∠C.',
+      wa: ['Suppose ∠B and ∠C are not congruent.', 'Suppose AB = AC.', 'Suppose ∠A is a right angle.'],
+      co: 'Then the sides opposite ∠B and ∠C would be equal, but AB ≠ AC.', wc: ['Then △ABC would still have exactly three angles.', 'Then ∠A would have to be the largest angle.', 'Then the angles of △ABC would add to 180°.'] },
+    { pr: 'A triangle has at most one right angle.', as: 'Suppose a triangle has two right angles.',
+      wa: ['Suppose a triangle has exactly one right angle.', 'Suppose a triangle has no right angles.', 'Suppose a triangle has at most one right angle.'],
+      co: 'The two right angles add to 180°, leaving 0° for the third angle.', wc: ['Each right angle measures exactly 90°.', 'The side opposite a right angle is the longest side.', 'The other two angles of a right triangle are acute.'] },
+    { g: `Point ${V('P')} is not on line ${ell}.`, pr: `At most one line through ${V('P')} is perpendicular to ${ell}.`, as: `Suppose two different lines through ${V('P')} are perpendicular to ${ell}.`,
+      wa: [`Suppose exactly one line through ${V('P')} is perpendicular to ${ell}.`, `Suppose ${V('P')} is on line ${ell}.`, `Suppose no line through ${V('P')} is perpendicular to ${ell}.`],
+      co: `The two lines and ${ell} would form a triangle with two right angles.`, wc: [`Both lines would pass through the point ${V('P')}.`, `Each of the two lines would make a 90° angle with ${ell}.`, `Line ${ell} would have to be horizontal.`] },
+  ];
+
+  A.skill({
+    id: 'int2.proof-by-contradiction', title: 'Proof by contradiction',
+    learn: p(`In a <b>proof by contradiction</b> you prove a statement by showing that its opposite is impossible. <b>Step 1: assume the opposite of what you want to prove</b> (the given facts stay true). <b>Step 2:</b> reason from that assumption until you reach a <b>contradiction</b>: something impossible, such as a result that clashes with the given or with a known fact. <b>Step 3:</b> conclude that the assumption was false, so the statement is true.`) +
+      p(`Assuming the statement itself proves nothing, and neither does doubting the given. A true fact along the way is not a contradiction either; the contradiction is the step where two things cannot both hold.`) +
+      example('Example', `${big('Prove: a triangle has at most one right angle.')}Assume a triangle has two right angles. Those two alone add to 90° + 90° = 180°, leaving 0° for the third angle, which is <b>impossible</b>. So the assumption is false: a triangle has at most one right angle.`),
+    make(rng) {
+      const kind = rng.pick(['assume', 'assume', 'contra', 'contra', 'eq', 'angle']);
+      if (kind === 'eq') {
+        const a = rng.int(2, 9), s = rng.int(-6, 9), b = rng.nz(-15, 15), c = a * s + b, k = s + rng.nz(-4, 4), v = a * k + b;
+        return { prompt: `<p>Given: ${M.poly([a, b])} = ${N(c)}. Prove: ${X} ≠ ${N(k)}.</p>A proof by contradiction starts by assuming ${X} = ${N(k)}. Under that assumption, what number would ${M.poly([a, b])} equal?`, type: 'number', answer: v, params: { kind, a, b, c, k },
+          hints: [`Substitute ${X} = ${N(k)}: ${N(a)}(${N(k)}) ${M.signed(b)}.`, `${N(a * k)} ${M.signed(b)} = ${N(v)}.`, `The left side would be <b>${N(v)}</b>, but the given says it is ${N(c)}. That contradiction proves ${X} ≠ ${N(k)}.`] };
+      }
+      if (kind === 'angle') {
+        const al = rng.int(3, 12) * 5, be = rng.int(3, 12) * 5, real = 180 - al - be, ga = real + rng.pick([-20, -15, -10, -5, 5, 10, 15, 20]);
+        return { prompt: `<p>Given: in △ABC, m∠A = ${N(al)}° and m∠B = ${N(be)}°. Prove: m∠C ≠ ${N(ga)}°.</p>A proof by contradiction starts by assuming m∠C = ${N(ga)}°. What would the three angles of the triangle then add up to?`, type: 'number', answer: al + be + ga, unit: '°', params: { kind, al, be, ga },
+          hints: [`Add the three angles: ${N(al)}° + ${N(be)}° + ${N(ga)}°.`, `${N(al + be)}° + ${N(ga)}° = ${N(al + be + ga)}°.`, `They would add to <b>${N(al + be + ga)}°</b>, but every triangle's angles add to 180°. That contradiction proves m∠C ≠ ${N(ga)}°.`] };
+      }
+      const pi = rng.int(0, PBC.length - 1), it = PBC[pi], head = `${it.g ? `<p>Given: ${it.g}</p>` : ''}<p>Prove: ${it.pr}</p>`;
+      if (kind === 'assume') return { prompt: `${head}To prove this by contradiction, what should you assume first?`, type: 'choice', answer: it.as, choices: rng.shuffle([it.as].concat(it.wa)), params: { kind, pi },
+        hints: ['A proof by contradiction starts by assuming the opposite of what you want to prove. The given facts stay true.', `You want to prove “${it.pr}” Assume the opposite of that.`, `<b>${it.as}</b>`] };
+      return { prompt: `${head}The proof begins: “${it.as}” Which statement is the contradiction that finishes the proof?`, type: 'choice', answer: it.co, choices: rng.shuffle([it.co].concat(it.wc)), params: { kind, pi },
+        hints: ['A contradiction is something impossible: it clashes with the given, with the assumption, or with a known fact.', 'The other options are true facts or steps along the way; nothing about them is impossible.', `<b>${it.co}</b> So the assumption was false, and the statement is proved.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'eq') { const sol = (P.c - P.b) / P.a; return sol !== P.k && q.answer - P.c === P.a * (P.k - sol); }     // how far the left side misses
+      if (P.kind === 'angle') return q.answer - 180 === P.ga - (180 - P.al - P.be) && q.answer !== 180;
+      const it = PBC[P.pi], right = P.kind === 'assume' ? it.as : it.co, wrong = P.kind === 'assume' ? it.wa : it.wc;
+      return q.answer === right && !wrong.includes(right);
+    },
+  });
+
+  /* Reasons in proofs. Each proof is a list of [statement, reason key, extra]; extra.parts lists the congruent
+     pairs (S = side, A = angle at a vertex) that a triangle congruence or similarity rests on. */
+  const RS = { mid: 'Definition of midpoint', bis: 'Definition of angle bisector', perp: 'Definition of perpendicular lines', rightc: 'All right angles are congruent',
+    refl: 'Reflexive property', vert: 'Vertical angles are congruent', alt: 'Alternate interior angles are congruent', corr: 'Corresponding angles are congruent',
+    para: 'Definition of a parallelogram', rhom: 'Definition of a rhombus', linear: 'Angles in a linear pair are supplementary', tri180: 'The angles of a triangle add to 180°',
+    subst: 'Substitution', subtr: 'Subtraction property of equality', cpctc: 'Corresponding parts of congruent triangles are congruent',
+    simsides: 'Corresponding sides of similar triangles are proportional', SSS: 'SSS ≅', SAS: 'SAS ≅', ASA: 'ASA ≅', AAS: 'AAS ≅', HL: 'HL ≅', AA: 'AA ~', SASs: 'SAS ~', SSSs: 'SSS ~' };
+  const WHY = { mid: 'A midpoint cuts a segment into two congruent pieces, and the given names a midpoint.', bis: 'An angle bisector cuts an angle into two congruent angles.',
+    perp: 'Perpendicular lines meet to form right angles.', rightc: 'Both angles are right angles, and every right angle measures 90°.',
+    refl: 'This part is shared by both triangles, and anything is congruent to itself.', vert: 'The two angles sit opposite each other where two segments cross.',
+    alt: 'The lines are parallel, and the two angles are on opposite sides of the transversal, between the parallel lines.', corr: 'The lines are parallel, and the two angles are in matching positions where the transversal crosses each line.',
+    para: 'A parallelogram is defined as a quadrilateral whose opposite sides are parallel.', rhom: 'A rhombus is defined as a quadrilateral with four congruent sides.',
+    linear: 'The two angles together make a straight line.', tri180: 'These are the three angles of one triangle.', subst: 'A known measure has been put in place of the angle name.',
+    subtr: 'The same amount has been subtracted from both sides of the equation.', cpctc: 'The triangles were already proved congruent, so their matching parts are congruent.',
+    simsides: 'The triangles were already proved similar, so their matching sides share one ratio.', SSS: 'Three pairs of sides are congruent.',
+    SAS: 'Two pairs of sides are congruent, and so are the angles between them.', ASA: 'Two pairs of angles are congruent, and so are the sides between them.',
+    AAS: 'Two pairs of angles are congruent, and so is a pair of sides that is not between them.', HL: 'They are right triangles with congruent hypotenuses and a pair of congruent legs.',
+    AA: 'Two pairs of angles are congruent, which is enough for similarity.' };
+  const PROOFS = [
+    { g: 'C is the midpoint of AE and of BD.', pr: '△ABC ≅ △EDC', rows: [['C is the midpoint of AE and of BD', 'given'], ['AC ≅ EC and BC ≅ DC', 'mid'], ['∠ACB ≅ ∠ECD', 'vert'],
+      ['△ABC ≅ △EDC', 'SAS', { parts: [['S', 'AC'], ['S', 'BC'], ['A', 'C']], from: [1, 2] }], ['AB ≅ ED', 'cpctc']] },
+    { g: 'AB ≅ AD, and AC bisects ∠BAD.', pr: '△ABC ≅ △ADC', rows: [['AB ≅ AD, and AC bisects ∠BAD', 'given'], ['∠BAC ≅ ∠DAC', 'bis'], ['AC ≅ AC', 'refl'],
+      ['△ABC ≅ △ADC', 'SAS', { parts: [['S', 'AB'], ['A', 'A'], ['S', 'AC']], from: [0, 1, 2] }], ['BC ≅ DC', 'cpctc']] },
+    { g: 'AE and BD cross at C, AB ∥ DE, and AC ≅ EC.', pr: '△ABC ≅ △EDC', rows: [['AB ∥ DE and AC ≅ EC', 'given'], ['∠BAC ≅ ∠DEC', 'alt'], ['∠ACB ≅ ∠ECD', 'vert'],
+      ['△ABC ≅ △EDC', 'ASA', { parts: [['A', 'A'], ['S', 'AC'], ['A', 'C']], from: [0, 1, 2], near: ['AAS'] }], ['BC ≅ DC', 'cpctc']] },
+    { g: 'CD ⟂ AB, and D is the midpoint of AB.', pr: 'AC ≅ BC', rows: [['CD ⟂ AB, and D is the midpoint of AB', 'given'], ['∠ADC and ∠BDC are right angles', 'perp'],
+      ['∠ADC ≅ ∠BDC', 'rightc', { near: ['perp'] }], ['AD ≅ BD', 'mid'], ['CD ≅ CD', 'refl'], ['△ADC ≅ △BDC', 'SAS', { parts: [['S', 'AD'], ['A', 'D'], ['S', 'CD']], from: [2, 3, 4] }], ['AC ≅ BC', 'cpctc']] },
+    { g: 'In △ABC, D is on AB, E is on AC, and DE ∥ BC.', pr: '△ADE ~ △ABC', rows: [['DE ∥ BC', 'given'], ['∠ADE ≅ ∠ABC', 'corr'], ['∠A ≅ ∠A', 'refl'],
+      ['△ADE ~ △ABC', 'AA', { parts: [['A', 'D'], ['A', 'A']], from: [1, 2] }], [`${F('AD', 'AB')} = ${F('DE', 'BC')}`, 'simsides']] },
+    { g: 'ABCD is a parallelogram with diagonal AC.', pr: 'AB ≅ CD', rows: [['ABCD is a parallelogram', 'given'], ['AB ∥ DC and AD ∥ BC', 'para'], ['∠BAC ≅ ∠DCA and ∠BCA ≅ ∠DAC', 'alt'],
+      ['AC ≅ CA', 'refl'], ['△ABC ≅ △CDA', 'ASA', { parts: [['A', 'A'], ['S', 'AC'], ['A', 'C']], from: [2, 3], near: ['AAS'] }], ['AB ≅ CD', 'cpctc']] },
+    { g: 'ABCD is a rhombus.', pr: 'Diagonal AC bisects ∠BAD.', rows: [['ABCD is a rhombus', 'given'], ['AB ≅ AD and CB ≅ CD', 'rhom'], ['AC ≅ AC', 'refl'],
+      ['△ABC ≅ △ADC', 'SSS', { parts: [['S', 'AB'], ['S', 'CB'], ['S', 'AC']], from: [1, 2] }], ['∠BAC ≅ ∠DAC', 'cpctc'], ['AC bisects ∠BAD', 'bis']] },
+    { g: 'BD ⟂ AC, and AB ≅ CB.', pr: 'AD ≅ CD', rows: [['BD ⟂ AC and AB ≅ CB', 'given'], ['∠ADB and ∠CDB are right angles', 'perp'], ['BD ≅ BD', 'refl'],
+      ['△ABD ≅ △CBD', 'HL', { parts: [['A', 'D', 'right'], ['S', 'AB'], ['S', 'BD']], from: [0, 1, 2], near: ['SSS', 'SAS'] }], ['AD ≅ CD', 'cpctc']] },
+    { g: '∠B ≅ ∠D, and AC bisects ∠BAD.', pr: 'AB ≅ AD', rows: [['∠B ≅ ∠D, and AC bisects ∠BAD', 'given'], ['∠BAC ≅ ∠DAC', 'bis'], ['AC ≅ AC', 'refl'],
+      ['△ABC ≅ △ADC', 'AAS', { parts: [['A', 'B'], ['A', 'A'], ['S', 'AC']], from: [0, 1, 2], near: ['ASA'] }], ['AB ≅ AD', 'cpctc']] },
+    { g: '∠1 and ∠2 form a linear pair, and m∠1 = 65°.', pr: 'm∠2 = 115°', rows: [['∠1 and ∠2 form a linear pair, and m∠1 = 65°', 'given'], ['m∠1 + m∠2 = 180°', 'linear'],
+      ['65° + m∠2 = 180°', 'subst', { near: ['linear'] }], ['m∠2 = 115°', 'subtr', { near: ['subst'] }]] },
+    { g: 'In △ABC, m∠A = 50° and m∠B = 60°.', pr: 'm∠C = 70°', rows: [['m∠A = 50° and m∠B = 60°', 'given'], ['m∠A + m∠B + m∠C = 180°', 'tri180'],
+      ['50° + 60° + m∠C = 180°', 'subst', { near: ['tri180'] }], ['m∠C = 70°', 'subtr', { near: ['subst'] }]] },
+  ];
+  const CRITERIA = ['SSS', 'SAS', 'ASA', 'AAS', 'HL'], SIMS = ['AA', 'SASs', 'SSSs'];
+  const FACTS = Object.keys(RS).filter(k => !CRITERIA.includes(k) && !SIMS.includes(k));
+  /** the congruence or similarity shortcut that a list of congruent parts supports */
+  function criterion(parts, sim) {
+    const S = parts.filter(x => x[0] === 'S').map(x => x[1]), An = parts.filter(x => x[0] === 'A');
+    if (sim) return An.length >= 2 ? 'AA' : S.length === 3 ? 'SSSs' : 'SASs';
+    if (S.length === 3) return 'SSS';
+    if (S.length === 2) { const v = An[0][1]; return S.every(s => s.includes(v)) ? 'SAS' : An[0][2] === 'right' && S.some(s => !s.includes(v)) ? 'HL' : 'SSA'; }
+    return An.every(x => S[0].includes(x[1])) ? 'ASA' : 'AAS';
+  }
+  /** a quick test that a reason fits its statement: st = the statement, g = the given, before = earlier statements */
+  const sameParts = (a, b) => a === b || a === [...b].reverse().join('');
+  const RULES = {
+    mid: (st, g) => /midpoint/.test(g) && !/[∠△]/.test(st), bis: (st, g) => /bisects/.test(st) || (/bisects/.test(g) && /∠/.test(st)),
+    perp: (st, g) => /⟂/.test(g) && /right angles/.test(st), rightc: (st, g, before) => /right angles/.test(before) && /^∠\w+ ≅ ∠\w+$/.test(st),
+    refl: st => { const m = st.match(/^(∠?)(\w+) ≅ (∠?)(\w+)$/); return !!m && m[1] === m[3] && sameParts(m[2], m[4]); },
+    vert: st => { const m = st.match(/^∠(\w)(\w)(\w) ≅ ∠(\w)(\w)(\w)$/); return !!m && m[2] === m[5] && m[1] !== m[4] && m[3] !== m[6]; },
+    alt: (st, g, before) => /∥/.test(g + before) && /∠/.test(st), corr: (st, g, before) => /∥/.test(g + before) && /∠/.test(st),
+    para: (st, g) => /parallelogram/.test(g) && /∥/.test(st), rhom: (st, g) => /rhombus/.test(g) && !/[∠△]/.test(st),
+    linear: (st, g) => /linear pair/.test(g) && /= 180°$/.test(st), tri180: st => (st.match(/m∠/g) || []).length === 3 && /= 180°$/.test(st),
+    subst: st => /^\d+° \+/.test(st) && /= 180°$/.test(st), subtr: st => /^m∠\w = \d+°$/.test(st),
+    cpctc: (st, g, before) => /△\w+ ≅ △/.test(before) && !/△/.test(st), simsides: (st, g, before) => /△\w+ ~ △/.test(before) && /=/.test(st),
+  };
+
+  A.skill({
+    id: 'int2.proof-reasons', title: 'Reasons in proofs',
+    learn: p(`Every step of a proof needs a <b>reason</b>: the given, a definition, a property, or a theorem. In a <b>two-column proof</b> the statements go on the left and the reasons on the right; in a <b>flowchart proof</b> each fact sits in a bubble with its reason underneath, and arrows show which facts lead to which.`) +
+      p(`Common reasons: <b>definitions</b> (a midpoint makes two congruent segments; a bisector makes two congruent angles; perpendicular lines make right angles), the <b>reflexive property</b> for a side or angle the triangles share, <b>vertical angles</b>, angles made by <b>parallel lines</b>, the <b>triangle shortcuts</b> SSS, SAS, ASA, AAS and HL (and AA for similarity), and then <b>corresponding parts of congruent triangles are congruent</b> to reach the final goal.`) +
+      example('Example', `Given: C is the midpoint of AE and of BD. The step “AC ≅ EC and BC ≅ DC” is justified by the <b>definition of midpoint</b>; “∠ACB ≅ ∠ECD” by <b>vertical angles are congruent</b>; and with two sides and the angle between them, “△ABC ≅ △EDC” by <b>SAS ≅</b>.`),
+    make(rng) {
+      const pi = rng.int(0, PROOFS.length - 1), pf = PROOFS[pi], ri = rng.int(1, pf.rows.length - 1), row = pf.rows[ri], ex = row[2] || {}, key = row[1];
+      const isTri = !!ex.parts, avoid = [key].concat(ex.near || []);
+      const pool = isTri ? (key === 'AA' ? ['SASs', 'SSSs', 'ASA', 'SAS'] : CRITERIA.concat(['AA'])) : FACTS;
+      const choices = [RS[key]].concat(rng.sample(pool.filter(k => !avoid.includes(k)), 3).map(k => RS[k]));
+      const head = `<p>Given: ${pf.g}<br>Prove: ${pf.pr}</p>`;
+      const known = isTri ? ex.parts.map(x => x[0] === 'S' ? `side ${x[1]}` : `${x[2] === 'right' ? 'the right angle' : 'angle'} ${x[1]}`).join(', ') : '';
+      let prompt;
+      if (isTri && rng.bool()) prompt = `${head}In a flowchart proof, the bubbles ${ex.from.map(i => `“${pf.rows[i][0]}”`).join(', ')} all point to the bubble “${row[0]}”. Which reason belongs under that bubble?`;
+      else prompt = `${head}${M.table(['Statement', 'Reason'], pf.rows.map((r, i) => [`${i + 1}. ${r[0]}`, i === ri ? '<b>?</b>' : r[1] === 'given' ? 'Given' : RS[r[1]]]))}What is the reason for step ${ri + 1}?`;
+      return { prompt, type: 'choice', answer: RS[key], choices: rng.shuffle(choices), params: { pi, ri },
+        hints: [isTri ? `List the congruent pairs you know, named by the first triangle's letters: ${known}.` : `Ask which earlier fact, definition or property makes “${row[0]}” true.`,
+          WHY[key], `<b>${RS[key]}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params, pf = PROOFS[P.pi], row = pf.rows[P.ri], ex = row[2] || {};
+      const key = Object.keys(RS).find(k => RS[k] === q.answer);
+      if (!key || (ex.near || []).includes(key)) return false;
+      if (ex.parts) return criterion(ex.parts, row[0].includes('~')) === key;          // work the shortcut out from the parts
+      return !!RULES[key] && RULES[key](row[0], pf.g, pf.rows.slice(0, P.ri).map(r => r[0]).join(' ; '));
+    },
+  });
+
+
+  /* ---------- Unit 10: More about parabolas ---------- */
+  /** a grid for x in xr and y in yr, with the curve y = f(x), dashed lines y = c, and labelled dots [x, y, label] */
+  function curveFig(f, xr, yr, opts) {
+    opts = opts || {};
+    const W = 260, H = 240, pad = 14;
+    const px = x => +(pad + (x - xr[0]) / (xr[1] - xr[0]) * (W - 2 * pad)).toFixed(1), py = y => +(H - pad - (y - yr[0]) / (yr[1] - yr[0]) * (H - 2 * pad)).toFixed(1);
+    const step = r => { const span = r[1] - r[0]; return span <= 16 ? 1 : span <= 32 ? 2 : span <= 80 ? 5 : 10; };
+    const sx = step(xr), sy = step(yr);
+    let g = '';
+    for (let x = Math.ceil(xr[0] / sx) * sx; x <= xr[1]; x += sx) if (x !== 0) g += `<line class="light" x1="${px(x)}" y1="${py(yr[0])}" x2="${px(x)}" y2="${py(yr[1])}" stroke-width="1"/>`;
+    for (let y = Math.ceil(yr[0] / sy) * sy; y <= yr[1]; y += sy) if (y !== 0) g += `<line class="light" x1="${px(xr[0])}" y1="${py(y)}" x2="${px(xr[1])}" y2="${py(y)}" stroke-width="1"/>`;
+    if (yr[0] < 0 && yr[1] > 0) g += `<line class="stroke" x1="${px(xr[0])}" y1="${py(0)}" x2="${px(xr[1])}" y2="${py(0)}" stroke-width="1.5"/><text x="${px(xr[1]) - 4}" y="${py(0) - 6}" font-size="13" font-style="italic" text-anchor="end">x</text>`;
+    if (xr[0] < 0 && xr[1] > 0) g += `<line class="stroke" x1="${px(0)}" y1="${py(yr[0])}" x2="${px(0)}" y2="${py(yr[1])}" stroke-width="1.5"/><text x="${px(0) + 6}" y="${py(yr[1]) + 12}" font-size="13" font-style="italic">y</text>`;
+    (opts.hlines || []).forEach(([c, lab]) => { g += `<line class="stroke" x1="${px(xr[0])}" y1="${py(c)}" x2="${px(xr[1])}" y2="${py(c)}" stroke-width="1.5" stroke-dasharray="6 4"/><text x="${px(xr[1]) - 4}" y="${py(c) - 5}" font-size="12" text-anchor="end">${lab}</text>`; });
+    let d = '', pen = false;
+    for (let i = 0; i <= 160; i++) {
+      const x = xr[0] + (xr[1] - xr[0]) * i / 160, y = f(x);
+      if (y < yr[0] || y > yr[1]) { pen = false; continue; }
+      d += `${pen ? 'L' : 'M'}${px(x)},${py(y)} `; pen = true;
+    }
+    g += `<path d="${d.trim()}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>`;
+    (opts.dots || []).forEach(([x, y, lab, pos]) => {
+      const right = pos ? pos !== 'bl' && pos !== 'l' : px(x) < W - 70, below = pos === 'bl' || pos === 'br' || (!pos && py(y) < 24);
+      g += `<circle cx="${px(x)}" cy="${py(y)}" r="4" fill="var(--primary)"/><text x="${px(x) + (right ? 7 : -7)}" y="${py(y) + (below ? 16 : -7)}" font-size="12" text-anchor="${right ? 'start' : 'end'}">${lab}</text>`;
+    });
+    return `<svg class="figure" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="graph of a parabola">${g}</svg>`;
+  }
+  /** a number as a coefficient in front of brackets: 1 → '', −1 → '−', 0.5 → ½ as a fraction */
+  function coefTxt(a) {
+    if (Number.isInteger(a)) return coef(a);
+    for (let dd = 2; dd <= 12; dd++) if (Number.isInteger(M.round(a * dd, 9))) return (a < 0 ? '−' : '') + F(Math.abs(M.round(a * dd, 9)), dd);
+    return N(a);
+  }
+  /** a value as a number or a fraction, for hints */
+  function numTxt(a) { if (Number.isInteger(a)) return N(a); for (let dd = 2; dd <= 12; dd++) if (Number.isInteger(M.round(a * dd, 9))) return F(M.round(a * dd, 9), dd); return N(a); }
+  /** solve for A in y = Ax² + Bx + C through three points, by Cramer's rule */
+  function leadThrough(pts) {
+    const det3 = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+    const D = det3(pts.map(([x]) => [x * x, x, 1])), DA = det3(pts.map(([x, y]) => [y, x, 1]));
+    return DA / D;
+  }
+
+  A.skill({
+    id: 'int2.write-quadratic', title: 'Writing quadratic equations from x-intercepts',
+    learn: p(`If a parabola crosses the ${X}-axis at ${X} = ${V('r')} and ${X} = ${V('s')}, its equation can be written in <b>factored form</b>: <b>${Y} = ${V('a')}(${X} − ${V('r')})(${X} − ${V('s')})</b>. The intercepts fix the brackets (watch the signs: an intercept at −3 gives the factor ${X} + 3), but many parabolas share those intercepts, some tall, some flat, some upside down.`) +
+      p(`To pin down ${V('a')}, use <b>one more point</b> on the graph, such as the ${Y}-intercept or the vertex: substitute its ${X} and ${Y} into the equation and solve for ${V('a')}. A negative ${V('a')} means the parabola opens downward.`) +
+      example('Example', `${big(`${X}-intercepts −1 and 3, passing through (1, −8)`)}${Y} = ${V('a')}(${X} + 1)(${X} − 3). Substitute (1, −8): −8 = ${V('a')}(2)(−2) = −4${V('a')}, so ${V('a')} = 2 and <b>${Y} = 2(${X} + 1)(${X} − 3)</b>.`),
+    make(rng) {
+      let r, s, a, x0, y0, kind;
+      do {
+        r = rng.int(-6, 5); s = rng.int(r + 1, 6); a = rng.pick([1, -1, 2, -2, 3, -3, 0.5, -0.5]);
+        kind = rng.pick(['point', 'point', 'yint', 'vertex']);
+        x0 = kind === 'yint' ? 0 : kind === 'vertex' ? (r + s) / 2 : rng.int(-6, 7);
+        y0 = a * (x0 - r) * (x0 - s);
+      } while (x0 === r || x0 === s || !Number.isInteger(x0) || !Number.isInteger(y0) || Math.abs(y0) > 24 || Math.abs(a * (s - r) * (s - r) / 4) > 30);
+      const fac = v => v === 0 ? X : `(${M.poly([1, -v])})`;
+      const eqTxt = (aa, u, w) => { if (w === 0) [u, w] = [w, u]; return `${Y} = ${coefTxt(aa)}${fac(u)}${fac(w)}`; };
+      const what = kind === 'yint' ? `${Y}-intercept` : kind === 'vertex' ? 'vertex' : 'point';
+      const prod = (x0 - r) * (x0 - s), asked = rng.bool() ? 'a' : 'eq', graph = rng.bool();
+      let intro;
+      if (graph) {
+        const yv = a * ((s - r) / 2) * ((r - s) / 2), lo = Math.min(0, yv, y0), hi = Math.max(0, yv, y0), padY = Math.max(2, Math.round((hi - lo) / 8));
+        intro = `The parabola crosses the ${X}-axis at the two labelled points and passes through the third.${curveFig(x => a * (x - r) * (x - s), [Math.min(r, x0) - 2, Math.max(s, x0) + 2], [lo - padY, hi + padY], { dots: [[r, 0, M.pt(r, 0), 'bl'], [s, 0, M.pt(s, 0), 'br'], [x0, y0, M.pt(x0, y0)]] })}`;
+      } else intro = `A parabola has ${X}-intercepts ${M.pt(r, 0)} and ${M.pt(s, 0)}, and its ${what === 'point' ? 'graph passes through' : `${what} is`} ${M.pt(x0, y0)}.`;
+      const hints = [`The ${X}-intercepts ${N(r)} and ${N(s)} give the factors: ${Y} = ${V('a')}${fac(r)}${fac(s)}.`,
+        `Substitute ${M.pt(x0, y0)}: ${N(y0)} = ${V('a')}(${N(x0)} − ${wrap(r)})(${N(x0)} − ${wrap(s)}) = ${V('a')}(${N(x0 - r)})(${N(x0 - s)}) = ${N(prod)}${V('a')}.`];
+      if (asked === 'a') return { prompt: `${intro} Its equation is ${Y} = ${V('a')}${fac(r)}${fac(s)}. What is ${V('a')}?`, type: 'number', answer: a, answerText: Number.isInteger(a) ? undefined : M.fracText(a * 2, 2), params: { asked, r, s, x0, y0 },
+        hints: hints.concat(`Divide: ${V('a')} = ${N(y0)} ÷ ${wrap(prod)} = <b>${numTxt(a)}</b>.`) };
+      const answer = eqTxt(a, r, s), target = mulPoly([a], mulPoly([1, -r], [1, -s]));
+      const cands = [[a, -r, -s], [-a, r, s], [1 / a, r, s], [2 * a, r, s], [a, r, -s], [a, -r, s], [y0, r, s]];
+      const opts = [{ t: answer, a, r, s }];
+      for (const [aa, u, w] of cands) {
+        if (opts.length === 4 || !aa || Math.abs(aa) > 30) continue;
+        const poly = mulPoly([aa], mulPoly([1, -u], [1, -w])), t = eqTxt(aa, u, w);
+        if (poly.every((c, i) => Math.abs(c - target[i]) < 1e-9) || opts.some(o => key(o.t) === key(t))) continue;
+        opts.push({ t, a: aa, r: u, s: w });
+      }
+      return { prompt: `${intro} Which equation describes the parabola?`, type: 'choice', answer, choices: rng.shuffle(opts.map(o => o.t)), params: { asked, r, s, x0, y0, opts },
+        hints: hints.concat(`Divide: ${V('a')} = ${N(y0)} ÷ ${wrap(prod)} = ${numTxt(a)}.`, `<b>${answer}</b>`) };
+    },
+    verify(q) {
+      const P = q.params, pts = [[P.r, 0], [P.s, 0], [P.x0, P.y0]];
+      if (P.asked === 'a') return Math.abs(leadThrough(pts) - q.answer) < 1e-9;              // fit y = Ax² + Bx + C through the three points
+      const o = P.opts.find(x => x.t === q.answer);
+      return !!o && pts.every(([x, y]) => Math.abs(o.a * (x - o.r) * (x - o.s) - y) < 1e-9);
+    },
+  });
+
+  /** an interval of x (or t) values: k = 'in' for lo..hi, 'out' for below lo or above hi; st = strict */
+  function setTxt(o, v) {
+    const lt = o.st ? '&lt;' : '≤', gt = o.st ? '&gt;' : '≥';
+    return o.k === 'in' ? `${N(o.lo)} ${lt} ${v} ${lt} ${N(o.hi)}` : `${v} ${lt} ${N(o.lo)} or ${v} ${gt} ${N(o.hi)}`;
+  }
+  const inSet = (o, x) => o.k === 'in' ? (o.st ? x > o.lo && x < o.hi : x >= o.lo && x <= o.hi) : (o.st ? x < o.lo || x > o.hi : x <= o.lo || x >= o.hi);
+  const OPS = { '<': ['&lt;', (u, w) => u < w], '>': ['&gt;', (u, w) => u > w], '≤': ['≤', (u, w) => u <= w], '≥': ['≥', (u, w) => u >= w] };
+
+  A.skill({
+    id: 'int2.quadratic-inequalities', title: 'Quadratic inequalities',
+    learn: p(`To solve a quadratic inequality such as ${M.poly([1, -2, -8])} &lt; 0, first solve the <b>equation</b> ${M.poly([1, -2, -8])} = 0: here (${X} + 2)(${X} − 4) = 0, so ${X} = −2 or ${X} = 4. Those two values split the number line, and the inequality is true on one side of the split and false on the other.`) +
+      p(`Picture the parabola. One opening <b>up</b> is <b>below</b> the ${X}-axis <b>between</b> its zeros and above it outside them; one opening down is the other way round. So ${M.poly([1, -2, -8])} &lt; 0 for −2 &lt; ${X} &lt; 4. In a story, the same idea answers “when is the ball higher than 50 feet?”: solve height = 50, and the answer is the time <b>between</b> the two solutions.`) +
+      example('Example', `${big(`${V('h')}(${V('t')}) = ${M.poly([-16, 56, 10], 't')}. When is ${V('h')} &gt; 50?`)}Set −16${sq(V('t'))} + 56${V('t')} + 10 = 50, then divide by −16: ${M.poly([1, -3.5, 2.5], 't')} = 0, so (${V('t')} − 1)(${V('t')} − 2.5) = 0. The ball is above 50 feet for <b>1 &lt; ${V('t')} &lt; 2.5</b> seconds.`),
+    make(rng) {
+      const kind = rng.pick(['interval', 'interval', 'duration', 'algebra', 'algebra']);
+      if (kind === 'algebra') {
+        const r = rng.int(-8, 6), s = rng.int(r + 1, 8), lead = rng.pick([1, 1, -1]), op = rng.pick(['<', '>', '≤', '≥']);
+        const coefs = mulPoly([lead], mulPoly([1, -r], [1, -s])), st = op === '<' || op === '>', below = op === '<' || op === '≤';
+        const inside = (lead > 0) === below, k = inside ? 'in' : 'out', kk = inside ? 'out' : 'in';
+        const ans = { k, lo: r, hi: s, st };
+        const cands = [{ k: kk, lo: r, hi: s, st }, { k, lo: r, hi: s, st: !st }, { k, lo: -s, hi: -r, st }, { k: kk, lo: -s, hi: -r, st }, { k: kk, lo: r, hi: s, st: !st }];
+        const opts = [ans];
+        cands.forEach(c => { if (opts.length < 4 && !opts.some(o => setTxt(o, X) === setTxt(c, X))) opts.push(c); });
+        const fact = `${lead < 0 ? '−' : ''}(${M.poly([1, -r])})(${M.poly([1, -s])})`;
+        return { prompt: `Solve.${big(`${M.poly(coefs)} ${OPS[op][0]} 0`)}`, type: 'choice', answer: setTxt(ans, X), choices: rng.shuffle(opts.map(o => setTxt(o, X))), params: { kind, coefs, op, opts },
+          hints: [`Solve the equation first: ${M.poly(coefs)} = ${fact} = 0, so ${X} = ${N(r)} or ${X} = ${N(s)}.`,
+            `The parabola opens ${lead > 0 ? 'up' : 'down'}, so it is ${lead > 0 ? 'below' : 'above'} the ${X}-axis between ${N(r)} and ${N(s)}, and ${lead > 0 ? 'above' : 'below'} it outside them.`,
+            `You want ${OPS[op][0]} 0, which happens ${inside ? 'between' : 'outside'} the zeros${st ? '' : ', counting the zeros themselves'}: <b>${setTxt(ans, X)}</b>.`] };
+      }
+      const t1 = rng.pick([0.5, 1, 1.5, 2]), t2 = t1 + rng.pick([1, 1.5, 2, 2.5, 3]), c = rng.pick([0, 4, 5, 6, 8, 10]);
+      const H = c + 16 * t1 * t2, b = 16 * (t1 + t2), T = V('t'), name = rng.pick(NAMES), strictQ = rng.chance(0.7);
+      const scene = rng.pick([`${name} kicks a ball into the air`, `A model rocket is launched`, `${name} throws a ball upward`, `A pumpkin is launched from a catapult`]);
+      const intro = `${scene}. Its height in feet after ${T} seconds is ${V('h')}(${T}) = ${M.poly([-16, b, c], 't')}.`;
+      const hints = [`Set the height equal to ${N(H)}: ${M.poly([-16, b, c], 't')} = ${N(H)}, so ${M.poly([-16, b, c - H], 't')} = 0.`,
+        `Divide by −16: ${M.poly([1, -(t1 + t2), t1 * t2], 't')} = 0, which factors as (${T} − ${N(t1)})(${T} − ${N(t2)}) = 0. The height is exactly ${N(H)} feet at ${T} = ${N(t1)} and ${T} = ${N(t2)}.`];
+      if (kind === 'duration') return { prompt: `${intro} For how many seconds is it higher than ${N(H)} feet?`, type: 'number', answer: t2 - t1, unit: 's', params: { kind, b, c, H },
+        hints: hints.concat(`The parabola opens down, so it is above ${N(H)} feet between those times: ${N(t2)} − ${N(t1)} = <b>${N(t2 - t1)}</b> seconds.`) };
+      const ans = { k: 'in', lo: t1, hi: t2, st: strictQ }, tv = (t1 + t2) / 2;
+      const cands = [{ k: 'out', lo: t1, hi: t2, st: strictQ }, { k: 'in', lo: 0, hi: t2, st: strictQ }, { k: 'in', lo: t1, hi: tv, st: strictQ }, { k: 'in', lo: tv, hi: t2, st: strictQ }];
+      const opts = [ans].concat(rng.sample(cands, 3));
+      return { prompt: `${intro} During which time interval is its height ${strictQ ? 'more than' : 'at least'} ${N(H)} feet?`, type: 'choice', answer: setTxt(ans, T), choices: rng.shuffle(opts.map(o => setTxt(o, T))), params: { kind, b, c, H, opts },
+        hints: hints.concat(`The parabola opens down, so it is above ${N(H)} feet between those times${strictQ ? '' : ', and exactly at it at the two ends'}: <b>${setTxt(ans, T)}</b>.`) };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'algebra') {                                       // test a fine grid of x values against the chosen set
+        const o = P.opts.find(x => setTxt(x, X) === q.answer); if (!o) return false;
+        for (let x = -20; x <= 20; x += 0.25) if (OPS[P.op][1](evalPoly(P.coefs, x), 0) !== inSet(o, x)) return false;
+        return true;
+      }
+      const h = t => -16 * t * t + P.b * t + P.c;
+      const land = (P.b + Math.sqrt(P.b * P.b + 64 * P.c)) / 32;
+      if (P.kind === 'duration') {                                      // add up the time spent above H in small steps
+        let above = 0; const dt = 0.0005; for (let t = dt / 2; t < land; t += dt) if (h(t) > P.H) above += dt;
+        return Math.abs(above - q.answer) < 0.002;
+      }
+      const o = P.opts.find(x => setTxt(x, V('t')) === q.answer); if (!o) return false;
+      for (let t = 0; t <= land; t += 0.125) if ((o.st ? h(t) > P.H : h(t) >= P.H) !== inSet(o, t)) return false;
+      return true;
+    },
+  });
+
+  A.skill({
+    id: 'int2.focus-directrix', title: 'Parabolas from a focus and directrix',
+    learn: p(`A parabola can be defined without any equation: it is <b>every point that is the same distance from a fixed point, the focus, as from a fixed line, the directrix</b>. The <b>vertex</b> is halfway between the focus and the directrix, and the parabola wraps around the focus, opening away from the directrix.`) +
+      p(`If the vertex is (${V('h')}, ${V('k')}) and the focus is ${V('p')} units above it (so the directrix is ${V('p')} units below), the equation is <b>${sq(`(${X} − ${V('h')})`)} = 4${V('p')}(${Y} − ${V('k')})</b>. A negative ${V('p')} means the focus is below the vertex and the parabola opens down. The same thing in “${Y} =” form is ${Y} = ${F(1, `4${V('p')}`)}${sq(`(${X} − ${V('h')})`)} + ${V('k')}.`) +
+      example('Example', `Focus (2, 5), directrix ${Y} = 1. The vertex is halfway, at (2, 3), and the focus is ${V('p')} = 2 above it. So <b>${sq(`(${X} − 2)`)} = 8(${Y} − 3)</b>.`),
+    make(rng) {
+      const kind = rng.pick(['vertex', 'equation', 'equation', 'focus', 'directrix', 'dist']);
+      const h = rng.int(-5, 5), k = rng.int(-5, 5), p = rng.pick([0.5, 1, 1, 2, 2, 3, -0.5, -1, -1, -2, -2, -3]);
+      const fy = k + p, dy = k - p, foc = M.pt(h, fy), dirTxt = `${Y} = ${N(dy)}`;
+      const eqTxt = (hh, kk, four) => `${sqBin('x', hh)} = ${four === 1 ? '' : four === -1 ? '−' : N(four)}${kk === 0 ? Y : `(${M.poly([1, -kk], 'y')})`}`;
+      const given = `A parabola has focus ${foc} and directrix ${dirTxt}.`;
+      const mid = `The vertex is halfway between the focus and the directrix: ${Y} = (${N(fy)} + ${wrap(dy)}) ÷ 2 = ${N(k)}, so it is ${M.pt(h, k)}.`;
+      const pHint = `The focus is ${N(Math.abs(p))} unit${Math.abs(p) === 1 ? '' : 's'} ${p > 0 ? 'above' : 'below'} the vertex, so ${V('p')} = ${N(p)} and 4${V('p')} = ${N(4 * p)}.`;
+      const pick = (answer, cands) => [answer].concat(distinct(answer, cands, 3));
+      if (kind === 'vertex') {
+        const answer = M.pt(h, k), ch = pick(answer, [foc, M.pt(h, dy), M.pt(h, fy - dy), M.pt(k, h), M.pt(h, k + 2 * p)]);
+        return { prompt: `${given} What is its vertex?`, type: 'choice', answer, choices: rng.shuffle(ch), params: { kind, h, fy, dy, opts: ch },
+          hints: ['The vertex is on the parabola, so it is the same distance from the focus as from the directrix: halfway between them.', mid, `<b>${answer}</b>.`] };
+      }
+      if (kind === 'equation') {
+        const answer = eqTxt(h, k, 4 * p), ch = pick(answer, [eqTxt(h, k, p), eqTxt(h, k, -4 * p), eqTxt(-h, -k, 4 * p), eqTxt(h, fy, 4 * p), eqTxt(h, k, 2 * p)]);
+        return { prompt: `${given} Which is its equation?`, type: 'choice', answer, choices: rng.shuffle(ch), params: { kind, h, fy, dy, opts: ch },
+          hints: [mid, pHint, `Use ${sq(`(${X} − ${V('h')})`)} = 4${V('p')}(${Y} − ${V('k')}): <b>${answer}</b>.`] };
+      }
+      const a = 1 / (4 * p), shown = rng.bool() ? eqTxt(h, k, 4 * p) : `${Y} = ${coefTxt(a)}${sqBin('x', h)}${k === 0 ? '' : ' ' + M.signed(k)}`;
+      const readP = shown.startsWith(Y) ? `In ${Y} = ${V('a')}${sq(`(${X} − ${V('h')})`)} + ${V('k')}, the vertex is (${V('h')}, ${V('k')}) = ${M.pt(h, k)} and ${V('a')} = ${F(1, `4${V('p')}`)}. Here ${V('a')} = ${numTxt(a)}, so 4${V('p')} = ${N(4 * p)} and ${V('p')} = ${N(p)}.`
+        : `Compare with ${sq(`(${X} − ${V('h')})`)} = 4${V('p')}(${Y} − ${V('k')}): the vertex is ${M.pt(h, k)} and 4${V('p')} = ${N(4 * p)}, so ${V('p')} = ${N(p)}.`;
+      if (kind === 'focus') {
+        const answer = foc, ch = pick(answer, [M.pt(h, dy), M.pt(h, k + 4 * p), M.pt(h + p, k), M.pt(-h, fy), M.pt(h, k)]);
+        return { prompt: `Where is the focus of this parabola?${big(shown)}`, type: 'choice', answer, choices: rng.shuffle(ch), params: { kind, h, k, a, opts: ch },
+          hints: [readP, `The focus is ${V('p')} = ${N(p)} from the vertex along the axis: ${M.pt(h, k)} → ${M.pt(h, fy)}.`, `<b>${answer}</b>.`] };
+      }
+      if (kind === 'directrix') return { prompt: `The directrix of this parabola is a line ${Y} = ${V('c')}. What is ${V('c')}?${big(shown)}`, type: 'number', answer: dy, params: { kind, h, k, a },
+        hints: [readP, `The directrix is ${V('p')} units on the other side of the vertex from the focus: ${Y} = ${N(k)} − ${wrap(p)}.`, `The directrix is ${Y} = ${N(dy)}, so ${V('c')} = <b>${N(dy)}</b>.`] };
+      const j = rng.pick((Math.abs(p) <= 1 ? [2, 3] : [1, 2, 2]).filter(m => Math.abs(2 * p * m) <= 8)), u = 2 * p * j * rng.sign(), x0 = h + u, y0 = k + u * u / (4 * p), hw = Math.max(5, Math.abs(u) + 2);
+      const fig = curveFig(x => k + (x - h) * (x - h) / (4 * p), [h - hw, h + hw], [Math.min(dy, fy, y0, k) - 3, Math.max(dy, fy, y0, k) + 3], { hlines: [[dy, `directrix ${Y} = ${N(dy)}`]], dots: [[h, fy, `F${foc}`, u > 0 ? 'l' : 'r'], [x0, y0, `P${M.pt(x0, y0)}`, u > 0 ? 'l' : 'r']] });
+      return { prompt: `${given} The point P${M.pt(x0, y0)} is on the parabola. How far is P from the focus?${fig}`, type: 'number', answer: Math.abs(y0 - dy), params: { kind, h, fy, x0, y0 },
+        hints: ['Every point on a parabola is the same distance from the focus as from the directrix.', `The distance from P to the horizontal line ${dirTxt} is straight up or down: |${N(y0)} − ${wrap(dy)}| = ${N(Math.abs(y0 - dy))}.`, `So P is <b>${N(Math.abs(y0 - dy))}</b> units from the focus too.`] };
+    },
+    verify(q) {
+      const P = q.params, eqd = (x, y, fx, fyy, d) => Math.abs(Math.hypot(x - fx, y - fyy) - Math.abs(y - d)) < 1e-9;   // equidistant from focus and directrix
+      if (P.kind === 'dist') return Math.abs(Math.hypot(P.x0 - P.h, P.y0 - P.fy) - q.answer) < 1e-9;
+      const nums = t => A.stripTags(t).replace(/−/g, '-').match(/-?\d+(\.\d+)?/g).map(Number);
+      if (P.kind === 'vertex') { const [vx, vy] = nums(q.answer); return vx === P.h && eqd(vx, vy, P.h, P.fy, P.dy); }
+      if (P.kind === 'equation') {                                      // read h, k, 4p back out of the chosen equation and test points on it
+        const t = A.stripTags(q.answer).replace(/\s+/g, '').replace(/−/g, '-');
+        const m = t.match(/^(?:\(x([+-]\d+)\)|x)2=(-?\d*(?:\.\d+)?)(?:\(y([+-]\d+(?:\.\d+)?)\)|y)$/); if (!m) return false;
+        const hh = -(Number(m[1]) || 0), four = m[2] === '' ? 1 : m[2] === '-' ? -1 : Number(m[2]), kk = -(Number(m[3]) || 0);
+        return [-3, -1, 0, 2, 5].every(dx => eqd(hh + dx, kk + dx * dx / four, P.h, P.fy, P.dy));
+      }
+      const pts = [1, 2, -3].map(dx => [P.h + dx, P.k + P.a * dx * dx]);
+      if (P.kind === 'directrix') { const fyy = 2 * P.k - q.answer; return pts.every(([x, y]) => eqd(x, y, P.h, fyy, q.answer)); }
+      const [fx, fyy] = nums(q.answer);
+      return pts.every(([x, y]) => eqd(x, y, fx, fyy, 2 * P.k - fyy));
+    },
+  });
+
+
+  /* ---------- Unit 11: Quadrilaterals and triangle centers ---------- */
+  const QUAD_PROPS = ['Both pairs of opposite sides are parallel.', 'Both pairs of opposite sides are congruent.', 'All four sides are congruent.', 'All four angles are right angles.',
+    'The diagonals bisect each other.', 'The diagonals are congruent.', 'The diagonals are perpendicular.', 'Each diagonal bisects two of the angles.',
+    'Both pairs of opposite angles are congruent.', 'Consecutive angles are supplementary.'];
+  /* which properties every shape of each kind has (1) or not (0), in the order of QUAD_PROPS */
+  const QUAD_TABLE = { parallelogram: [1, 1, 0, 0, 1, 0, 0, 0, 1, 1], rectangle: [1, 1, 0, 1, 1, 1, 0, 0, 1, 1], rhombus: [1, 1, 1, 0, 1, 0, 1, 1, 1, 1], square: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], kite: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0] };
+  /* two sample shapes of each kind, for verify() to measure */
+  const QUAD_SAMPLES = { parallelogram: [[[0, 0], [6, 0], [8, 3], [2, 3]], [[0, 0], [5, 0], [6, 4], [1, 4]]], rectangle: [[[0, 0], [6, 0], [6, 3], [0, 3]], [[0, 0], [4, 2], [3, 4], [-1, 2]]],
+    rhombus: [[[0, 0], [5, 0], [8, 4], [3, 4]], [[0, 0], [2, 1], [3, 3], [1, 2]]], square: [[[0, 0], [4, 0], [4, 4], [0, 4]], [[0, 0], [3, 1], [2, 4], [-1, 3]]],
+    kite: [[[0, 0], [3, -2], [8, 0], [3, 2]], [[0, 0], [2, -2], [7, 0], [2, 2]]] };
+  /** measure all ten properties of the quadrilateral with these vertices */
+  function quadProps(P) {
+    const q = quadInfo(P), s = [0, 1, 2, 3].map(i => vsub(P[(i + 1) % 4], P[i]));
+    const ang = i => { const u = vsub(P[(i + 3) % 4], P[i]), w = vsub(P[(i + 1) % 4], P[i]); return Math.acos(vdot(u, w) / Math.hypot(...u) / Math.hypot(...w)) * 180 / Math.PI; };
+    const between = (i, j) => { const u = vsub(P[j], P[i]), w = vsub(P[(i + 1) % 4], P[i]); return Math.acos(vdot(u, w) / Math.hypot(...u) / Math.hypot(...w)) * 180 / Math.PI; };
+    const halves = i => close(between(i, (i + 2) % 4) * 2, ang(i));        // the diagonal from vertex i splits its angle in half
+    const g = [0, 1, 2, 3].map(ang);
+    return [q.para, vdot(s[0], s[0]) === vdot(s[2], s[2]) && vdot(s[1], s[1]) === vdot(s[3], s[3]), q.eqSides, q.right, q.bisect, q.eqDiag, q.perpDiag,
+      [0, 1, 2, 3].every(halves), close(g[0], g[2]) && close(g[1], g[3]), [0, 1, 2, 3].every(i => close(g[i] + g[(i + 1) % 4], 180))];
+  }
+  /** vertices on a 0–10 grid with labels A, B, C, D */
+  function gridQuad(P) {
+    const S = 20, pad = 12, W = 10 * S + 2 * pad, px = x => pad + x * S, py = y => pad + (10 - y) * S;
+    let g = '';
+    for (let k = 0; k <= 10; k++) g += `<line class="light" x1="${px(k)}" y1="${py(0)}" x2="${px(k)}" y2="${py(10)}" stroke-width="1"/><line class="light" x1="${px(0)}" y1="${py(k)}" x2="${px(10)}" y2="${py(k)}" stroke-width="1"/>`;
+    g += `<polygon class="fill" points="${P.map(([x, y]) => `${px(x)},${py(y)}`).join(' ')}"/>`;
+    const cx = P.reduce((t, v) => t + v[0], 0) / 4, cy = P.reduce((t, v) => t + v[1], 0) / 4;
+    P.forEach(([x, y], i) => { const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1; g += `<circle cx="${px(x)}" cy="${py(y)}" r="3" fill="currentColor"/><text x="${(px(x) + dx / d * 12).toFixed(1)}" y="${(py(y) - dy / d * 12 + 5).toFixed(1)}" text-anchor="middle" font-size="14">${'ABCD'[i]}</text>`; });
+    return `<svg class="figure" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}" role="img" aria-label="quadrilateral ABCD on a grid">${g}</svg>`;
+  }
+  const QUAD_NAMES = ['Square', 'Rectangle', 'Rhombus', 'Parallelogram'];
+  const sideSlope = (nm, d) => d[0] === 0 ? `${nm} is vertical` : d[1] === 0 ? `${nm} is horizontal` : `${nm} has slope ${M.fracText(d[1], d[0])}`;
+
+  A.skill({
+    id: 'int2.quadrilateral-properties', title: 'Properties of parallelograms, rectangles and rhombuses',
+    learn: p(`A <b>parallelogram</b> has both pairs of opposite sides parallel. Then its opposite sides are congruent, its opposite angles are congruent, consecutive angles add to 180°, and <b>its diagonals bisect each other</b>.`) +
+      p(`A <b>rectangle</b> is a parallelogram with four right angles, and it adds one more fact: <b>its diagonals are congruent</b>. A <b>rhombus</b> is a parallelogram with four congruent sides, and it adds: <b>its diagonals are perpendicular</b> and each diagonal bisects two angles. A <b>square</b> is both a rectangle and a rhombus, so it has every property. On a grid, test sides with the distance formula and right angles with slopes (perpendicular slopes multiply to −1).`) +
+      example('Example', `In parallelogram ABCD the diagonals meet at E, with AE = 3${X} + 1 and EC = 5${X} − 7. The diagonals bisect each other, so 3${X} + 1 = 5${X} − 7, giving ${X} = 4. Then AE = 13 and <b>AC = 26</b>.`),
+    make(rng) {
+      const kind = rng.pick(['which', 'extra', 'algebra', 'algebra', 'grid']);
+      if (kind === 'which') {
+        const shape = rng.pick(['parallelogram', 'rectangle', 'rhombus', 'kite']), row = QUAD_TABLE[shape];
+        const yes = rng.pick(row.map((v, i) => v ? i : -1).filter(i => i >= 0)), no = rng.sample(row.map((v, i) => v ? -1 : i).filter(i => i >= 0), 3);
+        const answer = QUAD_PROPS[yes];
+        return { prompt: `Which statement is true for every ${shape}?`, type: 'choice', answer, choices: rng.shuffle([yes].concat(no).map(i => QUAD_PROPS[i])), params: { kind, shape, idx: [yes].concat(no) },
+          hints: [shape === 'kite' ? 'A kite has two pairs of congruent adjacent sides; it is usually not a parallelogram at all.' : `A ${shape} is a parallelogram${shape === 'parallelogram' ? '' : shape === 'rectangle' ? ' with four right angles' : ' with four congruent sides'}, so it has every parallelogram property${shape === 'parallelogram' ? '' : ' and some extra ones'}.`,
+            `The other ${no.length === 2 ? 'two' : 'three'} can fail: ${no.map(i => QUAD_PROPS[i].replace(/\.$/, '').toLowerCase()).join('; ')}.`, `<b>${answer}</b>`] };
+      }
+      if (kind === 'extra') {
+        const [big0, small] = rng.pick([['parallelogram', 'rectangle'], ['parallelogram', 'rhombus'], ['rectangle', 'square'], ['rhombus', 'square']]);
+        const tb = QUAD_TABLE[big0], ts = QUAD_TABLE[small], idx = tb.map((_, i) => i);
+        const yes = rng.pick(idx.filter(i => ts[i] && !tb[i])), both = rng.sample(idx.filter(i => ts[i] && tb[i]), 2), none = rng.pick(idx.filter(i => !ts[i]).concat(idx.filter(i => ts[i] && tb[i] && !both.includes(i))));
+        const answer = QUAD_PROPS[yes];
+        return { prompt: `Which property does every ${small} have, but not every ${big0}?`, type: 'choice', answer, choices: rng.shuffle([yes].concat(both, [none]).map(i => QUAD_PROPS[i])), params: { kind, big0, small, idx: [yes].concat(both, [none]) },
+          hints: [`Every ${small} is a ${big0}, so it has all the ${big0} properties. You want one it has <i>extra</i>.`, `${both.map((i, j) => (j ? QUAD_PROPS[i].charAt(0).toLowerCase() + QUAD_PROPS[i].slice(1) : QUAD_PROPS[i]).replace(/\.$/, '')).join(', and ')}: every ${big0} has ${both.length > 1 ? 'these' : 'this'} already.`, `The extra one is <b>${answer}</b>`] };
+      }
+      if (kind === 'grid') {
+        const type = rng.int(0, 3);
+        let u, v;
+        if (type === 0) { const [a, b] = rng.pick([[3, 0], [4, 0], [2, 1], [3, 1], [3, 2], [1, 2]]); u = [a, b]; v = [-b, a]; }
+        else if (type === 1) [u, v] = rng.pick([[[4, 0], [0, 2]], [[5, 0], [0, 3]], [[2, 1], [-2, 4]], [[1, 2], [-4, 2]], [[3, 1], [-2, 6]], [[2, 2], [-3, 3]], [[6, 0], [0, 3]], [[3, 0], [0, 5]]]);
+        else if (type === 2) [u, v] = rng.pick([[[5, 0], [3, 4]], [[4, 3], [0, 5]], [[2, 1], [1, 2]], [[3, 1], [1, 3]], [[4, 1], [1, 4]], [[3, 4], [5, 0]]]);
+        else [u, v] = rng.pick([[[4, 0], [1, 2]], [[5, 1], [2, 3]], [[4, 1], [1, 3]], [[3, 0], [2, 2]], [[5, 0], [2, 3]], [[4, -1], [1, 3]]]);
+        if (rng.bool()) { u = [-u[0], u[1]]; v = [-v[0], v[1]]; }
+        let P = [[0, 0], u, [u[0] + v[0], u[1] + v[1]], v];
+        const mx = Math.min(...P.map(t => t[0])), my = Math.min(...P.map(t => t[1])), Mx = Math.max(...P.map(t => t[0])), My = Math.max(...P.map(t => t[1]));
+        const ox = rng.int(0, Math.max(0, 10 - (Mx - mx))) - mx, oy = rng.int(0, Math.max(0, 10 - (My - my))) - my;
+        P = P.map(([x, y]) => [x + ox, y + oy]);
+        const d2 = (i, j) => (P[i][0] - P[j][0]) ** 2 + (P[i][1] - P[j][1]) ** 2, answer = QUAD_NAMES[type];
+        const right = vdot(vsub(P[1], P[0]), vsub(P[3], P[0])) === 0;
+        return { prompt: `ABCD has vertices A${M.pt(...P[0])}, B${M.pt(...P[1])}, C${M.pt(...P[2])} and D${M.pt(...P[3])}. It is a parallelogram. What is its most specific name?${gridQuad(P)}`, type: 'choice', answer, choices: QUAD_NAMES, keepOrder: true, params: { kind, P },
+          hints: [`Compare two neighbouring sides with the distance formula: AB² = ${N(d2(0, 1))} and AD² = ${N(d2(0, 3))}, so ${d2(0, 1) === d2(0, 3) ? 'neighbouring sides match and all four sides are congruent' : 'neighbouring sides differ: it is not a rhombus or a square'}.`,
+            `Check the angle at A with slopes: ${sideSlope('AB', u)} and ${sideSlope('AD', v)}. ${right ? (u[0] === 0 || u[1] === 0 ? 'One is horizontal and the other vertical' : 'They multiply to −1') + ', so the sides are perpendicular and the angles are right angles.' : 'They are not perpendicular, so the angles are not right angles.'}`,
+            `<b>${answer}</b>.`] };
+      }
+      const t = rng.pick(['bisect', 'rectDiag', 'perp', 'side', 'consec', 'rhAngle']);
+      const x = rng.int(2, 9);
+      if (t === 'bisect' || t === 'rectDiag') {
+        const p1 = rng.int(1, 5), q1 = rng.int(Math.max(-4, 2 - p1 * x), 10), L = p1 * x + q1, target = t === 'bisect' ? L : 2 * L;
+        let r1 = rng.int(1, 7); if (r1 === (t === 'bisect' ? p1 : 2 * p1)) r1 += 1;
+        const s1 = target - r1 * x, ask = rng.bool() ? 'x' : 'len', e1 = M.poly([p1, q1]), e2 = M.poly([r1, s1]);
+        const prompt = t === 'bisect' ? `In parallelogram ABCD the diagonals meet at E. AE = ${e1} and EC = ${e2}. ${ask === 'x' ? `Find ${X}.` : 'How long is diagonal AC?'}`
+          : `In rectangle ABCD the diagonals meet at E. AE = ${e1} and BD = ${e2}. ${ask === 'x' ? `Find ${X}.` : 'How long is diagonal BD?'}`;
+        const eqn = t === 'bisect' ? `${e1} = ${e2}` : `2(${e1}) = ${e2}`;
+        return { prompt, type: 'number', answer: ask === 'x' ? x : 2 * L, params: { kind, t, ask, p1, q1, r1, s1 },
+          hints: [t === 'bisect' ? 'The diagonals of a parallelogram bisect each other, so AE = EC.' : 'A rectangle\'s diagonals bisect each other, so AC = 2 · AE, and they are congruent, so AC = BD.', `Solve ${eqn}: ${X} = ${N(x)}.`,
+            ask === 'x' ? `<b>${X} = ${N(x)}</b>.` : `${t === 'bisect' ? `AE = ${N(L)}, so AC = 2 × ${N(L)}` : `BD = ${N(r1)}(${N(x)})${s1 ? " " + M.signed(s1) : ""}`} = <b>${N(2 * L)}</b>.`] };
+      }
+      if (t === 'perp') {
+        const p1 = rng.int(2, 9), xx = rng.int(Math.ceil(50 / p1), Math.floor(100 / p1)), q1 = 90 - p1 * xx;
+        return { prompt: `In rhombus ABCD the diagonals meet at E, and m∠AEB = (${M.poly([p1, q1])})°. Find ${X}.`, type: 'number', answer: xx, params: { kind, t, p1, q1 },
+          hints: ['The diagonals of a rhombus are perpendicular, so ∠AEB is a right angle.', `${M.poly([p1, q1])} = 90, so ${N(p1)}${X} = ${N(90 - q1)}.`, `${X} = ${N(90 - q1)} ÷ ${N(p1)} = <b>${N(xx)}</b>.`] };
+      }
+      if (t === 'side') {
+        const tr = rng.pick(TRIPLES.slice(0, 3)), m = rng.int(1, 3), a = tr[0] * m, b = tr[1] * m;
+        return { prompt: `The diagonals of a rhombus are ${N(2 * a)} cm and ${N(2 * b)} cm long. How long is each side?`, type: 'number', answer: tr[2] * m, unit: 'cm', params: { kind, t, d1: 2 * a, d2: 2 * b },
+          hints: ['The diagonals of a rhombus bisect each other at right angles, cutting the rhombus into four right triangles.', `Each triangle has legs ${N(2 * a)} ÷ 2 = ${N(a)} and ${N(2 * b)} ÷ 2 = ${N(b)}; the side of the rhombus is the hypotenuse.`, `${sq(N(a))} + ${sq(N(b))} = ${N(a * a + b * b)}, and ${R(N(a * a + b * b))} = <b>${N(tr[2] * m)}</b> cm.`] };
+      }
+      if (t === 'consec') {
+        const Aang = rng.int(11, 26) * 5, Bang = 180 - Aang, p1 = rng.int(1, 4), r1 = rng.int(1, 4), xx = rng.int(5, 20), q1 = Aang - p1 * xx, s1 = Bang - r1 * xx, ask = rng.bool() ? 'x' : 'A';
+        return { prompt: `In parallelogram ABCD, m∠A = (${M.poly([p1, q1])})° and m∠B = (${M.poly([r1, s1])})°. ${ask === 'x' ? `Find ${X}.` : 'Find m∠A.'}`, type: 'number', answer: ask === 'x' ? xx : Aang, unit: ask === 'x' ? undefined : '°', params: { kind, t, ask, p1, q1, r1, s1 },
+          hints: ['∠A and ∠B are consecutive angles of a parallelogram, so they are supplementary.', `(${M.poly([p1, q1])}) + (${M.poly([r1, s1])}) = 180, so ${M.poly([p1 + r1, q1 + s1])} = 180 and ${X} = ${N(xx)}.`,
+            ask === 'x' ? `<b>${X} = ${N(xx)}</b>.` : `m∠A = ${N(p1)}(${N(xx)}) ${M.signed(q1)} = <b>${N(Aang)}°</b>.`] };
+      }
+      const th = rng.int(10, 35) * 4;
+      return { prompt: `In rhombus ABCD, m∠ABC = ${N(th)}°. What is m∠ABD, the angle between side BA and diagonal BD?`, type: 'number', answer: th / 2, unit: '°', params: { kind, t, th },
+        hints: ['Each diagonal of a rhombus bisects the angles at its ends.', `Diagonal BD cuts ∠ABC into two equal parts.`, `${N(th)}° ÷ 2 = <b>${N(th / 2)}°</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'which' || P.kind === 'extra') {                   // measure the sample shapes instead of trusting the table
+        const idx = QUAD_PROPS.indexOf(q.answer); if (idx < 0) return false;
+        const always = (shape, i) => QUAD_SAMPLES[shape].every(c => quadProps(c)[i]);
+        if (P.kind === 'which') return always(P.shape, idx) && P.idx.slice(1).every(i => !always(P.shape, i));
+        return always(P.small, idx) && !always(P.big0, idx) && P.idx.slice(1).every(i => !always(P.small, i) || always(P.big0, i));
+      }
+      if (P.kind === 'grid') { const g = quadInfo(P.P); return g.para && q.answer === (g.square ? 'Square' : g.right ? 'Rectangle' : g.eqSides ? 'Rhombus' : 'Parallelogram'); }
+      const solve = f => { for (let x = -100; x <= 200; x += 0.5) if (Math.abs(f(x)) < 1e-9) return x; return NaN; };
+      if (P.t === 'bisect' || P.t === 'rectDiag') {
+        const x = solve(x => (P.t === 'bisect' ? 1 : 2) * (P.p1 * x + P.q1) - (P.r1 * x + P.s1));
+        return q.answer === (P.ask === 'x' ? x : 2 * (P.p1 * x + P.q1)) && P.p1 * x + P.q1 > 0;
+      }
+      if (P.t === 'perp') return P.p1 * q.answer + P.q1 === 90;
+      if (P.t === 'side') return close(q.answer, Math.hypot(P.d1, P.d2) / 2);
+      if (P.t === 'consec') { const x = solve(x => P.p1 * x + P.q1 + P.r1 * x + P.s1 - 180); return q.answer === (P.ask === 'x' ? x : P.p1 * x + P.q1); }
+      const t = toRad(P.th), D = [1 + Math.cos(t), Math.sin(t)];        // B at the origin, A = (1, 0), C at angle th, D = A + C
+      return close(Math.atan2(D[1], D[0]) * 180 / Math.PI, q.answer);
+    },
+  });
+
+  const CENTERS = ['Centroid', 'Circumcenter', 'Incenter', 'Orthocenter'];
+  const CENTER_DESC = [
+    ['the meeting point of the three medians', 0], ['the balance point of a triangle cut from cardboard', 0], ['the point that splits each median in the ratio 2 : 1', 0],
+    ['the meeting point of the perpendicular bisectors of the sides', 1], ['the point the same distance from all three vertices', 1], ['the center of the circle through all three vertices', 1],
+    ['the meeting point of the three angle bisectors', 2], ['the point the same distance from all three sides', 2], ['the center of the largest circle that fits inside the triangle', 2],
+    ['the meeting point of the three altitudes', 3]];
+  const CENTER_STORY = [
+    ['Three villages form a triangle. A cell tower must be the same distance from all three villages.', 1], ['A triangular park is bounded by three straight roads. A fountain must be the same distance from all three roads.', 2],
+    ['A triangular sign should balance on a single post placed underneath it.', 0], ['The largest possible round table top is to be cut from a triangular board.', 2], ['A circular path must pass through three trees that form a triangle.', 1]];
+  const CENTER_WHY = ['The centroid is where the medians meet; it is the balance point and splits each median 2 : 1.', 'The circumcenter is where the perpendicular bisectors meet; every point on a perpendicular bisector is the same distance from two vertices, so it is the same distance from all three.',
+    'The incenter is where the angle bisectors meet; every point on an angle bisector is the same distance from two sides, so it is the same distance from all three.', 'The orthocenter is where the altitudes meet.'];
+
+  A.skill({
+    id: 'int2.triangle-centers', title: 'Triangle centers',
+    learn: p(`Every triangle has several centers, each where three special lines meet. The <b>centroid</b> is where the three <b>medians</b> meet (a median joins a vertex to the midpoint of the opposite side). It is the balance point, and it <b>divides each median 2 : 1</b>: the part from the vertex is twice the part to the midpoint. Its coordinates are the averages of the vertices' coordinates.`) +
+      p(`The <b>circumcenter</b> is where the <b>perpendicular bisectors</b> of the sides meet; it is the <b>same distance from all three vertices</b>, so it is the center of the circle through them. The <b>incenter</b> is where the <b>angle bisectors</b> meet; it is the <b>same distance from all three sides</b>, so it is the center of the largest circle that fits inside. (The orthocenter, where the altitudes meet, completes the set.)`) +
+      example('Example', `G is the centroid of △ABC and AM is a median with AM = 18. AG is two thirds of the median and GM one third: <b>AG = 12</b> and GM = 6.`),
+    make(rng) {
+      const kind = rng.pick(['which', 'story', 'ratio', 'ratio', 'coords', 'angle', 'equal', 'right']);
+      if (kind === 'which' || kind === 'story') {
+        const [desc, ci] = rng.pick(kind === 'which' ? CENTER_DESC : CENTER_STORY), answer = CENTERS[ci];
+        return { prompt: kind === 'which' ? `Which triangle center is ${desc}?` : `${desc} Which triangle center gives the right spot?`, type: 'choice', answer, choices: CENTERS, keepOrder: true, params: { kind, desc },
+          hints: [kind === 'story' ? `Decide what must be equal or balanced: ${ci === 1 ? 'distances to three points (the vertices)' : ci === 2 ? 'distances to three lines (the sides)' : 'the weight on every side'}.` : 'Match the description to the lines that meet there: medians, perpendicular bisectors, angle bisectors or altitudes.', CENTER_WHY[ci], `<b>${answer}</b>.`] };
+      }
+      if (kind === 'ratio') {
+        const g = rng.int(2, 15), vals = { AG: 2 * g, GM: g, AM: 3 * g }, [giv, ask] = rng.sample(['AG', 'GM', 'AM'], 2);
+        return { prompt: `G is the centroid of △ABC, and AM is the median from A. ${giv} = ${N(vals[giv])}. What is ${ask}?`, type: 'number', answer: vals[ask], params: { kind, giv, ask, v: vals[giv] },
+          hints: ['The centroid divides each median 2 : 1, so AG is twice GM, and the whole median AM is three times GM.', `${giv} = ${N(vals[giv])} gives GM = ${N(g)}${giv === 'GM' ? '' : giv === 'AG' ? ` (half of ${N(2 * g)})` : ` (a third of ${N(3 * g)})`}.`, `${ask} = <b>${N(vals[ask])}</b>.`] };
+      }
+      if (kind === 'coords') {
+        let P;
+        do { P = [0, 1, 2].map(() => [rng.int(-8, 8), rng.int(-8, 8)]); } while ((P[0][0] + P[1][0] + P[2][0]) % 3 || (P[0][1] + P[1][1] + P[2][1]) % 3 || vcross(vsub(P[1], P[0]), vsub(P[2], P[0])) === 0);
+        const sx = P[0][0] + P[1][0] + P[2][0], sy = P[0][1] + P[1][1] + P[2][1], answer = M.pt(sx / 3, sy / 3);
+        const mAB = [(P[0][0] + P[1][0]) / 2, (P[0][1] + P[1][1]) / 2];
+        const ch = [answer].concat(distinct(answer, [M.pt(sx, sy), M.pt(sx / 2, sy / 2), M.pt(...mAB), M.pt(sy / 3, sx / 3), M.pt(-sx / 3, -sy / 3)], 3));
+        return { prompt: `A triangle has vertices ${M.list(P.map(t => M.pt(...t)))}. Where is its centroid?`, type: 'choice', answer, choices: rng.shuffle(ch), params: { kind, P, opts: ch },
+          hints: ['The centroid\'s coordinates are the averages of the three vertices\' coordinates.', `${X}: (${P.map((t, i) => i ? wrap(t[0]) : N(t[0])).join(' + ')}) ÷ 3 = ${N(sx)} ÷ 3 = ${N(sx / 3)}. ${Y}: (${P.map((t, i) => i ? wrap(t[1]) : N(t[1])).join(' + ')}) ÷ 3 = ${N(sy)} ÷ 3 = ${N(sy / 3)}.`, `<b>${answer}</b>.`] };
+      }
+      if (kind === 'angle') {
+        const th = rng.int(15, 60) * 2;
+        return { prompt: `I is the incenter of △ABC, and m∠ABC = ${N(th)}°. What is m∠IBC?`, type: 'number', answer: th / 2, unit: '°', params: { kind, th },
+          hints: ['The incenter is where the angle bisectors meet, so BI bisects ∠ABC.', `So ∠IBC is half of ∠ABC.`, `${N(th)}° ÷ 2 = <b>${N(th / 2)}°</b>.`] };
+      }
+      if (kind === 'equal') {
+        const inc = rng.bool(), x = rng.int(2, 9), p1 = rng.int(1, 4), r1 = p1 + rng.int(1, 3), q1 = rng.int(1, 12), L = p1 * x + q1, s1 = L - r1 * x;
+        const prompt = inc ? `I is the incenter of △ABC. The distance from I to side AB is ${M.poly([p1, q1])}, and the distance from I to side BC is ${M.poly([r1, s1])}. Find ${X}.`
+          : `O is the circumcenter of △ABC, with OA = ${M.poly([p1, q1])} and OB = ${M.poly([r1, s1])}. Find ${X}.`;
+        return { prompt, type: 'number', answer: x, params: { kind, p1, q1, r1, s1 },
+          hints: [inc ? 'The incenter is the same distance from all three sides.' : 'The circumcenter is the same distance from all three vertices.', `So ${M.poly([p1, q1])} = ${M.poly([r1, s1])}, which gives ${M.term(r1 - p1, 'x')} = ${N(q1 - s1)}.`, `<b>${X} = ${N(x)}</b>.`] };
+      }
+      const tr = rng.pick(TRIPLES.slice(0, 4)), m = rng.pick([1, 2]), [a, b, c] = tr.map(v => v * m);
+      return { prompt: `A right triangle has legs ${N(a)} and ${N(b)}. How far is its circumcenter from each vertex?`, type: 'number', answer: c / 2, params: { kind, a, b },
+        hints: [`The circumcenter of a right triangle is the midpoint of the hypotenuse (an angle inscribed in a semicircle is a right angle).`, `The hypotenuse is ${R(`${sq(N(a))} + ${sq(N(b))}`)} = ${N(c)}.`, `The circumradius is half of it: <b>${N(c / 2)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'which' || P.kind === 'story') {
+        const d = P.desc;                                               // read the key words instead of the table
+        const want = /median|balance/.test(d) ? 0 : /perpendicular bisector|vertices|villages|trees/.test(d) ? 1 : /angle bisector|sides|roads|inside|table top/.test(d) ? 2 : /altitude/.test(d) ? 3 : -1;
+        return q.answer === CENTERS[want];
+      }
+      if (P.kind === 'ratio') {                                         // a triangle with its median along the x-axis: A(0, 0), M(len, 0)
+        const am = P.giv === 'AM' ? P.v : P.giv === 'AG' ? P.v * 1.5 : P.v * 3, Mx = am, B = [Mx + 2, 3], C = [Mx - 2, -3], Gx = (0 + B[0] + C[0]) / 3;
+        return close(q.answer, { AG: Gx, GM: Mx - Gx, AM: Mx }[P.ask]);
+      }
+      if (P.kind === 'coords') {                                        // intersect two medians
+        const [A0, B0, C0] = P.P, mBC = [(B0[0] + C0[0]) / 2, (B0[1] + C0[1]) / 2], mAC = [(A0[0] + C0[0]) / 2, (A0[1] + C0[1]) / 2];
+        const d1 = vsub(mBC, A0), d2 = vsub(mAC, B0), t = vcross(vsub(B0, A0), d2) / vcross(d1, d2), G = [A0[0] + t * d1[0], A0[1] + t * d1[1]];
+        return q.answer === M.pt(M.round(G[0], 9), M.round(G[1], 9));
+      }
+      if (P.kind === 'angle') {                                         // build the triangle, find the incenter by the weighted average, measure ∠IBC
+        const t = toRad(P.th), B0 = [0, 0], C0 = [6, 0], A0 = [4 * Math.cos(t), 4 * Math.sin(t)];
+        const a = Math.hypot(...vsub(B0, C0)), b = Math.hypot(...vsub(A0, C0)), c = Math.hypot(...vsub(A0, B0));
+        const I = [(a * A0[0] + b * B0[0] + c * C0[0]) / (a + b + c), (a * A0[1] + b * B0[1] + c * C0[1]) / (a + b + c)];
+        return close(Math.atan2(I[1], I[0]) * 180 / Math.PI, q.answer);
+      }
+      if (P.kind === 'equal') return P.p1 * q.answer + P.q1 === P.r1 * q.answer + P.s1;
+      const O = [P.a / 2, P.b / 2];                                     // right angle at the origin: the circumcenter is equidistant from (0,0), (a,0), (0,b)
+      return close(Math.hypot(...O), q.answer) && close(Math.hypot(O[0] - P.a, O[1]), q.answer) && close(Math.hypot(O[0], O[1] - P.b), q.answer);
+    },
+  });
+
+
+  /* ---------- Unit 12: Area, volume and geometric probability ---------- */
+  const POLY_NAMES = { 5: 'pentagon', 6: 'hexagon', 8: 'octagon', 9: 'nonagon', 10: 'decagon', 12: 'dodecagon' };
+  /** shoelace area of a regular n-gon with circumradius R, built from its vertices */
+  function ngonArea(n, R) {
+    const v = Array.from({ length: n }, (_, k) => [R * Math.cos(2 * Math.PI * k / n), R * Math.sin(2 * Math.PI * k / n)]);
+    return Math.abs(v.reduce((t, p1, k) => t + vcross(p1, v[(k + 1) % n]), 0)) / 2;
+  }
+  /** a regular n-gon with a horizontal bottom side, its apothem (dashed) and one radius; labels for the side, apothem and radius */
+  function ngonFig(n, lab) {
+    const cx = 120, cy = 100, Rd = 82, h = Math.PI / n;
+    const pt = k => { const t = -Math.PI / 2 - h + 2 * Math.PI * k / n; return [cx + Rd * Math.cos(t), cy - Rd * Math.sin(t)]; };
+    const pts = Array.from({ length: n }, (_, k) => pt(k)), [x1, y1] = pt(1), my = cy + Rd * Math.cos(h), f = v => v.toFixed(1);
+    let g = `<polygon class="fill" points="${pts.map(([x, y]) => `${f(x)},${f(y)}`).join(' ')}"/><circle cx="${cx}" cy="${cy}" r="2.5" fill="currentColor"/>`;
+    g += `<line class="stroke" x1="${cx}" y1="${cy}" x2="${cx}" y2="${f(my)}" stroke-dasharray="5 3"/><path class="stroke" d="M${cx + 9},${f(my)} V${f(my - 9)} H${cx}" stroke-width="1.5"/>`;
+    if (lab.radius) g += `<line class="stroke" x1="${cx}" y1="${cy}" x2="${f(x1)}" y2="${f(y1)}"/><text x="${f((cx + x1) / 2 + 8)}" y="${f((cy + y1) / 2 - 2)}" font-size="13">${lab.radius}</text>`;
+    if (lab.apothem) g += `<text x="${cx - 6}" y="${f((cy + my) / 2 + 4)}" font-size="13" text-anchor="end">${lab.apothem}</text>`;
+    if (lab.side) g += `<text x="${cx}" y="${f(my + 17)}" font-size="13" text-anchor="middle">${lab.side}</text>`;
+    return `<svg class="figure" viewBox="0 0 240 ${f(my + 24)}" width="240" height="${f(my + 24)}" role="img" aria-label="regular ${POLY_NAMES[n]}">${g}</svg>`;
+  }
+
+  A.skill({
+    id: 'int2.regular-polygon-area', title: 'Area of regular polygons',
+    learn: p(`A regular polygon with ${V('n')} sides splits into ${V('n')} congruent isosceles triangles that meet at its center. The <b>apothem</b> is the distance from the center straight to the middle of a side; it is the height of each triangle. Adding up the triangles gives <b>area = ½ × apothem × perimeter</b>.`) +
+      p(`If you are not given the apothem, find it with right-triangle trigonometry. The apothem cuts one of the triangles in half, making a right triangle with angle ${F('180°', V('n'))} at the center, the apothem as the adjacent side, half a side as the opposite side, and the <b>radius</b> (center to vertex) as the hypotenuse. So apothem = ${F('half side', `tan(180°/${V('n')})`)}, or apothem = radius × cos(180°/${V('n')}).`) +
+      example('Example', `A regular hexagon has sides of 10 cm. The center angle of each half-triangle is 180° ÷ 6 = 30°, so the apothem is 5 ÷ tan 30° ≈ 8.660 cm. Perimeter = 60 cm, so area ≈ ½ × 8.660 × 60 ≈ <b>259.8 cm²</b>.`),
+    make(rng) {
+      const n = rng.pick([5, 6, 6, 8, 9, 10, 12]), name = POLY_NAMES[n], half = 180 / n, hr = toRad(half), kind = rng.pick(['given', 'side', 'side', 'radius', 'apothem']);
+      const r3 = v => N(M.round(v, 3)), tol = v => Math.max(0.05, M.round(v * 0.003, 2));
+      const split = `A regular ${name} splits into ${n} congruent triangles at its center. The apothem cuts each in half, leaving a right triangle with a ${N(M.round(half, 2))}° angle at the center.`;
+      if (kind === 'given') {
+        const s = rng.int(3, 20), a = M.round(s / (2 * Math.tan(hr)), 1), P = n * s, ans = M.round(a * P / 2, 2);
+        return { prompt: `A regular ${name} has sides of ${N(s)} cm and an apothem of ${N(a)} cm. What is its area?${ngonFig(n, { side: `${N(s)} cm`, apothem: `${N(a)} cm` })}`, type: 'number', answer: ans, unit: 'cm²', tolerance: 0.05, params: { kind, n, s, a },
+          hints: ['Area of a regular polygon = ½ × apothem × perimeter.', `The perimeter is ${N(n)} × ${N(s)} = ${N(P)} cm.`, `½ × ${N(a)} × ${N(P)} = <b>${N(ans)}</b> cm².`] };
+      }
+      if (kind === 'side') {
+        const s = rng.int(2, 20), a = s / 2 / Math.tan(hr), ans = M.round(n * s * a / 2, 1);
+        return { prompt: `A regular ${name} has sides of ${N(s)} cm. Find its area, to the nearest tenth.${ngonFig(n, { side: `${N(s)} cm`, apothem: V('a') })}`, type: 'number', answer: ans, unit: 'cm²', tolerance: tol(ans), params: { kind, n, s },
+          hints: [split, `Half a side, ${N(s / 2)}, is opposite that angle and the apothem is adjacent: apothem = ${N(s / 2)} ÷ tan ${N(M.round(half, 2))}° ≈ ${r3(a)} cm.`,
+            `Perimeter = ${N(n)} × ${N(s)} = ${N(n * s)} cm, so area ≈ ½ × ${r3(a)} × ${N(n * s)} ≈ <b>${N(ans)}</b> cm².`] };
+      }
+      if (kind === 'radius') {
+        const Rr = rng.int(2, 15), a = Rr * Math.cos(hr), hs = Rr * Math.sin(hr), ans = M.round(n * hs * a, 1);
+        return { prompt: `A regular ${name} has a radius (center to vertex) of ${N(Rr)} cm. Find its area, to the nearest tenth.${ngonFig(n, { radius: `${N(Rr)} cm`, apothem: V('a') })}`, type: 'number', answer: ans, unit: 'cm²', tolerance: tol(ans), params: { kind, n, Rr },
+          hints: [split + ` The radius, ${N(Rr)}, is its hypotenuse.`, `Apothem = ${N(Rr)} cos ${N(M.round(half, 2))}° ≈ ${r3(a)} cm, and half a side = ${N(Rr)} sin ${N(M.round(half, 2))}° ≈ ${r3(hs)} cm, so a side ≈ ${r3(2 * hs)} cm.`,
+            `Perimeter ≈ ${N(n)} × ${r3(2 * hs)} ≈ ${r3(2 * n * hs)} cm, so area ≈ ½ × ${r3(a)} × ${r3(2 * n * hs)} ≈ <b>${N(ans)}</b> cm².`] };
+      }
+      const a = rng.int(2, 15), hs = a * Math.tan(hr), ans = M.round(n * a * hs, 1);
+      return { prompt: `A regular ${name} has an apothem of ${N(a)} cm. Find its area, to the nearest tenth.${ngonFig(n, { apothem: `${N(a)} cm` })}`, type: 'number', answer: ans, unit: 'cm²', tolerance: tol(ans), params: { kind, n, a },
+        hints: [split, `The apothem, ${N(a)}, is adjacent to that angle and half a side is opposite: half a side = ${N(a)} × tan ${N(M.round(half, 2))}° ≈ ${r3(hs)} cm, so a side ≈ ${r3(2 * hs)} cm.`,
+          `Perimeter ≈ ${N(n)} × ${r3(2 * hs)} ≈ ${r3(2 * n * hs)} cm, so area ≈ ½ × ${N(a)} × ${r3(2 * n * hs)} ≈ <b>${N(ans)}</b> cm².`] };
+    },
+    verify(q) {
+      const P = q.params, h = Math.PI / P.n;
+      if (P.kind === 'given') { let t = 0; for (let k = 0; k < P.n; k++) t += P.s * P.a / 2; return Math.abs(t - q.answer) < 0.006; }   // n triangles of base s, height a
+      const Rr = P.kind === 'side' ? P.s / (2 * Math.sin(h)) : P.kind === 'radius' ? P.Rr : P.a / Math.cos(h);     // the circumradius, then the shoelace formula
+      return Math.abs(ngonArea(P.n, Rr) - q.answer) <= 0.05 + 1e-9;
+    },
+  });
+
+  const SOLIDS = [['cylinders', 'heights'], ['cones', 'radii'], ['rectangular prisms', 'lengths'], ['square pyramids', 'heights'], ['spheres', 'radii'], ['cubes', 'edges']];
+  const KPAIRS = [[1, 2], [2, 3], [3, 4], [2, 5], [3, 5], [1, 3], [4, 5], [3, 2], [2, 1], [5, 3], [4, 3], [5, 2]];
+  /** surface area and volume of a box with sides proportional to 2 : 3 : 5, scaled to the length L */
+  const boxSV = L => { const [a, b, c] = [2 * L, 3 * L, 5 * L]; return [2 * (a * b + b * c + a * c), a * b * c]; };
+
+  A.skill({
+    id: 'int2.similar-solids', title: 'Similar solids',
+    learn: p(`Two solids are <b>similar</b> when every length of one is the same multiple ${V('k')} of the matching length of the other. That one <b>scale factor</b> ${V('k')} controls everything: <b>lengths multiply by ${V('k')}</b>, <b>areas (including surface area) by ${sq(V('k'))}</b>, and <b>volumes by ${S(V('k'), 3)}</b>. An area has two dimensions that each grow by ${V('k')}, and a volume has three.`) +
+      p(`Work in the order length → area → volume. If you know a ratio of volumes, take the cube root to get ${V('k')}; from a ratio of areas, take the square root.`) +
+      example('Example', `Two similar cones have heights 4 cm and 10 cm, so ${V('k')} = ${F(10, 4)} = ${F(5, 2)}. If the small cone holds 16 cm³, the large one holds 16 × ${S(`(${F(5, 2)})`, 3)} = 16 × ${F(125, 8)} = <b>250 cm³</b>.`),
+    make(rng) {
+      const [sol, lens] = rng.pick(SOLIDS), [pp, qq] = rng.pick(KPAIRS), kind = rng.pick(['area', 'volume', 'volume', 'fromVolume', 'ratio']);
+      const m = rng.int(1, 4), L1 = qq * m, L2 = pp * m, kTxt = F(pp, qq), name = rng.pick(NAMES);
+      if (kind === 'ratio') {
+        const what = rng.pick(['surface areas', 'volumes']), choices = [`${pp} : ${qq}`, `${pp * pp} : ${qq * qq}`, `${pp ** 3} : ${qq ** 3}`], answer = choices[what === 'volumes' ? 2 : 1];
+        return { prompt: `The ${lens} of two similar ${sol} are in the ratio ${pp} : ${qq}. What is the ratio of their ${what}?`, type: 'choice', answer, choices, keepOrder: true, params: { kind, pp, qq, what },
+          hints: [`Lengths compare by the scale factor, ${pp} : ${qq}.`, what === 'volumes' ? 'Volumes have three dimensions, so cube both numbers.' : 'Areas have two dimensions, so square both numbers.', `<b>${answer}</b>.`] };
+      }
+      if (kind === 'area') {
+        const w = rng.int(2, 15), S1 = qq * qq * w, S2 = pp * pp * w;
+        return { prompt: `Two similar ${sol} have ${lens} of ${N(L1)} cm and ${N(L2)} cm. The first has a surface area of ${N(S1)} cm². What is the surface area of the second?`, type: 'number', answer: S2, unit: 'cm²', params: { kind, L1, L2, given: S1, pow: 2 },
+          hints: [`The scale factor from the first to the second is ${N(L2)} ÷ ${N(L1)} = ${kTxt}.`, `Areas scale by ${sq(V('k'))} = ${F(pp * pp, qq * qq)}.`, `${N(S1)} × ${F(pp * pp, qq * qq)} = <b>${N(S2)}</b> cm².`] };
+      }
+      if (kind === 'volume') {
+        const w = rng.int(1, 8), V1 = qq ** 3 * w, V2 = pp ** 3 * w;
+        return { prompt: `Two similar ${sol} have ${lens} of ${N(L1)} cm and ${N(L2)} cm. The first has a volume of ${N(V1)} cm³. What is the volume of the second?`, type: 'number', answer: V2, unit: 'cm³', params: { kind, L1, L2, given: V1, pow: 3 },
+          hints: [`The scale factor from the first to the second is ${N(L2)} ÷ ${N(L1)} = ${kTxt}.`, `Volumes scale by ${S(V('k'), 3)} = ${F(pp ** 3, qq ** 3)}.`, `${N(V1)} × ${F(pp ** 3, qq ** 3)} = <b>${N(V2)}</b> cm³.`] };
+      }
+      const w = rng.int(1, 6), V1 = qq ** 3 * w, V2 = pp ** 3 * w;
+      return { prompt: `${name} has two similar ${sol} with volumes ${N(V1)} cm³ and ${N(V2)} cm³. The first has a ${{ heights: 'height', radii: 'radius', lengths: 'length', edges: 'edge' }[lens]} of ${N(L1)} cm. What is the matching length of the second?`, type: 'number', answer: L2, unit: 'cm', params: { kind, V1, V2, L1 },
+        hints: [`The volume ratio is ${N(V2)} ÷ ${N(V1)} = ${F(V2, V1)} = ${F(pp ** 3, qq ** 3)}.`, `Volumes scale by ${S(V('k'), 3)}, so take the cube root: ${V('k')} = ${kTxt}.`, `${N(L1)} × ${kTxt} = <b>${N(L2)}</b> cm.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'ratio') { const [s1, v1] = boxSV(P.qq), [s2, v2] = boxSV(P.pp), r = P.what === 'volumes' ? v2 / v1 : s2 / s1; const [a, b] = q.answer.split(' : ').map(Number); return close(a / b, r); }
+      if (P.kind === 'fromVolume') return close(q.answer, P.L1 * Math.cbrt(P.V2 / P.V1));
+      const [s1, v1] = boxSV(P.L1), [s2, v2] = boxSV(P.L2);                   // measure two real boxes with those lengths
+      return close(q.answer, P.given * (P.pow === 2 ? s2 / s1 : v2 / v1));
+    },
+  });
+
+  /** figures for the probability skill: a target of rings, a spinner sector, a circle in a square, a rectangle in a rectangle */
+  function probFig(kind, d) {
+    const W = 200;
+    let g = '';
+    if (kind === 'target') { const sc = 88 / d.R; [d.R, d.r2, d.r1].forEach((r, i) => { if (r) g += `<circle cx="100" cy="100" r="${(r * sc).toFixed(1)}" ${i === (d.ring ? 1 : 2) ? 'class="fill"' : 'class="stroke"'}/>`; }); if (d.ring) g += `<circle cx="100" cy="100" r="${(d.r1 * sc).toFixed(1)}" fill="var(--surface)" class="stroke"/>`; }
+    if (kind === 'sector') { const t = toRad(d.deg), x = 100 + 88 * Math.cos(t), y = 100 - 88 * Math.sin(t); g += `<circle class="stroke" cx="100" cy="100" r="88"/><path class="fill" d="M100,100 L188,100 A88,88 0 ${d.deg > 180 ? 1 : 0} 0 ${x.toFixed(1)},${y.toFixed(1)} Z"/><text x="${(100 + 30 * Math.cos(t / 2)).toFixed(1)}" y="${(104 - 30 * Math.sin(t / 2)).toFixed(1)}" font-size="13" text-anchor="middle">${d.deg}°</text>`; }
+    if (kind === 'square') { const sc = 176 / d.s; g += `<rect class="stroke" x="12" y="12" width="176" height="176"/><circle class="fill" cx="100" cy="100" r="${(d.r * sc).toFixed(1)}"/>`; }
+    if (kind === 'rect') { const sc = 176 / Math.max(d.W, d.H), w = d.W * sc, h = d.H * sc; g += `<rect class="stroke" x="12" y="12" width="${w.toFixed(1)}" height="${h.toFixed(1)}"/><rect class="fill" x="${(12 + w * 0.15).toFixed(1)}" y="${(12 + h * 0.2).toFixed(1)}" width="${(d.w * sc).toFixed(1)}" height="${(d.h * sc).toFixed(1)}"/>`; return `<svg class="figure" viewBox="0 0 ${(w + 24).toFixed(1)} ${(h + 24).toFixed(1)}" width="${(w + 24).toFixed(1)}" height="${(h + 24).toFixed(1)}" role="img" aria-label="a shaded rectangle inside a larger rectangle">${g}</svg>`; }
+    return `<svg class="figure" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}" role="img" aria-label="a target with a shaded region">${g}</svg>`;
+  }
+
+  A.skill({
+    id: 'int2.geometric-probability', title: 'Geometric probability',
+    learn: p(`When a point is chosen at random from a region, every part of the region is equally likely. So the probability of landing in a smaller part is a ratio of sizes: <b>P = ${F('length of the part', 'whole length')}</b> on a segment or a timeline, and <b>P = ${F('area of the part', 'whole area')}</b> on a board or a target.`) +
+      p(`Use whatever formula the shapes need: rectangles (length × width), circles (π${sq(V('r'))}), sectors (${F(V('θ'), 360)} of the circle). Often π cancels. A dart landing in a sector of a round board has probability ${F(V('θ'), 360)}, and a bullseye of radius 2 on a target of radius 6 has probability ${F(`π · ${sq(2)}`, `π · ${sq(6)}`)} = ${F(4, 36)} = ${F(1, 9)}.`) +
+      example('Example', `A bus comes every 12 minutes, and you arrive at a random time. You wait less than 3 minutes if you arrive in the last 3 minutes of the gap: P = ${F(3, 12)} = <b>${F(1, 4)}</b>.`),
+    make(rng) {
+      const kind = rng.pick(['segment', 'wait', 'target', 'target', 'sector', 'square', 'rect']), name = rng.pick(NAMES);
+      const piTxt = k => k === 1 ? 'π' : `${N(k)}π`;
+      const frac = (num, den, params, prompt, hints, fig) => { const [a, b] = M.simp(num, den); return { prompt: prompt + ' Give a fraction.' + (fig || ''), type: 'number', answer: a / b, answerText: M.fracText(a, b), params, hints: hints.concat(`P = ${F(num, den, { raw: true })} = <b>${M.fracText(a, b)}</b>.`) }; };
+      if (kind === 'segment') {
+        const L = rng.pick([10, 12, 15, 16, 20, 24, 30]), c = rng.int(0, L - 3), d = rng.int(c + 1, Math.min(L, c + Math.ceil(L * 0.7)));
+        return frac(d - c, L, { kind, L, c, d }, `A point is chosen at random on a number line from 0 to ${N(L)}. What is the probability that it lies between ${N(c)} and ${N(d)}?`,
+          [`The whole segment has length ${N(L)}; the part from ${N(c)} to ${N(d)} has length ${N(d)} − ${N(c)} = ${N(d - c)}.`]);
+      }
+      if (kind === 'wait') {
+        const T = rng.pick([10, 12, 15, 20, 30]), w = rng.int(1, T - 1), less = rng.bool();
+        return frac(less ? w : T - w, T, { kind, T, w, less }, `A train leaves every ${N(T)} minutes, and ${name} reaches the platform at a random time. What is the probability that ${name} waits ${less ? 'less' : 'more'} than ${N(w)} minutes?`,
+          [`Every moment of the ${N(T)}-minute gap is equally likely, so compare lengths of time.`, `${name} waits ${less ? 'less' : 'more'} than ${N(w)} minutes when arriving ${less ? `in the last ${N(w)} minutes` : `in the first ${N(T - w)} minutes`} of the gap: ${N(less ? w : T - w)} minutes out of ${N(T)}.`]);
+      }
+      if (kind === 'target') {
+        const r1 = rng.int(1, 4), r2 = r1 + rng.int(1, 3), R = r2 + rng.int(1, 4), ring = rng.bool();
+        const num = ring ? r2 * r2 - r1 * r1 : r1 * r1;
+        return frac(num, R * R, { kind, r1, r2, R, ring }, `A round target has radius ${N(R)} cm. Inside it are circles of radius ${N(r2)} cm and ${N(r1)} cm with the same center. A dart lands at a random point on the target. What is the probability that it lands ${ring ? `in the ring between the ${N(r1)} cm and ${N(r2)} cm circles` : `inside the ${N(r1)} cm circle`}?`,
+          [`Compare areas. The whole target is π · ${sq(N(R))} = ${N(R * R)}π cm².`, ring ? `The ring is the ${N(r2)} cm circle minus the ${N(r1)} cm circle: ${piTxt(r2 * r2)} − ${piTxt(r1 * r1)} = ${piTxt(num)} cm². The π cancels.` : `The small circle is π · ${sq(N(r1))} = ${piTxt(r1 * r1)} cm². The π cancels.`], probFig('target', { R, r1, r2, ring }));
+      }
+      if (kind === 'sector') {
+        const deg = rng.pick([30, 40, 45, 60, 72, 80, 90, 100, 120, 135, 150, 200, 210, 240, 270]);
+        return frac(deg, 360, { kind, deg }, `A spinner is a circle with a shaded sector whose central angle is ${N(deg)}°. The arrow stops at a random angle. What is the probability that it stops in the shaded sector?`,
+          [`The sector is ${F(deg, 360, { raw: true })} of the circle, whatever the radius: its area is ${F(deg, 360, { raw: true })} · π${sq(V('r'))}.`], probFig('sector', { deg }));
+      }
+      if (kind === 'square') {
+        const s = rng.pick([4, 6, 8, 10, 12, 20]), r = rng.int(1, s / 2), ans = M.round(Math.PI * r * r / (s * s), 2);
+        return { prompt: `A square board is ${N(s)} inches on each side, with a circle of radius ${N(r)} inches painted in the middle. A dart hits the board at a random point. What is the probability that it lands in the circle? Round to the nearest hundredth.${probFig('square', { s, r })}`, type: 'number', answer: ans, tolerance: 0.006, params: { kind, s, r },
+          hints: [`Circle: π · ${sq(N(r))} ≈ ${N(M.round(Math.PI * r * r, 3))} in². Board: ${sq(N(s))} = ${N(s * s)} in².`, `P ≈ ${N(M.round(Math.PI * r * r, 3))} ÷ ${N(s * s)}.`, `P ≈ <b>${N(ans)}</b>.`] };
+      }
+      const Wd = rng.int(8, 14), Hd = rng.int(5, 9), w = rng.int(2, Math.floor(Wd * 0.6)), h = rng.int(2, Math.floor(Hd * 0.6));
+      return frac(w * h, Wd * Hd, { kind, Wd, Hd, w, h }, `${[8, 11].includes(Wd) ? 'An' : 'A'} ${N(Wd)} m by ${N(Hd)} m field has a ${N(w)} m by ${N(h)} m sandpit in it. A ball dropped from a drone lands at a random point in the field. What is the probability that it lands in the sandpit?`,
+        [`Sandpit: ${N(w)} × ${N(h)} = ${N(w * h)} m². Field: ${N(Wd)} × ${N(Hd)} = ${N(Wd * Hd)} m².`], probFig('rect', { W: Wd, H: Hd, w, h }));
+    },
+    verify(q) {
+      const P = q.params, N0 = 250;
+      const share = (inner, outer, x0, x1, y0, y1) => {                 // count points of a fine grid: in the part / in the whole
+        let a = 0, b = 0;
+        for (let i = 0; i < N0; i++) for (let j = 0; j < N0; j++) { const x = x0 + (x1 - x0) * (i + 0.5) / N0, y = y0 + (y1 - y0) * (j + 0.5) / N0; if (outer(x, y)) { b++; if (inner(x, y)) a++; } }
+        return a / b;
+      };
+      let est;
+      if (P.kind === 'segment' || P.kind === 'wait') {
+        const L = P.kind === 'segment' ? P.L : P.T, inside = P.kind === 'segment' ? x => x > P.c && x < P.d : x => (P.less ? L - x < P.w : L - x > P.w);   // wait = time until the next train
+        let a = 0; for (let i = 0; i < 100000; i++) if (inside(L * (i + 0.5) / 100000)) a++;
+        est = a / 100000;
+      } else if (P.kind === 'target') est = share((x, y) => { const d = Math.hypot(x, y); return P.ring ? d > P.r1 && d < P.r2 : d < P.r1; }, (x, y) => Math.hypot(x, y) < P.R, -P.R, P.R, -P.R, P.R);
+      else if (P.kind === 'sector') est = share((x, y) => { const t = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; return t < P.deg; }, (x, y) => Math.hypot(x, y) < 1, -1, 1, -1, 1);
+      else if (P.kind === 'square') est = share((x, y) => Math.hypot(x, y) < P.r, () => true, -P.s / 2, P.s / 2, -P.s / 2, P.s / 2);
+      else est = share((x, y) => x < P.w && y < P.h, () => true, 0, P.Wd, 0, P.Hd);
+      return Math.abs(est - q.answer) < 0.012;
+    },
+  });
+
+
+  /* ---------- Unit 13: Circles: chords, tangents and secants ---------- */
+  const onC = deg => [Math.cos(toRad(deg)), Math.sin(toRad(deg))];
+  const angAt = (V0, A0, B0) => { const u = vsub(A0, V0), w = vsub(B0, V0); return Math.acos(vdot(u, w) / Math.hypot(...u) / Math.hypot(...w)) * 180 / Math.PI; };
+  /** where line p1p2 meets line p3p4 */
+  function meet(p1, p2, p3, p4) { const d1 = vsub(p2, p1), d2 = vsub(p4, p3), t = vcross(vsub(p3, p1), d2) / vcross(d1, d2); return [p1[0] + t * d1[0], p1[1] + t * d1[1]]; }
+  /** a circle of radius 1 at the origin O, drawn 70 px wide per unit, with named points, segments, highlighted arcs and labels */
+  function circFig(o) {
+    const rr = 70, pts = Object.assign({ O: [0, 0] }, o.pts), ext = o.arcs && o.arcs.length ? 1.45 : 1;
+    const all = Object.values(pts).concat((o.notes || []).map(([x, y]) => [x + 1, y]), [[-ext, -ext], [ext, ext]]);
+    const x0 = Math.min(...all.map(p => p[0])) * rr - 26, x1 = Math.max(...all.map(p => p[0])) * rr + 26, y0 = -Math.max(...all.map(p => p[1])) * rr - 26, y1 = -Math.min(...all.map(p => p[1])) * rr + 26;
+    const X0 = p => +(p[0] * rr - x0).toFixed(1), Y0 = p => +(-p[1] * rr - y0).toFixed(1), at = k => pts[k];
+    let g = `<circle class="stroke light" cx="${X0([0, 0])}" cy="${Y0([0, 0])}" r="${rr}"/>`;
+    (o.arcs || []).forEach(([a, b, lab, lr]) => {
+      const ta = Math.atan2(at(a)[1], at(a)[0]), tb = Math.atan2(at(b)[1], at(b)[0]), sweep = ((tb - ta) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI), tm = ta + sweep / 2;
+      g += `<path class="stroke" style="stroke-width:5;opacity:.45" d="M${X0(at(a))},${Y0(at(a))} A${rr},${rr} 0 ${sweep > Math.PI ? 1 : 0} 0 ${X0(at(b))},${Y0(at(b))}"/>`;
+      const lr0 = lr || 1.25;
+      if (lab) g += `<text x="${X0([lr0 * Math.cos(tm), lr0 * Math.sin(tm)])}" y="${Y0([lr0 * Math.cos(tm), lr0 * Math.sin(tm)]) + 5}" text-anchor="middle" font-size="13">${lab}</text>`;
+    });
+    (o.segs || []).forEach(([a, b, dash]) => { g += `<line class="stroke" x1="${X0(at(a))}" y1="${Y0(at(a))}" x2="${X0(at(b))}" y2="${Y0(at(b))}"${dash ? ' stroke-dasharray="5 3"' : ''}/>`; });
+    (o.right || []).forEach(([v, a, b]) => {
+      const u = vsub(at(a), at(v)), w = vsub(at(b), at(v)), lu = Math.hypot(...u), lw = Math.hypot(...w), s = 9 / rr;
+      const p1 = [at(v)[0] + u[0] / lu * s, at(v)[1] + u[1] / lu * s], p3 = [at(v)[0] + w[0] / lw * s, at(v)[1] + w[1] / lw * s], p2 = [p1[0] + w[0] / lw * s, p1[1] + w[1] / lw * s];
+      g += `<path class="stroke" stroke-width="1.5" d="M${X0(p1)},${Y0(p1)} L${X0(p2)},${Y0(p2)} L${X0(p3)},${Y0(p3)}"/>`;
+    });
+    (o.segLabels || []).forEach(([a, b, lab, side]) => {
+      const m = [(at(a)[0] + at(b)[0]) / 2, (at(a)[1] + at(b)[1]) / 2], d = vsub(at(b), at(a)), l = Math.hypot(...d), nx = -d[1] / l * (side || 1) * 0.17, ny = d[0] / l * (side || 1) * 0.17;
+      g += `<text x="${X0([m[0] + nx, m[1] + ny])}" y="${Y0([m[0] + nx, m[1] + ny]) + 5}" text-anchor="middle" font-size="13">${lab}</text>`;
+    });
+    (o.angleLabels || []).forEach(([v, a, b, lab]) => {
+      const u = vsub(at(a), at(v)), w = vsub(at(b), at(v)), lu = Math.hypot(...u), lw = Math.hypot(...w), bx = u[0] / lu + w[0] / lw, by = u[1] / lu + w[1] / lw, lb = Math.hypot(bx, by) || 1, r0 = o.angleR || 0.3;
+      g += `<text x="${X0([at(v)[0] + bx / lb * r0, at(v)[1] + by / lb * r0])}" y="${Y0([at(v)[0] + bx / lb * r0, at(v)[1] + by / lb * r0]) + 5}" text-anchor="middle" font-size="13">${lab}</text>`;
+    });
+    (o.notes || []).forEach(([x, y, lab]) => { g += `<text x="${X0([x, y])}" y="${Y0([x, y]) + 5}" font-size="13">${lab}</text>`; });
+    Object.keys(pts).forEach(k => {
+      if (k === 'O' && !o.showO) return;
+      const p0 = pts[k], d = Math.hypot(...p0), off = (o.off && o.off[k]) || (d < 0.05 ? [-0.14, 0.12] : [p0[0] / d * 0.17, p0[1] / d * 0.17]);
+      g += `<circle cx="${X0(p0)}" cy="${Y0(p0)}" r="2.5" fill="currentColor"/><text x="${X0([p0[0] + off[0], p0[1] + off[1]])}" y="${Y0([p0[0] + off[0], p0[1] + off[1]]) + 5}" text-anchor="middle" font-size="14">${k}</text>`;
+    });
+    const W = +(x1 - x0).toFixed(1), H = +(y1 - y0).toFixed(1);
+    return `<svg class="figure" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${o.label || 'circle'}">${g}</svg>`;
+  }
+  /** a secant from the outside point P0 through the circle point B0: returns [nearer point, B0] */
+  function secant(P0, B0) { const d = vsub(B0, P0), t = (vdot(P0, P0) - 1) / vdot(d, d); return [[P0[0] + t * d[0], P0[1] + t * d[1]], B0]; }
+  const BIG_TRIPLES = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [9, 12, 15], [8, 15, 17], [12, 16, 20], [7, 24, 25], [15, 20, 25]];
+
+  A.skill({
+    id: 'int2.chords', title: 'Chords and the perpendicular from the center',
+    learn: p(`A <b>chord</b> is a segment whose endpoints are on the circle. The key fact: <b>the perpendicular from the center to a chord bisects the chord</b>. (Equally, the perpendicular bisector of any chord passes through the center.) The two radii to the ends of the chord make an isosceles triangle, and the perpendicular splits it into two congruent right triangles.`) +
+      p(`Each right triangle has the <b>radius as its hypotenuse</b>, the distance from the center to the chord as one leg, and <b>half the chord</b> as the other leg. So ${sq(V('r'))} = ${sq(V('d'))} + ${sq(`(${F('chord', 2)})`)}: know any two of radius, distance and chord, and the Pythagorean theorem gives the third. Chords the same distance from the center are congruent.`) +
+      example('Example', `A circle has radius 13, and a chord is 5 units from the center. Half the chord is ${R(`${sq(13)} − ${sq(5)}`)} = ${R(144)} = 12, so the chord is <b>24</b> long.`),
+    make(rng) {
+      const kind = rng.pick(['chord', 'chord', 'dist', 'radius', 'half']), t = rng.pick(BIG_TRIPLES), swap = rng.bool(), d = swap ? t[1] : t[0], hc = swap ? t[0] : t[1], r = t[2];
+      const pts = { A: [-hc / r, -d / r], B: [hc / r, -d / r], M: [0, -d / r] };
+      const fig = (lr, ld, lam, lmb) => circFig({ pts, segs: [['A', 'B'], ['O', 'M'], ['O', 'A']], right: [['M', 'O', 'B']], showO: true, off: { M: [0, -0.15] },
+        segLabels: [['O', 'A', lr, -1], ['O', 'M', ld, -1], ['A', 'M', lam || '', -1], ['M', 'B', lmb || '', -1]], label: 'circle with chord AB and the perpendicular OM from the center' });
+      const intro = 'O is the center of the circle and OM ⟂ AB.';
+      if (kind === 'half') {
+        const giveHalf = rng.bool(), ans = giveHalf ? 2 * hc : hc;
+        return { prompt: `${intro} ${giveHalf ? `AM = ${N(hc)}. How long is chord AB?` : `Chord AB = ${N(2 * hc)}. How long is MB?`}${fig('', '', giveHalf ? N(hc) : '', giveHalf ? '' : '?')}`, type: 'number', answer: ans, params: { kind, giveHalf, hc },
+          hints: ['A perpendicular from the center to a chord bisects the chord.', 'So M is the midpoint of AB, and AM = MB = half of AB.', giveHalf ? `AB = 2 × ${N(hc)} = <b>${N(2 * hc)}</b>.` : `MB = ${N(2 * hc)} ÷ 2 = <b>${N(hc)}</b>.`] };
+      }
+      const H1 = 'The perpendicular from the center bisects the chord, so triangle OMA has a right angle at M and AM is half of AB. The radius OA is the hypotenuse.';
+      if (kind === 'chord') return { prompt: `${intro} The radius is ${N(r)} and OM = ${N(d)}. How long is chord AB?${fig(N(r), N(d), '')}`, type: 'number', answer: 2 * hc, params: { kind, r, d },
+        hints: [H1, `AM = ${R(`${sq(N(r))} − ${sq(N(d))}`)} = ${R(N(r * r - d * d))} = ${N(hc)}.`, `AB = 2 × ${N(hc)} = <b>${N(2 * hc)}</b>.`] };
+      if (kind === 'dist') return { prompt: `${intro} The radius is ${N(r)} and chord AB = ${N(2 * hc)}. How far is the chord from the center (OM)?${fig(N(r), '', '')}`, type: 'number', answer: d, params: { kind, r, c: 2 * hc },
+        hints: [H1, `AM = ${N(2 * hc)} ÷ 2 = ${N(hc)}.`, `OM = ${R(`${sq(N(r))} − ${sq(N(hc))}`)} = ${R(N(d * d))} = <b>${N(d)}</b>.`] };
+      return { prompt: `${intro} Chord AB = ${N(2 * hc)} and OM = ${N(d)}. What is the radius of the circle?${fig('', N(d), '')}`, type: 'number', answer: r, params: { kind, d, c: 2 * hc },
+        hints: [H1, `AM = ${N(2 * hc)} ÷ 2 = ${N(hc)}.`, `OA = ${R(`${sq(N(hc))} + ${sq(N(d))}`)} = ${R(N(r * r))} = <b>${N(r)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'half') return q.answer === (P.giveHalf ? P.hc * 2 : P.hc);
+      if (P.kind === 'chord') { const x = Math.sqrt(P.r * P.r - P.d * P.d); return close(Math.hypot(2 * x, 0), q.answer); }      // where y = −d meets the circle
+      if (P.kind === 'dist') return close(Math.hypot(P.c / 2, q.answer), P.r);
+      return close(Math.hypot(P.c / 2, P.d), q.answer);
+    },
+  });
+
+  A.skill({
+    id: 'int2.intersecting-chords', title: 'Angles and segments of intersecting chords',
+    learn: p(`When two chords cross at a point E inside a circle, they make two pairs of vertical angles. <b>Each angle is half the sum of the two arcs it and its vertical angle cut off</b>: if chords AB and CD meet at E, then m∠AEC = ½(arc AC + arc BD). The other pair of angles is supplementary to these, or half the sum of the other two arcs.`) +
+      p(`The pieces of the chords obey a product rule: <b>AE · EB = CE · ED</b>. (Triangles AEC and DEB are similar, because inscribed angles on the same arc are equal.)`) +
+      example('Example', `Chords AB and CD meet at E. Arc AC = 70° and arc BD = 110°, so m∠AEC = ½(70° + 110°) = <b>90°</b>. If AE = 4, EB = 6 and CE = 3, then 4 · 6 = 3 · ED, so <b>ED = 8</b>.`),
+    make(rng) {
+      const kind = rng.pick(['angle', 'angle', 'arc', 'other', 'seg', 'seg']);
+      let x1, x2, y1, y2, a0, A0, B0, C0, D0, E0;
+      do {
+        x1 = rng.int(4, 15) * 10; x2 = rng.int(4, 15) * 10; y1 = rng.int(4, 15) * 10; y2 = 360 - x1 - x2 - y1;
+        a0 = rng.int(0, 35) * 10; A0 = onC(a0); C0 = onC(a0 + x1); B0 = onC(a0 + x1 + y1); D0 = onC(a0 + x1 + y1 + x2); E0 = y2 >= 40 ? meet(A0, B0, C0, D0) : [1, 1];
+      } while (y2 < 40 || Math.hypot(...E0) > 0.65);
+      const pts = { A: A0, B: B0, C: C0, D: D0, E: E0 }, uc = vsub(C0, E0), ub = vsub(B0, E0), bis = [uc[0] / Math.hypot(...uc) + ub[0] / Math.hypot(...ub), uc[1] / Math.hypot(...uc) + ub[1] / Math.hypot(...ub)];
+      const off = { E: [bis[0] / Math.hypot(...bis) * 0.17, bis[1] / Math.hypot(...bis) * 0.17] };
+      const geo = { a0, x1, y1, x2 };
+      if (kind === 'seg') {
+        const [Pd, pairs] = rng.pick([[12, [[2, 6], [3, 4]]], [18, [[2, 9], [3, 6]]], [20, [[2, 10], [4, 5]]], [24, [[3, 8], [4, 6], [2, 12]]], [30, [[3, 10], [5, 6], [2, 15]]], [36, [[3, 12], [4, 9]]], [40, [[4, 10], [5, 8]]], [48, [[4, 12], [6, 8]]], [60, [[5, 12], [6, 10]]], [72, [[6, 12], [8, 9]]]]);
+        const [p1, p2] = rng.sample(pairs, 2), [ae, eb] = rng.bool() ? p1 : [p1[1], p1[0]], [ce, ed] = rng.bool() ? p2 : [p2[1], p2[0]];
+        const fig = circFig({ pts, off, segs: [['A', 'B'], ['C', 'D']], segLabels: [['A', 'E', N(ae)], ['E', 'B', N(eb)], ['C', 'E', N(ce)], ['E', 'D', X]], label: 'two chords crossing inside a circle' });
+        return { prompt: `Chords AB and CD meet at E. AE = ${N(ae)}, EB = ${N(eb)} and CE = ${N(ce)}. Find ED. (The figure is not to scale.)${fig}`, type: 'number', answer: ed, params: { kind, ae, eb, ce },
+          hints: ['For two chords crossing inside a circle, the products of the pieces are equal: AE · EB = CE · ED.', `${N(ae)} · ${N(eb)} = ${N(ce)} · ED, so ${N(Pd)} = ${N(ce)} · ED.`, `ED = ${N(Pd)} ÷ ${N(ce)} = <b>${N(ed)}</b>.`] };
+      }
+      const half = (x1 + x2) / 2;
+      if (kind === 'arc') {
+        const fig = circFig({ pts, off, segs: [['A', 'B'], ['C', 'D']], arcs: [['A', 'C', `${x1}°`], ['B', 'D', '?']], angleLabels: [['E', 'A', 'C', `${N(half)}°`]], label: 'two chords crossing inside a circle' });
+        return { prompt: `Chords AB and CD meet at E. m∠AEC = ${N(half)}° and arc AC = ${N(x1)}°. What is the measure of arc BD?${fig}`, type: 'number', answer: x2, unit: '°', params: Object.assign({ kind }, geo),
+          hints: ['An angle formed by two chords is half the sum of the arcs cut off by it and its vertical angle: m∠AEC = ½(arc AC + arc BD).', `${N(half)} = ½(${N(x1)} + arc BD), so ${N(x1)} + arc BD = ${N(2 * half)}.`, `Arc BD = ${N(2 * half)}° − ${N(x1)}° = <b>${N(x2)}°</b>.`] };
+      }
+      const fig = circFig({ pts, off, segs: [['A', 'B'], ['C', 'D']], arcs: [['A', 'C', `${x1}°`], ['B', 'D', `${x2}°`]], angleLabels: [kind === 'angle' ? ['E', 'A', 'C', '?'] : ['E', 'A', 'D', '?']], label: 'two chords crossing inside a circle' });
+      if (kind === 'angle') return { prompt: `Chords AB and CD meet at E. Arc AC = ${N(x1)}° and arc BD = ${N(x2)}°. What is m∠AEC?${fig}`, type: 'number', answer: half, unit: '°', params: Object.assign({ kind }, geo),
+        hints: ['∠AEC and its vertical angle ∠BED cut off arcs AC and BD.', 'An angle formed by two chords is half the sum of those two arcs.', `½(${N(x1)}° + ${N(x2)}°) = ½(${N(x1 + x2)}°) = <b>${N(half)}°</b>.`] };
+      return { prompt: `Chords AB and CD meet at E. Arc AC = ${N(x1)}° and arc BD = ${N(x2)}°. What is m∠AED?${fig}`, type: 'number', answer: 180 - half, unit: '°', params: Object.assign({ kind }, geo),
+        hints: [`First find m∠AEC = ½(arc AC + arc BD) = ½(${N(x1)}° + ${N(x2)}°) = ${N(half)}°.`, '∠AED and ∠AEC form a linear pair along chord CD, so they add to 180°.', `m∠AED = 180° − ${N(half)}° = <b>${N(180 - half)}°</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'seg') return P.ae * P.eb === P.ce * q.answer;
+      const A0 = onC(P.a0), C0 = onC(P.a0 + P.x1), B0 = onC(P.a0 + P.x1 + P.y1), D0 = onC(P.a0 + P.x1 + P.y1 + P.x2), E0 = meet(A0, B0, C0, D0);   // measure the drawing
+      const aec = angAt(E0, A0, C0);
+      if (P.kind === 'angle') return close(aec, q.answer);
+      if (P.kind === 'other') return close(angAt(E0, A0, D0), q.answer);
+      return close(2 * aec - P.x1, q.answer);
+    },
+  });
+
+  A.skill({
+    id: 'int2.tangent-lines', title: 'Tangent lines to a circle',
+    learn: p(`A <b>tangent</b> line touches a circle at exactly one point, the point of tangency. <b>A tangent is perpendicular to the radius drawn to the point of tangency.</b> So the radius, the tangent segment and the line from the center to an outside point make a right triangle, with the line to the center as the hypotenuse.`) +
+      p(`From a point outside the circle you can draw exactly two tangents, and <b>the two tangent segments are congruent</b>: PA = PB. In the kite OAPB the angles at A and B are both 90°, so the angle at P and the central angle AOB add to 180°.`) +
+      example('Example', `A circle has radius 5, and P is 13 units from the center O. The tangent PA is perpendicular to radius OA, so PA = ${R(`${sq(13)} − ${sq(5)}`)} = ${R(144)} = <b>12</b>.`),
+    make(rng) {
+      const kind = rng.pick(['length', 'length', 'dist', 'radius', 'equal', 'angle']);
+      const draw = (rN, oN, extra, one) => { const al = Math.acos(rN / oN) * 180 / Math.PI; return Object.assign({ pts: one ? { A: onC(al), P: [oN / rN, 0] } : { A: onC(al), B: onC(-al), P: [oN / rN, 0] }, showO: true, off: { P: [0.15, 0] }, right: [['A', 'O', 'P']], label: 'tangents from P to a circle with center O' }, extra); };
+      if (kind === 'angle') {
+        const th = rng.int(6, 30) * 4, giveP = rng.bool(), oN = 1 / Math.cos(toRad((180 - th) / 2));
+        const o = draw(1, oN, { segs: [['O', 'A'], ['O', 'B'], ['P', 'A'], ['P', 'B']], right: [['A', 'O', 'P'], ['B', 'O', 'P']], angleLabels: [giveP ? ['P', 'A', 'B', `${th}°`] : ['O', 'A', 'B', `${180 - th}°`], giveP ? ['O', 'A', 'B', '?'] : ['P', 'A', 'B', '?']], angleR: 0.28 });
+        return { prompt: `PA and PB are tangent to the circle with center O. ${giveP ? `m∠APB = ${N(th)}°. What is m∠AOB?` : `m∠AOB = ${N(180 - th)}°. What is m∠APB?`}${circFig(o)}`, type: 'number', answer: giveP ? 180 - th : th, unit: '°', params: { kind, th, giveP },
+          hints: ['Each tangent is perpendicular to its radius, so ∠OAP = ∠OBP = 90°.', 'The angles of quadrilateral OAPB add to 360°, so m∠AOB + m∠APB = 360° − 90° − 90° = 180°.', `${giveP ? 'm∠AOB' : 'm∠APB'} = 180° − ${N(giveP ? th : 180 - th)}° = <b>${N(giveP ? 180 - th : th)}°</b>.`] };
+      }
+      if (kind === 'equal') {
+        const x = rng.int(2, 9), p1 = rng.int(1, 5), r1 = p1 + rng.int(1, 4), q1 = rng.int(1, 15), L = p1 * x + q1, s1 = L - r1 * x, ask = rng.bool() ? 'x' : 'PB';
+        const o = draw(1, 2.2, { segs: [['O', 'A'], ['O', 'B'], ['P', 'A'], ['P', 'B']], right: [['A', 'O', 'P'], ['B', 'O', 'P']], segLabels: [['P', 'A', M.poly([p1, q1]), -1], ['P', 'B', M.poly([r1, s1]), 1]] });
+        return { prompt: `PA and PB are tangent to the circle at A and B. PA = ${M.poly([p1, q1])} and PB = ${M.poly([r1, s1])}. ${ask === 'x' ? `Find ${X}.` : 'How long is PB?'}${circFig(o)}`, type: 'number', answer: ask === 'x' ? x : L, params: { kind, ask, p1, q1, r1, s1 },
+          hints: ['Two tangent segments from the same outside point are congruent: PA = PB.', `${M.poly([p1, q1])} = ${M.poly([r1, s1])}, so ${M.term(r1 - p1, 'x')} = ${N(q1 - s1)} and ${X} = ${N(x)}.`, ask === 'x' ? `<b>${X} = ${N(x)}</b>.` : `PB = ${N(r1)}(${N(x)})${s1 ? ' ' + M.signed(s1) : ''} = <b>${N(L)}</b>.`] };
+      }
+      const t = rng.pick(BIG_TRIPLES), swap = rng.bool(), r = swap ? t[1] : t[0], pa = swap ? t[0] : t[1], op = t[2];
+      const o = draw(r, op, { segs: [['O', 'A'], ['P', 'A'], ['O', 'P']], segLabels: [['O', 'A', kind === 'radius' ? '' : N(r), 1], ['A', 'P', kind === 'length' ? X : kind === 'radius' ? N(pa) : N(pa), 1], ['O', 'P', kind === 'dist' ? X : N(op), -1]] }, true);
+      if (kind === 'radius') o.segLabels[0][2] = X;
+      const H1 = 'The tangent PA is perpendicular to the radius OA, so triangle OAP has a right angle at A, with hypotenuse OP.';
+      if (kind === 'length') return { prompt: `PA is tangent to the circle with center O at A. The radius is ${N(r)} and OP = ${N(op)}. How long is PA?${circFig(o)}`, type: 'number', answer: pa, params: { kind, r, op },
+        hints: [H1, `PA = ${R(`${sq(N(op))} − ${sq(N(r))}`)} = ${R(N(op * op - r * r))}.`, `PA = <b>${N(pa)}</b>.`] };
+      if (kind === 'dist') return { prompt: `PA is tangent to the circle with center O at A. The radius is ${N(r)} and PA = ${N(pa)}. How far is P from the center O?${circFig(o)}`, type: 'number', answer: op, params: { kind, r, pa },
+        hints: [H1, `OP = ${R(`${sq(N(r))} + ${sq(N(pa))}`)} = ${R(N(op * op))}.`, `OP = <b>${N(op)}</b>.`] };
+      return { prompt: `PA is tangent to the circle with center O at A. PA = ${N(pa)} and OP = ${N(op)}. What is the radius?${circFig(o)}`, type: 'number', answer: r, params: { kind, pa, op },
+        hints: [H1, `OA = ${R(`${sq(N(op))} − ${sq(N(pa))}`)} = ${R(N(r * r))}.`, `The radius is <b>${N(r)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'equal') { const x = q.params.ask === 'x' ? q.answer : (P.q1 - P.s1) / (P.r1 - P.p1); return P.p1 * x + P.q1 === P.r1 * x + P.s1 && (P.ask === 'x' || q.answer === P.r1 * x + P.s1); }
+      if (P.kind === 'angle') {                                           // draw it: tangent points at ±α on a unit circle, P on the x-axis
+        const al = toRad((180 - P.th) / 2), A0 = [Math.cos(al), Math.sin(al)], B0 = [Math.cos(al), -Math.sin(al)], P0 = [1 / Math.cos(al), 0];
+        return close(P.giveP ? angAt([0, 0], A0, B0) : angAt(P0, A0, B0), q.answer) && close(vdot(A0, vsub(P0, A0)), 0);
+      }
+      const r = P.kind === 'radius' ? q.answer : P.r, op = P.kind === 'dist' ? q.answer : P.op;      // tangent point from the angle at the center
+      const al = Math.acos(r / op), A0 = [r * Math.cos(al), r * Math.sin(al)], pa = Math.hypot(op - A0[0], A0[1]);
+      return P.kind === 'length' ? close(pa, q.answer) : close(pa, P.pa);
+    },
+  });
+
+  A.skill({
+    id: 'int2.tangents-secants', title: 'Tangents, secants and arcs',
+    learn: p(`A <b>secant</b> is a line that cuts a circle twice. When two secants, a secant and a tangent, or two tangents meet at a point P <b>outside</b> the circle, the angle at P is <b>half the difference of the intercepted arcs</b>: ½(far arc − near arc). (Compare chords crossing <i>inside</i>, where you take half the sum.)`) +
+      p(`Lengths follow a product rule measured from P. For a secant through A and B (A nearer) and a tangent PT: <b>PT² = PA · PB</b>. For two secants: <b>PA · PB = PC · PD</b>. In each product, multiply the outside part by the whole secant, not by the part inside the circle.`) +
+      example('Example', `From P, a tangent touches the circle at T, and a secant cuts it at A and B, with PA = 4 and AB = 5. The whole secant is PB = 9, so PT² = 4 · 9 = 36 and <b>PT = 6</b>.`),
+    make(rng) {
+      const kind = rng.pick(['secants', 'tanSec', 'tangents', 'tanLen', 'tanLen', 'secLen']);
+      const lab = 'lines from an outside point P to a circle';
+      if (kind === 'secants') {
+        let al, be, Px;
+        do { al = rng.int(3, 12) * 5; be = rng.int(al / 5 + 4, 17) * 5; Px = meet(onC(180 - be), onC(al), [0, 0], [1, 0])[0]; } while (Px > 3.2 || Px < 1.5);
+        const giveAngle = rng.bool(), pts = { A: onC(al), B: onC(180 - be), C: onC(-al), D: onC(180 + be), P: [Px, 0] };
+        const fig = circFig({ pts, off: { P: [0.15, 0] }, segs: [['P', 'B'], ['P', 'D']], arcs: [['C', 'A', giveAngle ? '?' : `${2 * al}°`, 0.75], ['B', 'D', `${2 * be}°`]], notes: [[Px - 0.15, -0.38, `m∠P = ${giveAngle ? `${be - al}°` : '?'}`]], label: lab });
+        return { prompt: `Two secants from P cut the circle at A and B and at C and D. Arc BD = ${N(2 * be)}° ${giveAngle ? `and m∠P = ${N(be - al)}°. What is the measure of arc AC?` : `and arc AC = ${N(2 * al)}°. What is m∠P?`}${fig}`, type: 'number', answer: giveAngle ? 2 * al : be - al, unit: '°', params: { kind, al, be, giveAngle },
+          hints: ['For an angle formed outside the circle, m∠P = ½(far arc − near arc). Here the far arc is BD and the near arc is AC.',
+            giveAngle ? `${N(be - al)} = ½(${N(2 * be)} − arc AC), so ${N(2 * be)} − arc AC = ${N(2 * (be - al))}.` : `m∠P = ½(${N(2 * be)}° − ${N(2 * al)}°) = ½(${N(2 * (be - al))}°).`,
+            giveAngle ? `Arc AC = ${N(2 * be)}° − ${N(2 * (be - al))}° = <b>${N(2 * al)}°</b>.` : `m∠P = <b>${N(be - al)}°</b>.`] };
+      }
+      if (kind === 'tangents') {
+        const minor = rng.int(20, 35) * 4, ga = minor / 2, giveArc = rng.bool(), pts = { T: onC(ga), U: onC(-ga), P: [1 / Math.cos(toRad(ga)), 0] };
+        const fig = circFig({ pts, showO: true, off: { P: [0.15, 0] }, segs: [['P', 'T'], ['P', 'U']], arcs: [['U', 'T', giveArc ? `${minor}°` : '?', 0.75]], notes: [[1 / Math.cos(toRad(ga)) - 0.15, -0.38, `m∠P = ${giveArc ? '?' : `${180 - minor}°`}`]], label: lab });
+        return { prompt: `PT and PU are tangent to the circle at T and U. ${giveArc ? `The minor arc TU is ${N(minor)}°. What is m∠P?` : `m∠P = ${N(180 - minor)}°. What is the minor arc TU?`}${fig}`, type: 'number', answer: giveArc ? 180 - minor : minor, unit: '°', params: { kind, minor, giveArc },
+          hints: ['Two tangents cut the circle into a minor arc and a major arc that add to 360°. m∠P = ½(major arc − minor arc).',
+            giveArc ? `The major arc is 360° − ${N(minor)}° = ${N(360 - minor)}°, so m∠P = ½(${N(360 - minor)}° − ${N(minor)}°).` : `With minor arc ${V('m')}, the major arc is 360 − ${V('m')}, so ${N(180 - minor)} = ½(360 − 2${V('m')}) = 180 − ${V('m')}.`,
+            giveArc ? `m∠P = <b>${N(180 - minor)}°</b>.` : `Minor arc TU = 180° − ${N(180 - minor)}° = <b>${N(minor)}°</b>.`] };
+      }
+      if (kind === 'tanSec') {
+        let x, y, Pp;
+        do { x = rng.int(4, 14) * 10; y = rng.int(x / 10 + 4, 24) * 10; Pp = meet(onC(90 + y), onC(90 - x), [0, 1], [1, 1]); } while (x + y >= 340 || !(Pp[0] > 1.3 && Pp[0] < 3) || Math.hypot(...vsub(Pp, onC(90 - x))) > Math.hypot(...vsub(Pp, onC(90 + y))));
+        const pts = { T: [0, 1], N: onC(90 - x), F: onC(90 + y), P: Pp }, giveAngle = rng.bool(), ang = (y - x) / 2;
+        const fig = circFig({ pts, off: { P: [0, 0.16], T: [0, 0.16] }, segs: [['P', 'T'], ['P', 'F']], arcs: [['N', 'T', `${x}°`, 0.75], ['T', 'F', giveAngle ? '?' : `${y}°`]], notes: [[Pp[0] + 0.12, Pp[1] - 0.3, `m∠P = ${giveAngle ? `${ang}°` : '?'}`]], label: lab });
+        return { prompt: `PT is tangent to the circle at T, and a secant from P cuts the circle at N and F. Arc TN = ${N(x)}° ${giveAngle ? `and m∠P = ${N(ang)}°. What is the measure of arc TF?` : `and arc TF = ${N(y)}°. What is m∠P?`}${fig}`, type: 'number', answer: giveAngle ? y : ang, unit: '°', params: { kind, x, y, giveAngle },
+          hints: ['For an angle formed outside the circle, m∠P = ½(far arc − near arc). Here the far arc is TF and the near arc is TN.',
+            giveAngle ? `${N(ang)} = ½(arc TF − ${N(x)}), so arc TF − ${N(x)} = ${N(2 * ang)}.` : `m∠P = ½(${N(y)}° − ${N(x)}°) = ½(${N(y - x)}°).`,
+            giveAngle ? `Arc TF = ${N(2 * ang)}° + ${N(x)}° = <b>${N(y)}°</b>.` : `m∠P = <b>${N(ang)}°</b>.`] };
+      }
+      if (kind === 'tanLen') {
+        const [e, w] = rng.pick([[4, 9], [2, 8], [3, 12], [4, 16], [1, 9], [5, 20], [2, 18], [3, 27], [8, 18], [9, 16], [4, 25], [6, 24], [1, 16], [3, 75]].filter(z => z[1] <= 40)), t = Math.sqrt(e * w), i = w - e, askT = rng.bool();
+        const [A0, B0] = secant([2.4, 1], onC(212));
+        const fig = circFig({ pts: { T: [0, 1], A: A0, B: B0, P: [2.4, 1] }, off: { P: [0.15, 0], T: [0, 0.16] }, segs: [['P', 'T'], ['P', 'B']], segLabels: [['T', 'P', askT ? X : N(t), 1], ['P', 'A', N(e), 1], ['A', 'B', askT ? N(i) : X, 1]], label: lab });
+        return { prompt: `PT is tangent to the circle at T, and a secant from P cuts the circle at A and B, with A nearer to P. ${askT ? `PA = ${N(e)} and AB = ${N(i)}. How long is PT?` : `PT = ${N(t)} and PA = ${N(e)}. How long is AB?`} (The figure is not to scale.)${fig}`, type: 'number', answer: askT ? t : i, params: { kind, e, i, t, askT },
+          hints: ['Tangent and secant from the same point: PT² = PA · PB, where PB is the whole secant.', askT ? `PB = ${N(e)} + ${N(i)} = ${N(w)}, so PT² = ${N(e)} · ${N(w)} = ${N(e * w)}.` : `${sq(N(t))} = ${N(e)} · PB, so PB = ${N(t * t)} ÷ ${N(e)} = ${N(w)}.`,
+            askT ? `PT = ${R(N(e * w))} = <b>${N(t)}</b>.` : `AB = PB − PA = ${N(w)} − ${N(e)} = <b>${N(i)}</b>.`] };
+      }
+      const [Pd, pairs] = rng.pick([[24, [[2, 12], [3, 8], [4, 6]]], [30, [[2, 15], [3, 10], [5, 6]]], [36, [[2, 18], [3, 12], [4, 9]]], [40, [[2, 20], [4, 10], [5, 8]]], [48, [[3, 16], [4, 12], [6, 8]]], [60, [[3, 20], [4, 15], [5, 12], [6, 10]]], [72, [[3, 24], [4, 18], [6, 12], [8, 9]]]]);
+      const [[e1, w1], [e2, w2]] = rng.sample(pairs, 2);
+      const [A1, B1] = secant([2.3, 0], onC(150)), [C1, D1] = secant([2.3, 0], onC(205));
+      const fig = circFig({ pts: { A: A1, B: B1, C: C1, D: D1, P: [2.3, 0] }, off: { P: [0.15, 0] }, segs: [['P', 'B'], ['P', 'D']], segLabels: [['P', 'A', N(e1), -1], ['A', 'B', N(w1 - e1), -1], ['P', 'C', N(e2), 1], ['C', 'D', X, 1]], label: lab });
+      return { prompt: `Two secants from P cut the circle at A and B and at C and D, with A and C nearer to P. PA = ${N(e1)}, AB = ${N(w1 - e1)} and PC = ${N(e2)}. How long is CD? (The figure is not to scale.)${fig}`, type: 'number', answer: w2 - e2, params: { kind, e1, i1: w1 - e1, e2 },
+        hints: ['For two secants from the same point: PA · PB = PC · PD, each outside part times its whole secant.', `PB = ${N(e1)} + ${N(w1 - e1)} = ${N(w1)}, so ${N(e1)} · ${N(w1)} = ${N(Pd)} = ${N(e2)} · PD, and PD = ${N(Pd)} ÷ ${N(e2)} = ${N(w2)}.`, `CD = PD − PC = ${N(w2)} − ${N(e2)} = <b>${N(w2 - e2)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'tanLen') { const pt = P.askT ? q.answer : P.t, i = P.askT ? P.i : q.answer; return close(pt * pt, P.e * (P.e + i)); }
+      if (P.kind === 'secLen') return close(P.e1 * (P.e1 + P.i1), P.e2 * (P.e2 + q.answer));
+      if (P.kind === 'secants') {                                        // measure the angle at P in the drawing
+        const A0 = onC(P.al), B0 = onC(180 - P.be), P0 = meet(B0, A0, [0, 0], [1, 0]), ang = angAt(P0, A0, onC(-P.al));
+        return P.giveAngle ? close(2 * P.be - 2 * ang, q.answer) : close(ang, q.answer);
+      }
+      if (P.kind === 'tangents') { const T0 = onC(P.minor / 2), P0 = [1 / Math.cos(toRad(P.minor / 2)), 0], ang = angAt(P0, T0, onC(-P.minor / 2)); return P.giveArc ? close(ang, q.answer) : close(180 - ang, q.answer); }
+      const N0 = onC(90 - P.x), F0 = onC(90 + P.y), P0 = meet(F0, N0, [0, 1], [1, 1]), ang = angAt(P0, [0, 1], N0);
+      return P.giveAngle ? close(2 * ang + P.x, q.answer) : close(ang, q.answer);
+    },
+  });
+
+
+  /* ---------- Unit 14: The tangent ratio ---------- */
+  const TAN_TABLE = [10, 20, 30, 40, 50, 60, 70, 80];
+  const tan4 = d => M.round(Math.tan(toRad(d)), 4);
+
+  A.skill({
+    id: 'int2.tangent-ratio', title: 'The tangent ratio',
+    learn: p(`In a right triangle, pick one of the acute angles. The leg across from it is the <b>opposite</b> side and the leg touching it is the <b>adjacent</b> side. Their ratio is the angle's <b>tangent</b>: <b>tan = ${F('opposite', 'adjacent')}</b>. It is the slope ratio of a slope triangle, rise over run, with the angle at the bottom.`) +
+      p(`Similar right triangles have the same angles, so every right triangle with a 30° angle has the same ratio, tan 30° ≈ 0.577. That is why a table (or the calculator's tan key) can list one value for each angle. To find a missing leg, write tan = ${F('opposite', 'adjacent')} and solve: multiply when the unknown is opposite, divide when it is adjacent. The tangent grows as the angle grows, and tan 45° = 1.`) +
+      example('Example', `A slope triangle has a 35° angle and a run of 12. Rise = 12 × tan 35° ≈ 12 × 0.7002 ≈ <b>8.4</b>.`),
+    make(rng) {
+      const kind = rng.pick(['ratio', 'ratio', 'side', 'side', 'table']);
+      if (kind === 'ratio') {
+        const ac = rng.int(2, 20), bc = rng.int(2, 20), ang = rng.pick(['A', 'B']), [num, den] = ang === 'A' ? [bc, ac] : [ac, bc];
+        return { prompt: `In right triangle ABC, angle C is the right angle. Find tan ${ang} as a fraction in simplest form.${triFig(N(ac), N(bc), '', ang)}`, type: 'number', answer: num / den, answerText: M.fracText(num, den), params: { kind, ac, bc, ang },
+          hints: [`From angle ${ang}, the opposite leg is ${ang === 'A' ? 'BC' : 'AC'} = ${N(num)} and the adjacent leg is ${ang === 'A' ? 'AC' : 'BC'} = ${N(den)}.`, `tan ${ang} = ${F('opposite', 'adjacent')} = ${F(num, den, { raw: true })}.`, `${M.gcd(num, den) > 1 ? 'Simplify: ' : ''}tan ${ang} = <b>${M.fracText(num, den)}</b>.`] };
+      }
+      if (kind === 'side') {
+        const deg = rng.int(15, 70), len = rng.int(3, 30), want = rng.pick(['opp', 'adj']), t = tan4(deg);
+        const ans = M.round(want === 'opp' ? len * Math.tan(toRad(deg)) : len / Math.tan(toRad(deg)), 1);
+        const fig = triFig(want === 'adj' ? X : N(len), want === 'opp' ? X : N(len), '', 'A', deg + '°');
+        return { prompt: `In right triangle ABC, angle C is the right angle and angle A = ${N(deg)}°. Find ${X}, to the nearest tenth. (Use tan ${N(deg)}° ≈ ${N(t)}.)${fig}`, type: 'number', answer: ans, tolerance: Math.max(0.05, M.round(ans * 0.002, 2)), params: { kind, deg, len, want },
+          hints: [`From the ${N(deg)}° angle, ${want === 'opp' ? `${X} is opposite and ${N(len)} is adjacent` : `${N(len)} is opposite and ${X} is adjacent`}, so use the tangent.`,
+            `tan ${N(deg)}° = ${want === 'opp' ? F(X, N(len)) : F(N(len), X)}.`,
+            want === 'opp' ? `${X} = ${N(len)} × tan ${N(deg)}° ≈ ${N(len)} × ${N(t)} ≈ <b>${N(ans)}</b>.` : `${X} = ${N(len)} ÷ tan ${N(deg)}° ≈ ${N(len)} ÷ ${N(t)} ≈ <b>${N(ans)}</b>.`] };
+      }
+      let th, run, rise, guard = 0;
+      do { th = rng.pick(TAN_TABLE.slice(1, 7)); run = rng.int(4, 20); rise = Math.round(run * Math.tan(toRad(th))); guard++; }
+      while (guard < 50 && (rise < 1 || Math.abs(Math.atan2(rise, run) * 180 / Math.PI - th) > 2.5));
+      const i0 = Math.max(0, Math.min(TAN_TABLE.length - 4, TAN_TABLE.indexOf(th) - rng.int(1, 2))), opts = TAN_TABLE.slice(i0, i0 + 4);
+      const table = M.table(['Angle'].concat(opts.map(d => `${d}°`)), [['Slope ratio (tan)'].concat(opts.map(d => N(M.round(Math.tan(toRad(d)), 3))))], { compact: true });
+      return { prompt: `A slope triangle has a rise of ${N(rise)} and a run of ${N(run)}. Use the table to decide which angle the slope makes with the horizontal, to the nearest 10°.${table}`, type: 'choice', answer: `${th}°`, choices: opts.map(d => `${d}°`), keepOrder: true, params: { kind, rise, run, opts },
+        hints: ['The slope ratio is rise ÷ run, the tangent of the angle at the bottom of the slope triangle.', `${N(rise)} ÷ ${N(run)} ≈ ${N(M.round(rise / run, 3))}.`, `The closest value in the table is ${N(M.round(Math.tan(toRad(th)), 3))}, so the angle is about <b>${th}°</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'ratio') { const A0 = Math.atan2(P.bc, P.ac), th = P.ang === 'A' ? A0 : Math.PI / 2 - A0; return close(Math.tan(th), q.answer); }     // measure the angle, then use Math.tan
+      if (P.kind === 'side') { const t = toRad(P.deg), want = P.want === 'opp' ? P.len * Math.sin(t) / Math.cos(t) : P.len * Math.cos(t) / Math.sin(t); return Math.abs(want - q.answer) <= 0.05 + 1e-9; }
+      const deg = Math.atan2(P.rise, P.run) * 180 / Math.PI, best = P.opts.reduce((b, d) => Math.abs(d - deg) < Math.abs(b - deg) ? d : b);
+      return q.answer === `${best}°`;
+    },
+  });
+
+  A.skill({
+    id: 'int2.tangent-applications', title: 'Using the tangent ratio',
+    learn: p(`The tangent ratio finds heights and distances you cannot measure directly. The <b>angle of elevation</b> is the angle you look <i>up</i> from the horizontal; the <b>angle of depression</b> is the angle you look <i>down</i> from the horizontal. Draw the right triangle: the horizontal distance and the height are its legs.`) +
+      p(`If the angle sits at the end of the horizontal distance, then <b>height = distance × tan(angle)</b> and <b>distance = height ÷ tan(angle)</b>. Remember to add any extra height, such as the observer's eye level, after you find the triangle's height. An angle of depression from a tower equals the angle of elevation from the ground back up, because the two horizontals are parallel.`) +
+      example('Example', `${big('A tree casts a 20 m shadow when the sun is 38° above the horizon.')}Height = 20 × tan 38° ≈ 20 × 0.7813 ≈ <b>15.6 m</b>.`),
+    make(rng) {
+      const kind = rng.pick(['elevation', 'eye', 'depression', 'shadow', 'ramp', 'angle']), name = rng.pick(NAMES), deg = rng.int(12, 70), t = tan4(deg);
+      const tolOf = v => Math.max(0.05, M.round(v * 0.002, 2));
+      if (kind === 'angle') {
+        const h = rng.int(5, 60), d = rng.int(5, 80), ans = Math.round(Math.atan2(h, d) * 180 / Math.PI);
+        return { prompt: `${name} stands ${N(d)} m from the base of a ${N(h)} m tower on flat ground. What is the angle of elevation from the ground where ${name} stands to the top of the tower, to the nearest degree?`, type: 'number', answer: ans, unit: '°', params: { kind, h, d },
+          hints: ['The height is opposite the angle and the ground distance is adjacent, so use the tangent.', `tan θ = ${F(N(h), N(d))} ≈ ${N(M.round(h / d, 4))}.`, `θ = tan<sup>−1</sup>(${N(M.round(h / d, 4))}) ≈ ${N(M.round(Math.atan2(h, d) * 180 / Math.PI, 2))}°, so about <b>${N(ans)}°</b>.`] };
+      }
+      if (kind === 'depression') {
+        const h = rng.int(20, 120), ans = M.round(h / Math.tan(toRad(deg)), 1);
+        return { prompt: `From the top of a ${N(h)} m cliff, ${name} sees a boat at an angle of depression of ${N(deg)}°. How far is the boat from the foot of the cliff, to the nearest tenth of a metre? (tan ${N(deg)}° ≈ ${N(t)})`, type: 'number', answer: ans, unit: 'm', tolerance: tolOf(ans), params: { kind, h, deg },
+          hints: [`The angle of depression from the cliff top equals the angle of elevation from the boat up to the cliff top: ${N(deg)}°.`, `From the boat, the cliff (${N(h)} m) is opposite and the distance ${V('d')} is adjacent: tan ${N(deg)}° = ${F(N(h), V('d'))}.`, `${V('d')} = ${N(h)} ÷ ${N(t)} ≈ <b>${N(ans)}</b> m.`] };
+      }
+      if (kind === 'ramp') {
+        const small = rng.int(3, 12), run = rng.int(2, 15), ans = M.round(run * Math.tan(toRad(small)), 2);
+        return { prompt: `A wheelchair ramp makes a ${N(small)}° angle with the ground and covers a horizontal distance of ${N(run)} m. How high does it rise, to the nearest hundredth of a metre? (tan ${N(small)}° ≈ ${N(tan4(small))})`, type: 'number', answer: ans, unit: 'm', tolerance: 0.01, params: { kind, deg: small, d: run, eye: 0 },
+          hints: ['The rise is opposite the angle and the horizontal distance is adjacent, so use the tangent.', `rise = ${N(run)} × tan ${N(small)}°.`, `rise ≈ ${N(run)} × ${N(tan4(small))} ≈ <b>${N(ans)}</b> m.`] };
+      }
+      const d = rng.int(5, 60), eye = kind === 'eye' ? rng.pick([1.4, 1.5, 1.6, 1.7]) : 0, ans = M.round(d * Math.tan(toRad(deg)) + eye, 1);
+      const prompt = kind === 'shadow' ? `A flagpole casts a shadow ${N(d)} m long when the sun is ${N(deg)}° above the horizon. How tall is the flagpole, to the nearest tenth of a metre? (tan ${N(deg)}° ≈ ${N(t)})`
+        : kind === 'eye' ? `${name} stands ${N(d)} m from a building and looks up at its top at an angle of elevation of ${N(deg)}°. ${name}'s eyes are ${N(eye)} m above the ground. How tall is the building, to the nearest tenth of a metre? (tan ${N(deg)}° ≈ ${N(t)})`
+          : `From a point ${N(d)} m from the foot of a tree, the angle of elevation to the top of the tree is ${N(deg)}°. How tall is the tree, to the nearest tenth of a metre? (tan ${N(deg)}° ≈ ${N(t)})`;
+      const legs = kind === 'shadow' ? 'the shadow is the adjacent leg and the pole is the opposite leg' : `the ground distance is the adjacent leg and the height${kind === 'eye' ? ' above eye level' : ''} is the opposite leg`;
+      return { prompt, type: 'number', answer: ans, unit: 'm', tolerance: tolOf(ans), params: { kind, deg, d, eye },
+        hints: [`Draw the right triangle: ${legs}. Use tan = ${F('opposite', 'adjacent')}.`, `opposite = ${N(d)} × tan ${N(deg)}° ≈ ${N(d)} × ${N(t)} ≈ ${N(M.round(d * Math.tan(toRad(deg)), 2))} m.`,
+          kind === 'eye' ? `Add the eye height: ${N(M.round(d * Math.tan(toRad(deg)), 2))} + ${N(eye)} ≈ <b>${N(ans)}</b> m.` : `The height is about <b>${N(ans)}</b> m.`] };
+    },
+    verify(q) {
+      const P = q.params;                                               // rebuild the triangle with the law of sines instead of tan
+      if (P.kind === 'angle') return Math.abs(Math.asin(P.h / Math.hypot(P.h, P.d)) * 180 / Math.PI - q.answer) <= 0.5;
+      const t = toRad(P.deg), sides = len => len * Math.sin(t) / Math.sin(Math.PI / 2 - t);
+      if (P.kind === 'depression') return Math.abs(P.h * Math.sin(Math.PI / 2 - t) / Math.sin(t) - q.answer) <= q.tolerance + 1e-9;
+      return Math.abs(sides(P.d) + P.eye - q.answer) <= (P.kind === 'ramp' ? 0.005 : 0.05) + 1e-9;
     },
   });
 

@@ -35,6 +35,9 @@
       { id: 'equations', title: 'Equations and inequalities', blurb: 'One-step equations, and inequalities that describe many answers.', skills: ['g6.one-step-equations', 'g6.inequalities'] },
       { id: 'geometry', title: 'Geometry', blurb: 'Area of flat shapes, and volume and surface area of boxes.', skills: ['g6.area', 'g6.volume-surface-area'] },
       { id: 'stats', title: 'Data and statistics', blurb: 'The centre of a data set and how spread out it is.', skills: ['g6.mean-median', 'g6.spread'] },
+      { id: 'fraction-sense', title: 'Fractions as division and mixed numbers', blurb: 'Sharing things equally to make a fraction, and multiplying mixed numbers.', skills: ['g6.fraction-as-division', 'g6.multiply-mixed-numbers'] },
+      { id: 'data-displays', title: 'Statistical questions and data displays', blurb: 'Questions with answers that vary, and reading histograms and stem-and-leaf plots.', skills: ['g6.statistical-questions', 'g6.histograms', 'g6.stem-and-leaf'] },
+      { id: 'logic', title: 'Logic puzzles and Venn diagrams', blurb: 'Using clues to reason your way to an answer, and sorting things into overlapping circles.', skills: ['g6.logic-puzzles', 'g6.venn-diagrams'] },
     ],
   });
 
@@ -967,6 +970,549 @@
       const m = pr.q.match(/between (\d+) and (\d+)|greater than (\d+)/);
       const lo = Number(m[1] || m[3]), hi = m[2] ? Number(m[2]) : mx;
       return q.answer === 25 * parts.filter(([a, b]) => a >= lo && b <= hi).length;    // count the quarters inside
+    },
+  });
+
+  /* ---------- Unit 11: Fractions as division and mixed numbers ---------- */
+  const SHARE_CTX = [
+    { what: 'pizzas', whatOne: 'pizza', much: 'pizza', one: 'pizza', ones: 'pizzas', some: 'Some pizzas were' },
+    { what: 'pieces of licorice', whatOne: 'piece of licorice', much: 'licorice', one: 'piece', ones: 'pieces', some: 'Some licorice was' },
+    { what: 'loaves of bread', whatOne: 'loaf of bread', much: 'bread', one: 'loaf', ones: 'loaves', some: 'Some bread was' },
+    { what: 'pounds of clay', whatOne: 'pound of clay', much: 'clay', one: 'pound', ones: 'pounds', unit: 'lb', some: 'Some clay was' },
+    { what: 'metres of ribbon', whatOne: 'metre of ribbon', much: 'ribbon', one: 'metre', ones: 'metres', unit: 'm', some: 'Some ribbon was' },
+    { what: 'litres of juice', whatOne: 'litre of juice', much: 'juice', one: 'litre', ones: 'litres', unit: 'L', some: 'Some juice was' },
+    { what: 'cups of rice', whatOne: 'cup of rice', much: 'rice', one: 'cup', ones: 'cups', unit: 'cups', some: 'Some rice was' },
+  ];
+  const SHARERS = [['friends', 'friend'], ['people', 'person'], ['campers', 'camper'], ['teammates', 'teammate'], ['children', 'child']];
+  const amountOf = (k, c) => `${k} ${k === 1 ? c.whatOne : c.what}`;
+  const shareOf = (n, d, c) => `${MX(n, d)} ${n < d ? 'of a ' + c.one : c.ones}`;
+  A.skill({
+    id: 'g6.fraction-as-division', title: 'Fractions as division',
+    learn: p(`A fraction is a division. <b>${F(V('a'), V('b'))} means ${V('a')} ÷ ${V('b')}</b>: the top number divided by the bottom number. So when ${V('a')} things are shared equally among ${V('b')} people, each person gets ${F(V('a'), V('b'))} of a thing.`) +
+      p(`Picture 3 pizzas shared by 4 friends. Cut every pizza into 4 equal slices. Each friend takes one slice from each pizza: 3 slices of ${F(1, 4)}, which is ${F(3, 4)} of a pizza. So 3 ÷ 4 = ${F(3, 4)}.`) +
+      p(`When there are more things than people, each person gets more than one whole. Divide to see how many wholes each person gets, then share what is left over: 7 ÷ 3 is 2 with 1 left over, so each person gets ${MX(7, 3)}.`) +
+      example('Example', `${big('3 campers share 8 litres of juice equally.')}8 ÷ 3 = ${F(8, 3)}. Each camper gets 2 litres, and the 2 litres left over are split into 3 parts, so each camper gets <b>${MX(8, 3)} litres</b>.`),
+    make(rng) {
+      const kind = rng.pick(['share', 'share', 'share', 'divide', 'which', 'reverse']);
+      const c = rng.pick(SHARE_CTX), [who, whoOne] = rng.pick(SHARERS);
+      const b = rng.int(2, 9);
+      let a = kind === 'divide' ? rng.int(b + 1, 5 * b) : rng.int(1, 12);
+      if (a % b === 0) a += 1;
+      if (kind === 'which') while (a === b || M.gcd(a, b) !== 1) a = a === 12 ? 1 : a + 1;
+      const fr = F(a, b, { raw: true }), q0 = Math.floor(a / b), r = a % b;
+      const story = rng.bool() ? `${b} ${who} share ${amountOf(a, c)} equally.` : `${amountOf(a, c)} ${a === 1 ? 'is' : 'are'} shared equally among ${b} ${who}.`;
+      if (kind === 'share') {
+        const h2 = a < b ? `Split each ${c.one} into ${b} equal parts. Each ${whoOne} gets one part of every ${c.one}: ${a} part${a > 1 ? 's' : ''} of ${F(1, b)}, which is ${fr}.`
+          : `Each ${whoOne} first gets ${q0} whole ${q0 === 1 ? c.one : c.ones}, which uses ${b * q0} ${c.ones}. The ${r} left over ${r === 1 ? 'is' : 'are'} split into ${b} equal parts, so each ${whoOne} also gets ${F(r, b, { raw: true })}.`;
+        return { prompt: `${story} How much ${c.much} does each ${whoOne} get? Give your answer as a fraction or a mixed number.`, type: 'number', answer: a / b, answerText: M.fracText(a, b), unit: c.unit, params: { kind, a, b },
+          hints: [`Sharing ${amountOf(a, c)} among ${b} ${who} is a division: ${a} ÷ ${b}.`, h2, `${a} ÷ ${b} = ${fr}${M.gcd(a, b) > 1 || a > b ? ` = ${MX(a, b)}` : ''}. Each ${whoOne} gets <b>${shareOf(a, b, c)}</b>.`] };
+      }
+      if (kind === 'divide') {
+        return { prompt: `Write the division as a fraction or a mixed number.${big(`${a} ÷ ${b}`)}`, type: 'number', answer: a / b, answerText: M.fracText(a, b), params: { kind, a, b },
+          hints: [`A division can be written as a fraction, with the number being divided on top: ${a} ÷ ${b} = ${fr}.`, `${b} goes into ${a} ${q0} time${q0 > 1 ? 's' : ''} (${b} × ${q0} = ${b * q0}), with ${r} left over. The ${r} left over, divided by ${b}, makes ${F(r, b, { raw: true })}.`, `So ${a} ÷ ${b} = <b>${MX(a, b)}</b>${M.gcd(r, b) > 1 ? `, because ${F(r, b, { raw: true })} simplifies to ${F(r, b)}` : ''}.`] };
+      }
+      if (kind === 'which') {
+        const answer = `${a} ÷ ${b}`, plain = rng.bool();
+        return { prompt: plain ? `Which division means the same as the fraction ${F(a, b)}?` : `${story} Which expression shows how much ${c.much} each ${whoOne} gets?`, type: 'choice', answer,
+          choices: [answer, `${b} ÷ ${a}`, `${a} × ${b}`, `${Math.max(a, b)} − ${Math.min(a, b)}`], params: { kind, a, b },
+          hints: [plain ? `The fraction bar means “divided by”.` : `Sharing equally is dividing: the amount being shared is divided by the number of ${who}.`, plain ? `The top number, ${a}, is divided by the bottom number, ${b}.` : `${a} is being shared by ${b} ${who}, so ${a} is divided by ${b}.`, `The answer is <b>${answer}</b>, which equals ${F(a, b)}.`] };
+      }
+      const [sn, sd] = M.simp(a, b), frs = F(sn, sd, { raw: true });
+      return { prompt: `${c.some} shared equally among ${b} ${who}. Each ${whoOne} got ${shareOf(a, b, c)}. How many ${c.what} were shared?`, type: 'number', answer: a, unit: c.unit, params: { kind, b, sn, sd },
+        hints: [`Each share is the total ÷ ${b}, so the total is one share × ${b}.`, `${a > b ? `${MX(a, b)} = ${frs}, and ` : ''}${frs} × ${b} = ${F(sn * b, sd, { raw: true })}.`, `${F(sn * b, sd, { raw: true })} = ${a}, so <b>${amountOf(a, c)}</b> ${a === 1 ? 'was' : 'were'} shared.`] };
+    },
+    verify(q) {
+      const pr = q.params;
+      if (pr.kind === 'which') { const m = q.answer.match(/^(\d+) ÷ (\d+)$/); return !!m && Number(m[1]) === pr.a && close(Number(m[1]) / Number(m[2]), pr.a / pr.b); }
+      if (pr.kind === 'reverse') { let t = 0; for (let i = 0; i < pr.b; i++) t += pr.sn / pr.sd; return Number.isInteger(q.answer) && close(t, q.answer); }   // add up every share
+      return close(q.answer * pr.b, pr.a);                              // one share × the number of sharers = the amount shared
+    },
+  });
+
+  /** a proper fraction r/d in lowest terms, d from the list */
+  function properFrac(rng, dens) { const d = rng.pick(dens); let r = rng.int(1, d - 1); while (M.gcd(r, d) !== 1) r = r === d - 1 ? 1 : r + 1; return [r, d]; }
+  /** the value of a number printed by M.mixed / M.frac: "3 1 2" → 3.5, "7 4" → 1.75, "6" → 6 */
+  function printedValue(html) {
+    const t = A.stripTags(html).replace(/−/g, '-').trim().split(/\s+/).map(Number);
+    return t.length === 3 ? t[0] + t[1] / t[2] : t.length === 2 ? t[0] / t[1] : t[0];
+  }
+  function areaModelSvg(x, y) {
+    const X0 = 70, Y0 = 34, W1 = 160, W2 = 64, H1 = 90, H2 = 44;
+    let g = `<rect x="${X0}" y="${Y0}" width="${W1 + W2}" height="${H1 + H2}" class="fill"/>`;
+    g += `<line x1="${X0 + W1}" y1="${Y0}" x2="${X0 + W1}" y2="${Y0 + H1 + H2}" class="stroke"/><line x1="${X0}" y1="${Y0 + H1}" x2="${X0 + W1 + W2}" y2="${Y0 + H1}" class="stroke"/>`;
+    g += `<text x="${X0 + W1 / 2}" y="${Y0 - 10}" text-anchor="middle" font-size="15">${x.w}</text><text x="${X0 + W1 + W2 / 2}" y="${Y0 - 10}" text-anchor="middle" font-size="15">${x.r}/${x.d}</text>`;
+    g += `<text x="${X0 - 10}" y="${Y0 + H1 / 2 + 5}" text-anchor="end" font-size="15">${y.w}</text><text x="${X0 - 10}" y="${Y0 + H1 + H2 / 2 + 5}" text-anchor="end" font-size="15">${y.r}/${y.d}</text>`;
+    return `<svg class="figure" viewBox="0 0 310 ${Y0 + H1 + H2 + 12}" width="310" role="img" aria-label="an area model: ${x.w} and ${x.r}/${x.d} across the top, ${y.w} and ${y.r}/${y.d} down the side">${g}</svg>`;
+  }
+  A.skill({
+    id: 'g6.multiply-mixed-numbers', title: 'Multiplying mixed numbers',
+    learn: p(`To multiply mixed numbers, <b>first rewrite each one as a fraction greater than one</b>. Multiply the whole number by the denominator and add the numerator: ${MX(7, 3)} = ${F('2 × 3 + 1', 3)} = ${F(7, 3, { raw: true })}. Then multiply the numerators, multiply the denominators, simplify, and change the answer back into a mixed number.`) +
+      p(`<b>Do not just multiply the whole numbers and the fractions on their own.</b> ${MX(5, 2)} × ${MX(5, 2)} is not ${MX(17, 4)}. An area model shows why: (2 + ${F(1, 2)}) × (2 + ${F(1, 2)}) has four parts, 4 + 1 + 1 + ${F(1, 4)} = ${MX(25, 4)}. The two middle parts are the ones people forget.`) +
+      p(`Estimate to check your answer: ${MX(7, 3)} × ${MX(3, 2)} must be between 2 × 1 = 2 and 3 × 2 = 6.`) +
+      example('Example', `${big(`${MX(7, 3)} × ${MX(3, 2)}`)}${F(7, 3, { raw: true })} × ${F(3, 2, { raw: true })} = ${F(21, 6, { raw: true })} = ${F(7, 2, { raw: true })} = <b>${MX(7, 2)}</b>.`),
+    make(rng) {
+      const kind = rng.pick(['mm', 'mm', 'mw', 'mf', 'area', 'recipe', 'model', 'mistake']);
+      const dens = [2, 3, 4, 5, 6], name = rng.pick(NAMES);
+      const mk = (lo, hi, ds) => { const [r, d] = properFrac(rng, ds || dens); return { w: rng.int(lo, hi), r, d }; };
+      const x = mk(1, kind === 'model' ? 4 : 3, kind === 'recipe' ? [2, 3, 4] : dens);
+      let y;
+      if (kind === 'mw') y = { w: rng.int(2, 6), r: 0, d: 1 };
+      else if (kind === 'recipe') y = { w: rng.int(1, 3), r: 1, d: rng.pick([2, 2, 3]) };       // 1 1/2 batches, 2 1/3 batches …
+      else if (kind === 'mf') { const [r, d] = properFrac(rng, [2, 3, 4, 5, 6, 8]); y = { w: 0, r, d }; }
+      else y = mk(1, 3, [2, 3, 4]);
+      const imp = m => m.w * m.d + m.r;
+      const show = m => m.r === 0 ? String(m.w) : m.w === 0 ? F(m.r, m.d) : MX(imp(m), m.d);
+      const impShow = m => m.d === 1 ? F(String(m.w), '1') : F(imp(m), m.d, { raw: true });
+      const Nn = imp(x) * imp(y), Dd = x.d * y.d, [sn, sd] = M.simp(Nn, Dd);
+      const params = { kind, x, y };
+      const ans = { type: 'number', answer: sn / sd, answerText: M.fracText(sn, sd), params };
+      const rewrite = [x, y].filter(m => m.w > 0 && m.r > 0).map(m => `${show(m)} = ${F(`${m.w} × ${m.d} + ${m.r}`, m.d)} = ${impShow(m)}`);
+      const steps = [`Rewrite ${rewrite.length > 1 ? 'each mixed number' : 'the mixed number'} as a fraction greater than one: ${rewrite.join(' and ')}.${y.d === 1 ? ` Write ${y.w} as ${impShow(y)}.` : ''}`,
+        `Multiply the numerators and the denominators: ${impShow(x)} × ${impShow(y)} = ${F(Nn, Dd, { raw: true })}.`];
+      const result = `<b>${MX(sn, sd)}</b>${sd > 1 && sn > sd ? ` (${M.fracText(sn, sd)})` : ''}`, g = M.gcd(Nn, Dd);
+      const finish = u => sd === 1 ? `Divide: ${F(Nn, Dd, { raw: true })} = <b>${sn}${u}</b>.`
+        : `${g > 1 ? `Simplify by dividing the top and bottom by ${g}: ${F(Nn, Dd, { raw: true })} = ${F(sn, sd, { raw: true })}. ` : ''}${sn > sd ? `As a mixed number that is <b>${MX(sn, sd)}${u}</b>.` : `The answer is <b>${F(sn, sd)}${u}</b>.`}`;
+      if (kind === 'model') {
+        const D = x.d * y.d, p2 = x.w * y.r * x.d, p3 = x.r * y.w * y.d, p4 = x.r * y.r;
+        return Object.assign(ans, { prompt: `The area model splits ${show(x)} × ${show(y)} into four parts: (${x.w} + ${F(x.r, x.d)}) × (${y.w} + ${F(y.r, y.d)}). What is the total area? Give your answer in simplest form.${areaModelSvg(x, y)}`,
+          hints: [`Find each part: ${x.w} × ${y.w} = ${x.w * y.w}, ${x.w} × ${F(y.r, y.d)} = ${F(x.w * y.r, y.d, { raw: true })}, ${F(x.r, x.d)} × ${y.w} = ${F(x.r * y.w, x.d, { raw: true })}, and ${F(x.r, x.d)} × ${F(y.r, y.d)} = ${F(p4, D, { raw: true })}.`,
+            `Give the three fraction parts the denominator ${D}: ${F(p2, D, { raw: true })} + ${F(p3, D, { raw: true })} + ${F(p4, D, { raw: true })} = ${F(p2 + p3 + p4, D, { raw: true })}.`,
+            `Add the whole-number part: ${x.w * y.w} + ${F(p2 + p3 + p4, D, { raw: true })} = ${result}.`] });
+      }
+      if (kind === 'mistake') {
+        const bad = (x.w + x.r) * (y.w + y.r);                           // 2 1/3 read as (2 + 1)/3
+        const wrongs = [MX(x.w * y.w * Dd + x.r * y.r, Dd)].concat(bad > 2 * Dd ? [MX(bad, Dd)] : [], [MX((x.w + y.w) * Dd + x.r * y.d + y.r * x.d, Dd), MX(sn + sd, sd), MX(sn - sd, sd)]);
+        const answer = MX(sn, sd);
+        return { prompt: `${name} says ${show(x)} × ${show(y)} = ${wrongs[0]}, because ${x.w} × ${y.w} = ${x.w * y.w} and ${F(x.r, x.d)} × ${F(y.r, y.d)} = ${F(x.r * y.r, Dd)}. What is the correct product?`, type: 'choice', answer, choices: options(answer, wrongs), params,
+          hints: [steps[0], steps[1], `${finish('')} ${name} left out the two middle parts, ${x.w} × ${F(y.r, y.d)} and ${F(x.r, x.d)} × ${y.w}.`] };
+      }
+      let prompt = `Multiply. Give your answer in simplest form.${big(kind === 'mw' && rng.bool() ? `${show(y)} × ${show(x)}` : `${show(x)} × ${show(y)}`)}`, unit;
+      if (kind === 'area') { unit = rng.pick(['ft', 'm', 'yd']); prompt = `A rectangular garden bed is ${show(x)} ${unit} long and ${show(y)} ${unit} wide. What is its area? Give your answer in simplest form.`; unit += '²'; }
+      if (kind === 'recipe') { const [stuff, u] = rng.pick([['cups of flour', 'cups'], ['cups of oats', 'cups'], ['cups of milk', 'cups'], ['teaspoons of cinnamon', 'tsp']]); unit = u; prompt = `A recipe uses ${show(x)} ${stuff}. ${name} makes ${show(y)} batches of the recipe. How many ${stuff} does ${name} need? Give your answer in simplest form.`; }
+      return Object.assign(ans, { prompt, unit, hints: steps.concat(finish(unit ? ' ' + unit : '')) });
+    },
+    verify(q) {
+      const { x, y } = q.params;
+      const v = x.w * y.w + x.w * y.r / y.d + x.r / x.d * y.w + x.r * y.r / (x.d * y.d);      // the four parts of the area model
+      return close(q.type === 'choice' ? printedValue(q.answer) : q.answer, v);
+    },
+  });
+
+  /* ---------- Unit 12: Statistical questions and data displays ---------- */
+  // Clear-cut cases only: a statistical question is about a group and expects answers that vary;
+  // the others have one answer (a fact, a count, or one person at one moment).
+  const STAT_QS = [
+    'How old are the teachers at our school?',
+    'How tall are the players on our team?',
+    'How many pets do our classmates have?',
+    'How much do the dogs at the shelter weigh?',
+    'What shoe sizes do our classmates wear?',
+    'How many siblings do our classmates have?',
+    'How long are the songs on this album?',
+    'How many hours do sixth graders sleep on a school night?',
+    'How many books did our classmates read this summer?',
+    'What were the daily high temperatures in our town last month?',
+    'How many minutes do sixth graders spend on homework each night?',
+    'How many letters are in our classmates’ first names?',
+  ];
+  const ONE_QS = [
+    'How many students are in the sixth grade at our school this year?',
+    'What time does the first bell ring at our school each morning?',
+    'How many minutes long is the lunch break at our school?',
+    'How many legs does a spider have?',
+    'NAME: How many hours of sleep did NAME get last night?',
+    'NAME: How tall was NAME on the first day of school this year?',
+    'How many teachers work at our school this year?',
+    'How many pages are in the math textbook our class uses?',
+    'How many days are there in the month of September?',
+    'What is the area of the floor of our classroom?',
+    'NAME: How many pets does NAME’s family have at home?',
+    'NAME: How long did it take NAME to walk to school this morning?',
+  ];
+  const STAT_REWRITE = [
+    [n => `How tall is ${n}?`, n => `How tall are the students in ${n}’s class?`, n => [`How tall is ${n}’s best friend?`, `How tall was ${n} last year?`, `How tall is ${n} in centimetres?`]],
+    [n => `How many pets does ${n} have?`, n => `How many pets do the students in ${n}’s class have?`, n => [`How many pets does ${n}’s neighbour have?`, `How many pets did ${n} have last year?`, `How many dogs does ${n} have?`]],
+    [n => `How many hours did ${n} sleep last night?`, n => `How many hours do the students in ${n}’s grade sleep at night?`, n => [`How many hours did ${n} sleep on Saturday?`, `How many hours did ${n}’s brother sleep last night?`, `What time did ${n} go to bed last night?`]],
+    [n => `How long did it take ${n} to get to school today?`, n => `How long does it take the students at ${n}’s school to get there?`, n => [`How long did it take ${n} to get home today?`, `How far is ${n}’s house from the school?`, `What time did ${n} leave for school today?`]],
+    [n => `What size shoe does ${n} wear?`, n => `What shoe sizes do the players on ${n}’s soccer team wear?`, n => [`What size shoe does ${n}’s coach wear?`, `What size shoe did ${n} wear last year?`, `What colour are ${n}’s soccer shoes?`]],
+    [n => `How many books did ${n} read this summer?`, n => `How many books did the students in ${n}’s class read this summer?`, n => [`How many books did ${n} read last summer?`, `How many books are on ${n}’s shelf?`, `How many pages are in ${n}’s favourite book?`]],
+  ];
+  const oneQ = (s, name) => s.startsWith('NAME: ') ? s.slice(6).replace(/NAME/g, name) : s;
+  A.skill({
+    id: 'g6.statistical-questions', title: 'Statistical questions',
+    learn: p('A <b>statistical question</b> is one you answer by collecting data, and it <b>expects answers that vary</b>. “How many hours do sixth graders sleep on a school night?” is statistical: different students sleep for different amounts of time, so you would ask many of them and look at all the answers.') +
+      p('A question with <b>one fixed answer</b> is not statistical. “How many legs does a spider have?” has one answer. So does “How tall is Ana?”: it is about one person at one moment.') +
+      p('To test a question, ask yourself: <b>would I expect to get different answers?</b> Questions about a whole group, such as the students in a class or the dogs at a shelter, usually are statistical.') +
+      example('Example', `${big('“How old is Ben?” → “How old are the students in Ben’s class?”')}The first question has one answer. The second asks about a whole group whose ages vary, so <b>the second is a statistical question</b>.`),
+    make(rng) {
+      const kind = rng.pick(['pick', 'pick', 'not', 'rewrite']), name = rng.pick(NAMES);
+      const why = 'A statistical question expects answers that <b>vary</b>, so you would collect many pieces of data to answer it.';
+      if (kind === 'rewrite') {
+        const idx = rng.int(0, STAT_REWRITE.length - 1), [one, good, bad] = STAT_REWRITE[idx], answer = good(name);
+        return { prompt: `“${one(name)}” is <b>not</b> a statistical question: it has only one answer. Which question below <b>is</b> a statistical question?`, type: 'choice', answer, choices: [answer].concat(bad(name)), params: { kind, idx, name },
+          hints: [why, `Three of these are still about one person or one thing. Look for the one that asks about a whole group.`, `<b>${answer}</b> asks about many people, and their answers will vary.`] };
+      }
+      const stats = rng.sample(STAT_QS.map((_, i) => i), 3), ones = rng.sample(ONE_QS.map((_, i) => i), 3);
+      if (kind === 'pick') {
+        const answer = STAT_QS[stats[0]];
+        return { prompt: 'Which of these is a <b>statistical question</b>?', type: 'choice', answer, choices: [answer].concat(ones.map(i => oneQ(ONE_QS[i], name))), params: { kind, name },
+          hints: [why, 'For each question, ask: would different people, animals or days give different answers? A fact or a single measurement is not statistical.', `<b>${answer}</b> has many different answers, so it is the statistical question.`] };
+      }
+      const answer = oneQ(ONE_QS[ones[0]], name);
+      return { prompt: 'Which of these is <b>not</b> a statistical question?', type: 'choice', answer, choices: [answer].concat(stats.map(i => STAT_QS[i])), params: { kind, name },
+        hints: [why, 'Look for the question with just one answer: a fact, a single count, or one person at one moment.', `<b>${answer}</b> has a single answer, so it is not a statistical question.`] };
+    },
+    verify(q) {
+      const pr = q.params, isStat = s => STAT_QS.includes(s) || STAT_REWRITE.some(([, good]) => good(pr.name) === s);
+      const isOne = s => ONE_QS.some(t => oneQ(t, pr.name) === s) || STAT_REWRITE.some(([one, , bad]) => one(pr.name) === s || bad(pr.name).includes(s));
+      const want = pr.kind === 'not' ? isOne : isStat, other = pr.kind === 'not' ? isStat : isOne;
+      return want(q.answer) && q.choices.every(c => c === q.answer || other(c));     // the right one, and every other option clearly the other kind
+    },
+  });
+
+  const HIST = [
+    { title: 'Minutes spent on homework last night', item: 'students', yl: 'Students', xl: 'Minutes', lo: 0, w: 10, say: L => `spent ${L} minutes on homework`, more: v => `spent at least ${v} minutes on homework`, less: v => `spent less than ${v} minutes on homework` },
+    { title: 'Heights of sunflowers', item: 'sunflowers', yl: 'Sunflowers', xl: 'Height (cm)', lo: 100, w: 20, say: L => `are ${L} cm tall`, more: v => `are at least ${v} cm tall`, less: v => `are shorter than ${v} cm` },
+    { title: 'Points scored by players this season', item: 'players', yl: 'Players', xl: 'Points', lo: 0, w: 5, say: L => `scored ${L} points`, more: v => `scored at least ${v} points`, less: v => `scored fewer than ${v} points` },
+    { title: 'Ages of people at a swimming pool', item: 'people', yl: 'People', xl: 'Age (years)', lo: 0, w: 10, say: L => `are ${L} years old`, more: v => `are at least ${v} years old`, less: v => `are younger than ${v}` },
+    { title: 'Jumps in one minute of jump rope', item: 'students', yl: 'Students', xl: 'Jumps', lo: 40, w: 10, say: L => `made ${L} jumps`, more: v => `made at least ${v} jumps`, less: v => `made fewer than ${v} jumps` },
+    { title: 'Scores on a math test', item: 'students', yl: 'Students', xl: 'Score', lo: 50, w: 10, say: L => `scored ${L} on the test`, more: v => `scored at least ${v} on the test`, less: v => `scored less than ${v} on the test` },
+  ];
+  const binLabel = (t, i) => `${t.lo + i * t.w}–${t.lo + (i + 1) * t.w - 1}`;
+  function histSvg(t, counts) {
+    const nb = counts.length, bw = nb === 4 ? 66 : 54, X0 = 50, Y = 190, px = 15, right = X0 + nb * bw;
+    let g = '';
+    for (let v = 1; v <= 10; v++) g += `<line x1="${X0}" y1="${Y - v * px}" x2="${right}" y2="${Y - v * px}" class="stroke light" style="stroke-width:1"/>`;
+    for (let v = 0; v <= 10; v += 2) g += `<text x="${X0 - 6}" y="${Y - v * px + 4}" text-anchor="end" font-size="12">${v}</text>`;
+    counts.forEach((c, i) => {
+      g += `<rect x="${X0 + i * bw}" y="${Y - c * px}" width="${bw}" height="${c * px}" class="fill" data-px="${px}" data-bin="${i}"/>`;
+      g += `<text x="${X0 + i * bw + bw / 2}" y="${Y + 17}" text-anchor="middle" font-size="12">${binLabel(t, i)}</text>`;
+    });
+    g += `<line x1="${X0}" y1="${Y}" x2="${right}" y2="${Y}" class="stroke"/><line x1="${X0}" y1="${Y}" x2="${X0}" y2="${Y - 158}" class="stroke"/>`;
+    g += `<text x="${(X0 + right) / 2}" y="${Y + 40}" text-anchor="middle" font-size="13" font-weight="700">${t.xl}</text>`;
+    g += `<text x="16" y="${Y - 75}" transform="rotate(-90 16 ${Y - 75})" text-anchor="middle" font-size="13" font-weight="700">${t.yl}</text>`;
+    return `<svg class="figure" viewBox="0 0 ${right + 16} 240" width="${right + 16}" role="img" aria-label="a histogram of ${t.title.toLowerCase()}">${g}</svg>`;
+  }
+  // which display does each job? Each description fits exactly one of the four.
+  const DISPLAYS = ['Stem-and-leaf plot', 'Histogram', 'Box plot', 'Bar graph'];
+  const DISPLAY_JOBS = [
+    ['Which display keeps every data value, so you can read each one exactly?', 'Stem-and-leaf plot', 'A stem-and-leaf plot writes down every value: each leaf is one value.'],
+    ['Which display groups numbers into equal intervals and shows how many values fall in each one?', 'Histogram', 'A histogram has one bar for each interval, such as 10–19, and the height shows how many.'],
+    ['Which display is drawn from five numbers: the minimum, Q1, the median, Q3 and the maximum?', 'Box plot', 'A box plot is built from the five-number summary: the box runs from Q1 to Q3.'],
+    ['Which display shows how many chose each category, such as each favourite fruit?', 'Bar graph', 'Categories like fruits are not numbers on a scale, so they go in a bar graph with gaps between the bars.'],
+  ];
+  A.skill({
+    id: 'g6.histograms', title: 'Histograms',
+    learn: p('A <b>histogram</b> is a bar graph for numbers. The data is grouped into <b>intervals of equal width</b>, such as 0–9, 10–19 and 20–29, and the height of each bar shows <b>how many values</b> fall in that interval. The bars touch, because each interval starts right where the last one ended.') +
+      p('To read a bar, look across from its top to the scale. To answer “how many are at least 20?”, <b>add up every bar from 20 upward</b>. Adding all the bars gives the number of values in the data set.') +
+      p('A histogram does <b>not</b> show the exact values. You can see that 7 students spent 20–29 minutes on homework, but not whether any of them spent exactly 25.') +
+      example('Example', `${histSvg(HIST[0], [2, 5, 7, 3])}How many students spent at least 20 minutes? Add the bars for 20–29 and 30–39: 7 + 3 = <b>10 students</b>.`),
+    make(rng) {
+      const kind = rng.pick(['count', 'count', 'most', 'total', 'atleast', 'less', 'more', 'display']);
+      if (kind === 'display') {
+        const idx = rng.int(0, DISPLAY_JOBS.length - 1), [ask, answer, why] = DISPLAY_JOBS[idx];
+        return { prompt: ask, type: 'choice', answer, choices: DISPLAYS.slice(), params: { kind, idx },
+          hints: ['Think about what each display shows: every value, counts in intervals, five summary numbers, or counts for categories.', why, `The answer is <b>${answer.toLowerCase()}</b>.`] };
+      }
+      const t = rng.pick(HIST), nb = rng.int(4, 5), c = Array.from({ length: nb }, () => rng.int(0, 9));
+      c[rng.int(1, nb - 2)] = rng.int(4, 9);                              // keep the middle from being empty
+      const L = i => binLabel(t, i), pic = () => `<p><b>${t.title}</b></p>${histSvg(t, c)}`;
+      const params = { kind, lo: t.lo, w: t.w };
+      if (kind === 'count') {
+        const i = rng.int(0, nb - 1);
+        return { prompt: `How many ${t.item} ${t.say(L(i))}?${pic()}`, type: 'number', answer: c[i], params: Object.assign(params, { i }),
+          hints: [`Find the bar above ${L(i)}.`, c[i] ? `Look across from the top of that bar to the scale on the left: it reaches ${c[i]}.` : `There is no bar above ${L(i)}: its height is 0.`, `<b>${c[i]}</b> ${t.item} ${t.say(L(i))}.`] };
+      }
+      if (kind === 'most') {
+        const most = rng.bool(), pickIt = most ? Math.max : Math.min;
+        let k = c.indexOf(pickIt(...c));
+        c.forEach((v, i) => { if (i !== k && v === c[k]) c[k] += most ? 1 : -1; });
+        if (c[k] < 0) { c[k] = 0; c.forEach((v, i) => { if (i !== k && v === 0) c[i] = 1; }); }
+        k = c.indexOf(pickIt(...c));
+        const answer = L(k);
+        return { prompt: `Which interval has the ${most ? 'most' : 'fewest'} ${t.item}?${pic()}`, type: 'choice', answer, choices: c.map((_, i) => L(i)), keepOrder: true, params: Object.assign(params, { most }),
+          hints: [`Find the ${most ? 'tallest' : 'shortest'} bar.`, `The ${most ? 'tallest' : 'shortest'} bar reaches ${c[k]}, and it is above ${answer}.`, `The interval <b>${answer}</b> has the ${most ? 'most' : 'fewest'} ${t.item}.`] };
+      }
+      if (kind === 'total') {
+        const sum = c.reduce((a, b) => a + b, 0);
+        return { prompt: `How many ${t.item} does the histogram show in all?${pic()}`, type: 'number', answer: sum, params,
+          hints: ['Each bar counts the values in one interval, so add up all the bars.', `The bars reach ${M.list(c.map(String))}.`, `${c.join(' + ')} = <b>${sum}</b>.`] };
+      }
+      if (kind === 'atleast' || kind === 'less') {
+        const k = kind === 'atleast' ? rng.int(1, nb - 2) : rng.int(2, nb - 1), edge = t.lo + k * t.w;
+        const idx = kind === 'atleast' ? c.map((_, i) => i).slice(k) : c.map((_, i) => i).slice(0, k);
+        if (idx.every(i => c[i] === 0)) c[idx[0]] = rng.int(2, 6);
+        const bars = idx.map(i => c[i]);
+        const sum = bars.reduce((a, b) => a + b, 0);
+        return { prompt: `How many ${t.item} ${kind === 'atleast' ? t.more(edge) : t.less(edge)}?${pic()}`, type: 'number', answer: sum, params: Object.assign(params, { edge }),
+          hints: [kind === 'atleast' ? `“At least ${edge}” means ${edge} or more: use the bars from ${L(k)} up.` : `Less than ${edge} means every interval below ${edge}: the bars from ${L(0)} to ${L(k - 1)}.`,
+            `Those bars are ${M.list(idx.map(i => `${L(i)}: ${c[i]}`))}.`, `${bars.join(' + ')} = <b>${sum}</b>.`] };
+      }
+      let [i, j] = rng.sample(c.map((_, k) => k), 2);
+      if (c[i] === c[j]) c[i] = c[j] === 9 ? 7 : c[j] + 1;
+      if (c[i] < c[j]) [i, j] = [j, i];
+      return { prompt: `How many more ${t.item} are in the ${L(i)} interval than in the ${L(j)} interval?${pic()}`, type: 'number', answer: c[i] - c[j], params: Object.assign(params, { i, j }),
+        hints: [`Read both bars: ${L(i)} reaches ${c[i]} and ${L(j)} ${c[j] ? `reaches ${c[j]}` : 'has no bar, so it is 0'}.`, `“How many more” means subtract: ${c[i]} − ${c[j]}.`, `There are <b>${c[i] - c[j]}</b> more.`] };
+    },
+    verify(q) {
+      const pr = q.params;
+      if (pr.kind === 'display') return q.answer === DISPLAY_JOBS[pr.idx][1] && DISPLAY_JOBS.filter(([, d]) => d === q.answer).length === 1;
+      const bars = [...q.prompt.matchAll(/height="([\d.]+)" class="fill" data-px="([\d.]+)" data-bin="(\d+)"/g)].map(m => Math.round(Number(m[1]) / Number(m[2])));
+      const lowOf = k => pr.lo + k * pr.w;                               // each bar holds lowOf(k) up to lowOf(k + 1) − 1
+      if (pr.kind === 'count') return q.answer === bars[pr.i];
+      if (pr.kind === 'most') {
+        const best = bars.filter(b => pr.most ? bars.every(o => b >= o) : bars.every(o => b <= o));
+        const k = bars.indexOf(best[0]);
+        return best.length === 1 && q.answer === `${lowOf(k)}–${lowOf(k + 1) - 1}`;
+      }
+      if (pr.kind === 'total') { let t = 0; bars.forEach(b => { t += b; }); return q.answer === t; }
+      if (pr.kind === 'atleast') return q.answer === bars.reduce((s, b, k) => s + (lowOf(k) >= pr.edge ? b : 0), 0);
+      if (pr.kind === 'less') return q.answer === bars.reduce((s, b, k) => s + (lowOf(k + 1) - 1 < pr.edge ? b : 0), 0);
+      return q.answer === bars[pr.i] - bars[pr.j] && q.answer > 0;
+    },
+  });
+
+  function stemPlot(data) {
+    const s = data.slice().sort((a, b) => a - b), lo = Math.floor(s[0] / 10), hi = Math.floor(s[s.length - 1] / 10);
+    let rows = '';
+    for (let st = lo; st <= hi; st++) {
+      const leaves = s.filter(v => Math.floor(v / 10) === st).map(v => v % 10);
+      rows += `<tr data-stem="${st}"><td style="text-align:right;border:0;border-right:2px solid currentColor;font-weight:700">${st}</td><td style="text-align:left;border:0;letter-spacing:.3em;min-width:9em">${leaves.join(' ')}</td></tr>`;
+    }
+    const kv = s[Math.floor(s.length / 2)];
+    return `<table class="mtable compact" aria-label="stem-and-leaf plot"><thead><tr><th style="border:0;background:none">Stem</th><th style="border:0;background:none;text-align:left">Leaf</th></tr></thead><tbody>${rows}</tbody></table><p class="muted">Key: ${Math.floor(kv / 10)} | ${kv % 10} means ${kv}</p>`;
+  }
+  const STEM_DATA = [
+    { title: 'Quiz scores', item: 'students', lo: 52, hi: 99, atLeast: v => `scored at least ${v}` },
+    { title: 'Ages of people at a family reunion', item: 'people', lo: 2, hi: 78, atLeast: v => `are at least ${v} years old` },
+    { title: 'Books read in the first 100 days of school', item: 'students', lo: 4, hi: 38, atLeast: v => `read at least ${v} books` },
+    { title: 'Heights of students (inches)', item: 'students', lo: 50, hi: 69, atLeast: v => `are at least ${v} inches tall` },
+    { title: 'Push-ups done in one minute', item: 'students', lo: 8, hi: 46, atLeast: v => `did at least ${v} push-ups` },
+    { title: 'Minutes to finish a puzzle', item: 'people', lo: 12, hi: 58, atLeast: v => `took at least ${v} minutes` },
+  ];
+  A.skill({
+    id: 'g6.stem-and-leaf', title: 'Stem-and-leaf plots',
+    learn: p('A <b>stem-and-leaf plot</b> shows every value in a data set. Each value is split into a <b>stem</b>, the tens digit, and a <b>leaf</b>, the ones digit. The stems run down the left side, and <b>each leaf on the right is one value</b>. The key tells you how to read it: 3 | 7 means 37.') +
+      p('The leaves in each row are written <b>in order</b>, so the plot lists the data from smallest to largest. That makes it quick to find the least and greatest values, the range, and the <b>median</b>: count the leaves until you reach the middle one.') +
+      p('Count every leaf, including repeats: a row 4 | 2 2 5 holds three values, 42, 42 and 45. A stem with no leaves means there are no values in that ten.') +
+      example('Example', `${stemPlot([12, 15, 21, 24, 24, 28, 33])}There are 7 leaves, so the median is the 4th value: 12, 15, 21, <b>24</b>. The range is 33 − 12 = <b>21</b>.`),
+    make(rng) {
+      const kind = rng.pick(['count', 'extreme', 'stem', 'median', 'median', 'range', 'atleast', 'mode']);
+      const t = rng.pick(STEM_DATA), n = rng.int(9, 15);
+      let data;
+      if (kind === 'mode') {
+        const pool = rng.sample(Array.from({ length: t.hi - t.lo + 1 }, (_, i) => t.lo + i), n - 3);
+        data = pool.concat([pool[0], pool[0], pool[1]]);
+      } else data = Array.from({ length: n }, () => rng.int(t.lo, t.hi));
+      const s = data.slice().sort((a, b) => a - b), mn = s[0], mx = s[n - 1];
+      const pic = `<p><b>${t.title}</b></p>${stemPlot(data)}`, params = { kind };
+      const parts = v => `stem ${Math.floor(v / 10)} and leaf ${v % 10}`;
+      if (kind === 'count') {
+        const rows = []; for (let st = Math.floor(mn / 10); st <= Math.floor(mx / 10); st++) rows.push(s.filter(v => Math.floor(v / 10) === st).length);
+        return { prompt: `How many ${t.item} are shown in the stem-and-leaf plot?${pic}`, type: 'number', answer: n, params,
+          hints: ['Each leaf is one value, so count the leaves, including repeats.', `Leaves in each row, from the top: ${rows.join(', ')}.`, `${rows.join(' + ')} = <b>${n}</b>.`] };
+      }
+      if (kind === 'extreme') {
+        const big1 = rng.bool(), v = big1 ? mx : mn;
+        return { prompt: `What is the ${big1 ? 'greatest' : 'least'} value in the stem-and-leaf plot?${pic}`, type: 'number', answer: v, params: Object.assign(params, { big: big1 }),
+          hints: [`The leaves are in order, so the ${big1 ? 'greatest value is the last leaf in the bottom row' : 'least value is the first leaf in the top row'}.`, `That is ${parts(v)}.`, `Put the stem and leaf together: <b>${v}</b>.`] };
+      }
+      if (kind === 'stem') {
+        const st = Math.floor(rng.pick(s) / 10), row = s.filter(v => Math.floor(v / 10) === st);
+        return { prompt: `How many values in the plot are from ${st * 10} to ${st * 10 + 9}?${pic}`, type: 'number', answer: row.length, params: Object.assign(params, { st }),
+          hints: [`Every value from ${st * 10} to ${st * 10 + 9} has the stem ${st}.`, `The ${st} row has the leaves ${row.map(v => v % 10).join(', ')}: that is ${M.list(row.map(String))}.`, `There ${row.length === 1 ? 'is' : 'are'} <b>${row.length}</b>.`] };
+      }
+      if (kind === 'median') {
+        const odd = n % 2 === 1, a = s[Math.floor((n - 1) / 2)], b = s[Math.floor(n / 2)], med = (a + b) / 2;
+        return { prompt: `What is the median of the data in the stem-and-leaf plot?${pic}`, type: 'number', answer: med, params,
+          hints: [`The leaves are already in order. There are ${n} values, so the median is ${odd ? `the ${M.ordinal((n + 1) / 2)} value` : `halfway between the ${M.ordinal(n / 2)} and ${M.ordinal(n / 2 + 1)} values`}.`,
+            `Count from the smallest: ${s.slice(0, Math.floor(n / 2) + 1).join(', ')}.`, odd ? `The ${M.ordinal((n + 1) / 2)} value is <b>${a}</b>.` : `The middle two are ${a} and ${b}, so the median is <b>${N(med)}</b>.`] };
+      }
+      if (kind === 'range') {
+        return { prompt: `What is the range of the data in the stem-and-leaf plot?${pic}`, type: 'number', answer: mx - mn, params,
+          hints: [`The range is the greatest value minus the least value.`, `The least is the first leaf in the top row, ${mn}. The greatest is the last leaf in the bottom row, ${mx}.`, `${mx} − ${mn} = <b>${mx - mn}</b>.`] };
+      }
+      if (kind === 'atleast') {
+        const v = rng.int(mn + 1, mx), hit = s.filter(x => x >= v);
+        return { prompt: `How many ${t.item} ${t.atLeast(v)}?${pic}`, type: 'number', answer: hit.length, params: Object.assign(params, { v }),
+          hints: [`“At least ${v}” means ${v} or more.`, `The values that are ${v} or more: ${hit.join(', ')}.`, `There ${hit.length === 1 ? 'is' : 'are'} <b>${hit.length}</b>.`] };
+      }
+      const m = data[n - 3];
+      return { prompt: `What is the mode of the data in the stem-and-leaf plot?${pic}`, type: 'number', answer: m, params,
+        hints: ['The mode is the value that appears most often. Look for a leaf repeated in the same row.', `${m} appears 3 times (${parts(m)}). No other value appears more than twice.`, `The mode is <b>${m}</b>.`] };
+    },
+    verify(q) {
+      const vals = [];                                                    // read the values back off the plot
+      for (const m of q.prompt.matchAll(/<tr data-stem="(\d+)"><td[^>]*>\d+<\/td><td[^>]*>([\d ]*)<\/td><\/tr>/g)) m[2].split(' ').filter(Boolean).forEach(l => vals.push(10 * Number(m[1]) + Number(l)));
+      const pr = q.params, a = q.answer;
+      if (pr.kind === 'count') return a === vals.length;
+      if (pr.kind === 'extreme') return a === (pr.big ? Math.max(...vals) : Math.min(...vals));
+      if (pr.kind === 'stem') return a === vals.filter(v => v >= 10 * pr.st && v < 10 * pr.st + 10).length;
+      if (pr.kind === 'median') { const below = vals.filter(v => v < a).length, above = vals.filter(v => v > a).length; return Math.abs(below - above) <= vals.length - below - above; }
+      if (pr.kind === 'range') return a === Math.max(...vals) - Math.min(...vals);
+      if (pr.kind === 'atleast') return a === vals.filter(v => v >= pr.v).length;
+      const freq = {}; vals.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
+      const top = Math.max(...Object.values(freq));
+      return freq[a] === top && Object.values(freq).filter(f => f === top).length === 1;
+    },
+  });
+
+  /* ---------- Unit 13: Logic puzzles and Venn diagrams ---------- */
+  const LOGIC = [
+    { what: 'instruments', items: ['drums', 'flute', 'guitar', 'violin', 'trumpet'], art: i => 'the ' + i, intro: (ns, it) => `${ns} each play a different instrument: ${it}.`,
+      pos: (n, i) => `${n} plays the ${i}.`, neg: (n, i) => `${n} does not play the ${i}.`, nei: (a, b, i) => `Neither ${a} nor ${b} plays the ${i}.`, ask: i => `Who plays the ${i}?` },
+    { what: 'pets', items: ['cat', 'dog', 'hamster', 'parrot', 'turtle'], art: i => 'a ' + i, intro: (ns, it) => `${ns} each have a different pet: ${it}.`,
+      pos: (n, i) => `${n} has the ${i}.`, neg: (n, i) => `${n} does not have the ${i}.`, nei: (a, b, i) => `Neither ${a} nor ${b} has the ${i}.`, ask: i => `Who has the ${i}?` },
+    { what: 'fruits', items: ['apple', 'banana', 'orange', 'pear', 'plum'], art: i => (/^[aeiou]/.test(i) ? 'an ' : 'a ') + i, intro: (ns, it) => `${ns} each brought a different fruit for lunch: ${it}.`,
+      pos: (n, i) => `${n} brought the ${i}.`, neg: (n, i) => `${n} did not bring the ${i}.`, nei: (a, b, i) => `Neither ${a} nor ${b} brought the ${i}.`, ask: i => `Who brought the ${i}?` },
+    { what: 'clubs', items: ['art', 'chess', 'drama', 'robotics', 'science'], art: i => i, intro: (ns, it) => `${ns} each joined a different club: ${it}.`,
+      pos: (n, i) => `${n} is in the ${i} club.`, neg: (n, i) => `${n} is not in the ${i} club.`, nei: (a, b, i) => `Neither ${a} nor ${b} is in the ${i} club.`, ask: i => `Who is in the ${i} club?` },
+  ];
+  /** every way to give k people k different items: perm[person] = item */
+  function permutations(k) {
+    const out = [], rec = (pre, rest) => { if (!rest.length) out.push(pre); rest.forEach((v, j) => rec(pre.concat(v), rest.filter((_, m) => m !== j))); };
+    rec([], [...Array(k).keys()]);
+    return out;
+  }
+  const clueFits = (perm, c) => c.t === 'pos' ? perm[c.p] === c.i : c.t === 'neg' ? perm[c.p] !== c.i : perm[c.p] !== c.i && perm[c.q] !== c.i;
+  /** solve the grid the way a student would: cross out, then fill any row or column with one box left */
+  function gridSteps(k, clues) {
+    const can = Array.from({ length: k }, () => Array(k).fill(true)), owner = Array(k).fill(-1), steps = [];
+    const fix = (p, i, why) => { owner[i] = p; for (let j = 0; j < k; j++) { if (j !== i) can[p][j] = false; if (j !== p) can[j][i] = false; } steps.push({ p, i, why }); };
+    clues.forEach(c => { if (c.t === 'neg') can[c.p][c.i] = false; if (c.t === 'nei') { can[c.p][c.i] = false; can[c.q][c.i] = false; } });
+    clues.filter(c => c.t === 'pos').forEach(c => fix(c.p, c.i, 'clue'));
+    for (let moved = true; moved;) {
+      moved = false;
+      for (let p = 0; p < k; p++) { const left = can[p].map((v, i) => v ? i : -1).filter(i => i >= 0); if (left.length === 1 && owner[left[0]] < 0) { fix(p, left[0], 'row'); moved = true; } }
+      for (let i = 0; i < k; i++) { const left = can.map((row, p) => row[i] ? p : -1).filter(p => p >= 0); if (left.length === 1 && owner[i] < 0) { fix(left[0], i, 'col'); moved = true; } }
+    }
+    return owner.every(p => p >= 0) ? steps : null;
+  }
+  A.skill({
+    id: 'g6.logic-puzzles', title: 'Logic puzzles',
+    learn: p('In a logic puzzle, every person gets a different item, and the clues tell you what is <b>not</b> true as well as what is. A <b>grid</b> keeps track of it all: names down the side, items across the top.') +
+      p('Put an <b>✕</b> in a box for each “not” clue. Every row and every column ends up with exactly <b>one ✓</b>, so <b>when a row or a column has only one empty box left, that box must be the ✓</b>. Then cross out the rest of that row and column, and look again.') +
+      p('Keep going until every row has its ✓. Check your answer against every clue before you finish.') +
+      example('Example', `<p><b>Ana, Ben and Chloe each have a different pet: a cat, a dog and a fish.</b></p>Clues: Ana does not have the dog. Ben has neither the dog nor the cat. Ben’s row now has only the fish box left, so Ben has the fish. The dog column has only Chloe’s box left, so Chloe has the dog, and <b>Ana has the cat</b>.`),
+    make(rng) {
+      const t = rng.pick(LOGIC);
+      for (let tries = 0; ; tries++) {
+        const k = tries > 30 || rng.chance(0.65) ? 3 : 4, names = rng.sample(NAMES, k), items = rng.sample(t.items, k), sol = rng.shuffle([...Array(k).keys()]);
+        let cands = [];
+        for (let pp = 0; pp < k; pp++) for (let i = 0; i < k; i++) if (sol[pp] !== i) cands.push({ t: 'neg', p: pp, i });
+        for (let i = 0; i < k; i++) for (let pp = 0; pp < k; pp++) for (let q = pp + 1; q < k; q++) if (sol[pp] !== i && sol[q] !== i && rng.chance(0.5)) cands.push({ t: 'nei', p: pp, q, i });
+        cands = rng.shuffle(cands);
+        if (k === 4 && rng.chance(0.5)) { const pp = rng.int(0, k - 1); cands.unshift({ t: 'pos', p: pp, i: sol[pp] }); }
+        let alive = permutations(k);
+        const clues = [], known = new Set();
+        for (const c of cands) {
+          const facts = c.t === 'nei' ? [`${c.p}:${c.i}`, `${c.q}:${c.i}`] : [`${c.p}:${c.i}`];
+          if (facts.some(f => known.has(f))) continue;                     // never repeat what an earlier clue said
+          const left = alive.filter(pm => clueFits(pm, c));
+          if (left.length < alive.length) { clues.push(c); alive = left; facts.forEach(f => known.add(f)); }
+          if (alive.length === 1) break;
+        }
+        const steps = gridSteps(k, clues), deduced = steps ? steps.filter(s => s.why !== 'clue') : [];
+        if (!steps || !deduced.length || clues.length > (k === 3 ? 4 : 6)) continue;
+        const target = rng.pick(deduced), upTo = steps.slice(0, steps.indexOf(target));
+        const say = s => s.why === 'clue' ? `The clue says ${t.pos(names[s.p], items[s.i]).replace(/\.$/, '')}, so cross out the rest of that row and column.`
+          : s.why === 'row' ? `${names[s.p]}’s row has only the ${items[s.i]} box left, so ${t.pos(names[s.p], items[s.i])}` : `The ${items[s.i]} column has only ${names[s.p]}’s box left, so ${t.pos(names[s.p], items[s.i])}`;
+        const text = c => c.t === 'pos' ? t.pos(names[c.p], items[c.i]) : c.t === 'neg' ? t.neg(names[c.p], items[c.i]) : t.nei(names[c.p], names[c.q], items[c.i]);
+        const answer = names[target.p], last = say(target).replace(t.pos(names[target.p], items[target.i]), t.pos(`<b>${answer}</b>`, items[target.i]));
+        return { prompt: `${t.intro(M.list(names), M.list(items.map(t.art)))}<ul>${rng.shuffle(clues).map(c => `<li>${text(c)}</li>`).join('')}</ul><b>${t.ask(items[target.i])}</b>`, type: 'choice', answer, choices: names.slice(),
+          params: { k, clues, ask: target.i, names },
+          hints: [`Draw a grid with the names down the side and the ${t.what} across the top. Put an ✕ in a box for every “not” or “neither” clue${clues.some(c => c.t === 'pos') ? ', and a ✓ for the clue that says who has what' : ''}.`,
+            `Each row and each column gets exactly one ✓, so look for a row or column with only one empty box. ${upTo.map(say).join(' ')}`.trim(), last] };
+      }
+    },
+    verify(q) {
+      const { k, clues, ask, names } = q.params;
+      const fit = permutations(k).filter(pm => clues.every(c => clueFits(pm, c)));   // every way to hand out the items, checked against every clue
+      return fit.length === 1 && q.answer === names[fit[0].indexOf(ask)];
+    },
+  });
+
+  function vennSvg(la, lb, nums) {
+    const cy = 116;
+    let g = `<rect x="6" y="6" width="348" height="212" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>`;
+    g += `<circle cx="135" cy="${cy}" r="80" fill="var(--primary-soft)" fill-opacity="0.7"/><circle cx="225" cy="${cy}" r="80" fill="var(--primary-soft)" fill-opacity="0.7"/>`;
+    g += `<circle cx="135" cy="${cy}" r="80" fill="none" stroke="var(--primary)" stroke-width="2"/><circle cx="225" cy="${cy}" r="80" fill="none" stroke="var(--primary)" stroke-width="2"/>`;
+    g += `<text x="96" y="27" text-anchor="middle" font-size="13" font-weight="700">${la}</text><text x="264" y="27" text-anchor="middle" font-size="13" font-weight="700">${lb}</text>`;
+    if (nums) {
+      const at = [[98, 'a'], [180, 'ab'], [262, 'b']];
+      at.forEach(([x, r], j) => { g += `<text x="${x}" y="${cy + 7}" text-anchor="middle" font-size="20" font-weight="700" data-r="${r}">${nums[j]}</text>`; });
+      g += `<text x="340" y="208" text-anchor="end" font-size="20" font-weight="700" data-r="out">${nums[3]}</text>`;
+    }
+    return `<svg class="figure" viewBox="0 0 360 224" width="360" role="img" aria-label="a Venn diagram with two overlapping circles, ${la} and ${lb}">${g}</svg>`;
+  }
+  const VENN_SURVEYS = [
+    { who: 'students', A: 'Soccer', B: 'Piano', intro: 'Students were asked whether they play soccer and whether they play piano.', onlyA: 'play soccer but not piano', onlyB: 'play piano but not soccer', both: 'play both soccer and piano', allA: 'play soccer', allB: 'play piano', none: 'play neither soccer nor piano', any: 'play soccer, piano or both' },
+    { who: 'students', A: 'Has a dog', B: 'Has a cat', intro: 'Students were asked whether they have a dog and whether they have a cat.', onlyA: 'have a dog but not a cat', onlyB: 'have a cat but not a dog', both: 'have both a dog and a cat', allA: 'have a dog', allB: 'have a cat', none: 'have neither a dog nor a cat', any: 'have a dog, a cat or both' },
+    { who: 'people', A: 'Likes apples', B: 'Likes grapes', intro: 'People at a picnic were asked whether they like apples and whether they like grapes.', onlyA: 'like apples but not grapes', onlyB: 'like grapes but not apples', both: 'like both apples and grapes', allA: 'like apples', allB: 'like grapes', none: 'like neither apples nor grapes', any: 'like apples, grapes or both' },
+    { who: 'students', A: 'Speaks Spanish', B: 'Speaks French', intro: 'Students were asked whether they speak Spanish and whether they speak French.', onlyA: 'speak Spanish but not French', onlyB: 'speak French but not Spanish', both: 'speak both Spanish and French', allA: 'speak Spanish', allB: 'speak French', none: 'speak neither Spanish nor French', any: 'speak Spanish, French or both' },
+    { who: 'campers', A: 'Swimming', B: 'Hiking', intro: 'Campers signed up for swimming, hiking, both or neither.', onlyA: 'signed up for swimming but not hiking', onlyB: 'signed up for hiking but not swimming', both: 'signed up for both swimming and hiking', allA: 'signed up for swimming', allB: 'signed up for hiking', none: 'signed up for neither swimming nor hiking', any: 'signed up for swimming, hiking or both' },
+  ];
+  // number properties for sorting; each test is plain arithmetic, so where a number goes is never in doubt
+  const PROPS = {
+    m3: { label: 'Multiples of 3', k: 3, test: v => v % 3 === 0 }, m4: { label: 'Multiples of 4', k: 4, test: v => v % 4 === 0 }, m5: { label: 'Multiples of 5', k: 5, test: v => v % 5 === 0 }, m6: { label: 'Multiples of 6', k: 6, test: v => v % 6 === 0 },
+    even: { label: 'Even numbers', test: v => v % 2 === 0 }, odd: { label: 'Odd numbers', test: v => v % 2 === 1 },
+    f24: { label: 'Factors of 24', of: 24, test: v => 24 % v === 0 }, f30: { label: 'Factors of 30', of: 30, test: v => 30 % v === 0 }, f36: { label: 'Factors of 36', of: 36, test: v => 36 % v === 0 },
+    prime: { label: 'Prime numbers', test: v => v > 1 && factorsOf(v).length === 2 }, gt20: { label: 'Greater than 20', gt: 20, test: v => v > 20 },
+  };
+  const PROP_PAIRS = [['m3', 'even'], ['m4', 'm6'], ['f24', 'f36'], ['prime', 'odd'], ['gt20', 'm5'], ['m5', 'even'], ['f30', 'even'], ['m3', 'm4']];
+  function whyProp(key, v) {
+    const pr = PROPS[key], yes = pr.test(v);
+    if (pr.k) return yes ? `${v} = ${pr.k} × ${v / pr.k}, so it is a multiple of ${pr.k}` : `${v} ÷ ${pr.k} leaves a remainder, so it is not a multiple of ${pr.k}`;
+    if (pr.of) return yes ? `${pr.of} ÷ ${v} = ${pr.of / v}, so ${v} is a factor of ${pr.of}` : `${pr.of} ÷ ${v} leaves a remainder, so ${v} is not a factor of ${pr.of}`;
+    if (key === 'prime') { const f = factorsOf(v)[1]; return yes ? `${v} has only two factors, 1 and ${v}, so it is prime` : `${v} = ${f} × ${v / f}, so it is not prime`; }
+    if (pr.gt) return yes ? `${v} is greater than ${pr.gt}` : `${v} is not greater than ${pr.gt}`;
+    const even = v % 2 === 0;
+    return `${v} ${even ? 'can' : 'cannot'} be split into two equal whole numbers, so it is ${even ? 'even' : 'odd'}${key === 'even' ? (even ? '' : ', not even') : (even ? ', not odd' : '')}`;
+  }
+  const PLACES = ['Only in circle A', 'Only in circle B', 'In both circles (the overlap)', 'Outside both circles'];
+  A.skill({
+    id: 'g6.venn-diagrams', title: 'Venn diagrams',
+    learn: p('A <b>Venn diagram</b> sorts things into overlapping circles. Each circle is one group. The <b>overlap</b>, where the circles cross, holds everything that belongs to <b>both</b> groups, and anything in <b>neither</b> group goes outside the circles, inside the rectangle.') +
+      p('“<b>Only</b> A” means the part of circle A outside the overlap. “<b>All</b> of A” means the whole circle, so add its two parts: only A plus the overlap. To find the total, add all four numbers.') +
+      p('To place a number, test it against each circle in turn. If it fits both, it goes in the overlap.') +
+      example('Example', `${vennSvg('Soccer', 'Piano', [7, 3, 5, 4])}3 students play both. 7 + 3 = <b>10</b> play soccer. 7 + 3 + 5 + 4 = <b>19</b> students were asked.`),
+    make(rng) {
+      const kind = rng.pick(['read', 'read', 'read', 'place', 'place']);
+      if (kind === 'place') {
+        const [ka, kb] = rng.pick(PROP_PAIRS), pa = PROPS[ka], pb = PROPS[kb];
+        const region = v => pa.test(v) ? (pb.test(v) ? 2 : 0) : (pb.test(v) ? 1 : 3);
+        const pool = Array.from({ length: 39 }, (_, i) => i + 2), regs = [0, 1, 2, 3].filter(r => pool.some(v => region(v) === r));
+        const r = rng.pick(regs), v = rng.pick(pool.filter(x => region(x) === r)), answer = PLACES[r];
+        return { prompt: `Where does the number <b>${v}</b> belong in this Venn diagram?${vennSvg('A: ' + pa.label, 'B: ' + pb.label, null)}`, type: 'choice', answer, choices: PLACES.slice(), keepOrder: true, params: { kind, ka, kb, v },
+          hints: [`Circle A is ${pa.label.toLowerCase()}: ${whyProp(ka, v)}.`, `Circle B is ${pb.label.toLowerCase()}: ${whyProp(kb, v)}.`, `So ${v} goes here: <b>${answer}</b>.`] };
+      }
+      const s = rng.pick(VENN_SURVEYS), nums = [rng.int(2, 15), rng.int(1, 9), rng.int(2, 15), rng.int(0, 9)], [a, ab, b, out] = nums;
+      const ask = rng.pick(['both', 'onlyA', 'onlyB', 'allA', 'allB', 'none', 'any', 'total']);
+      const Q = {
+        both: [ab, [`The overlap, where the circles cross, holds the ${s.who} in both groups.`, `The number in the overlap is ${ab}.`]],
+        onlyA: [a, [`“Only” means the part of the ${s.A} circle outside the overlap.`, `That part shows ${a}.`]],
+        onlyB: [b, [`“Only” means the part of the ${s.B} circle outside the overlap.`, `That part shows ${b}.`]],
+        allA: [a + ab, [`Everyone inside the ${s.A} circle counts, including the overlap.`, `Add the two parts of that circle: ${a} + ${ab}.`]],
+        allB: [b + ab, [`Everyone inside the ${s.B} circle counts, including the overlap.`, `Add the two parts of that circle: ${b} + ${ab}.`]],
+        none: [out, [`${s.who[0].toUpperCase() + s.who.slice(1)} in neither group are outside both circles, but inside the rectangle.`, `The number outside the circles is ${out}.`]],
+        any: [a + ab + b, [`Everyone inside at least one circle counts: the three numbers inside the circles.`, `${a} + ${ab} + ${b}.`]],
+        total: [a + ab + b + out, [`Everyone asked is somewhere in the rectangle, so add all four numbers.`, `${a} + ${ab} + ${b} + ${out}.`]],
+      }[ask];
+      const phrase = ask === 'total' ? 'were asked in all' : s[ask];
+      return { prompt: `${s.intro} The Venn diagram shows the results. How many ${s.who} ${phrase}?${vennSvg(s.A, s.B, nums)}`, type: 'number', answer: Q[0], params: { kind, ask },
+        hints: Q[1].concat(`<b>${Q[0]}</b> ${s.who} ${phrase}.`) };
+    },
+    verify(q) {
+      const pr = q.params;
+      if (pr.kind === 'place') {
+        const inSet = (key, v) => { const P = PROPS[key]; if (P.k) { for (let m = P.k; m <= v; m += P.k) if (m === v) return true; return false; } if (P.of) return Number.isInteger(P.of / v);
+          if (key === 'prime') { for (let d = 2; d * d <= v; d++) if (v % d === 0) return false; return v > 1; } if (P.gt) return v > P.gt; return (v % 2 === 0) === (key === 'even'); };
+        const A1 = inSet(pr.ka, pr.v), B1 = inSet(pr.kb, pr.v);
+        return q.answer === (A1 && B1 ? PLACES[2] : A1 ? PLACES[0] : B1 ? PLACES[1] : PLACES[3]);
+      }
+      const r = {}; for (const m of q.prompt.matchAll(/data-r="(\w+)">(\d+)</g)) r[m[1]] = Number(m[2]);     // read the regions off the drawing
+      const want = { both: r.ab, onlyA: r.a, onlyB: r.b, allA: r.a + r.ab, allB: r.b + r.ab, none: r.out, any: r.a + r.ab + r.b, total: r.a + r.ab + r.b + r.out }[pr.ask];
+      return q.answer === want;
     },
   });
 

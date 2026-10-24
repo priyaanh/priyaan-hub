@@ -52,6 +52,13 @@
       { id: 'series', title: 'Sequences and series', blurb: 'Adding up arithmetic and geometric sequences.', skills: ['int3.arithmetic-series', 'int3.geometric-series'] },
       { id: 'statistics', title: 'Statistics', blurb: 'The normal distribution, z-scores, sampling, and margin of error.', skills: ['int3.normal-distribution', 'int3.margin-of-error'] },
       { id: 'solids', title: '3D geometry', blurb: 'Slicing solids, and volume by Cavalieri’s principle.', skills: ['int3.cross-sections', 'int3.volume-cavalieri'] },
+      { id: 'function-models', title: 'Modeling with functions', blurb: 'Area and volume as functions of one length, with their domains and best values.', skills: ['int3.area-models', 'int3.box-volume'] },
+      { id: 'study-design', title: 'Surveys, studies, and data', blurb: 'Fair survey questions, the three kinds of study, what each can conclude, and relative frequency histograms.', skills: ['int3.survey-questions', 'int3.study-types', 'int3.study-conclusions', 'int3.relative-frequency'] },
+      { id: 'simulation', title: 'Simulation and inference', blurb: 'Estimating probabilities with random digits, and testing whether a difference could be chance.', skills: ['int3.simulations', 'int3.randomization-tests'] },
+      { id: 'polynomial-roots', title: 'Roots of polynomials', blurb: 'Possible rational roots, conjugate pairs, and building a polynomial from its roots.', skills: ['int3.rational-roots', 'int3.poly-from-roots'] },
+      { id: 'more-trig', title: 'More trigonometry', blurb: 'The tangent graph, secant, cosecant and cotangent, sum and difference identities, and the ambiguous case.', skills: ['int3.tangent-function', 'int3.reciprocal-trig', 'int3.sum-difference-identities', 'int3.ambiguous-case'] },
+      { id: 'induction-binomial', title: 'Induction and the binomial theorem', blurb: 'Proof by induction, expanding powers of binomials, and binomial probability.', skills: ['int3.induction', 'int3.binomial-theorem', 'int3.binomial-probability'] },
+      { id: 'three-d', title: 'Three dimensions and three-variable systems', blurb: 'Points and planes in 3-D, systems of three equations, and fitting a parabola through three points.', skills: ['int3.points-3d', 'int3.plane-intercepts', 'int3.three-variable-systems', 'int3.curve-fitting'] },
     ],
   });
 
@@ -1014,6 +1021,1197 @@
       else { area = y => Math.PI * (r * r - y * y); lo = -r; hi = r; }
       let v = 0; const dy = (hi - lo) / n; for (let i = 0; i < n; i++) v += area(lo + (i + 0.5) * dy) * dy;
       return Math.abs(v - q.answer) <= 0.05 + 1e-6 * v;
+    },
+  });
+
+  /* ---------- Unit 9: Modeling with functions ---------- */
+  const between = (lo, hi) => `${N(lo)} &lt; ${X} &lt; ${N(hi)}`;
+  /** c·x(a − bx) as text: "x(20 − x)", "½x(30 − x)", "2x(40 − 2x)" */
+  const cxForm = ([c, a, b]) => `${c === 1 ? '' : c === 0.5 ? '½' : N(c)}${X}(${N(a)} − ${b === 1 ? '' : N(b)}${X})`;
+  A.skill({
+    id: 'int3.area-models', title: 'Area as a function: domain and maximum',
+    learn: p(`When a shape changes, its area often depends on one length. <b>Name that length ${X}, write every other length in terms of ${X}, then multiply to get the area function ${V('A')}(${X}).</b> A rectangle with a perimeter of 40 m and width ${X} has length 20 − ${X}, so ${V('A')}(${X}) = ${X}(20 − ${X}).`) +
+      p(`<b>The domain is the set of ${X}-values that make every length positive.</b> Here ${X} &gt; 0 and 20 − ${X} &gt; 0, so the domain is 0 &lt; ${X} &lt; 20.`) +
+      p(`Area functions like this are downward parabolas that are zero at both ends of the domain. <b>The maximum is at the vertex, halfway between the two zeros.</b> Substitute that ${X} to find the largest area.`) +
+      example('Example', `A pen is built against a wall, with 60 m of fence for the other three sides. The two sides that meet the wall are ${X} m each, so the side parallel to the wall is 60 − 2${X}.${big(`${V('A')}(${X}) = ${X}(60 − 2${X}), &nbsp; 0 &lt; ${X} &lt; 30`)}The zeros are 0 and 30, so the vertex is at ${X} = 15. The largest area is 15 × 30 = <b>450 m²</b>.`),
+    make(rng) {
+      const shape = rng.pick(['rect', 'wall', 'tri']), ask = rng.pick(['max', 'max', 'best', 'domain', 'rule']);
+      const m = rng.int(4, 24), name = rng.pick(NAMES);
+      let total, form, wrong, setup, other, unit;
+      if (shape === 'rect') {
+        total = 4 * m; form = [1, 2 * m, 1]; unit = 'm';
+        setup = `${name} marks out a rectangular garden with a perimeter of ${total} m. Its width is ${X} m.`; other = ['the length', `${N(2 * m)} − ${X}`];
+        wrong = [[1, total, 1], [1, 2 * m, 2], [2, 2 * m, 1]];
+      } else if (shape === 'wall') {
+        total = 4 * m; form = [1, total, 2]; unit = 'm';
+        setup = `${name} builds a rectangular pen against a long wall, using ${total} m of fence for the other three sides. The two sides that meet the wall are ${X} m long each.`; other = ['the side parallel to the wall', `${N(total)} − 2${X}`];
+        wrong = [[1, total, 1], [2, total, 2], [1, 2 * m, 1]];
+      } else {
+        total = 2 * m; form = [0.5, total, 1]; unit = 'cm';
+        setup = `The two legs of a right triangle add up to ${total} cm. One leg is ${X} cm long.`; other = ['the other leg', `${N(total)} − ${X}`];
+        wrong = [[1, total, 1], [0.5, total, 2], [0.5, 2 * total, 1]];
+      }
+      const zero = form[1] / form[2], xs = zero / 2, best = form[0] * xs * (form[1] - form[2] * xs);
+      const rule = `${V('A')}(${X}) = ${cxForm(form)}`;
+      const h1 = `Write the other length in terms of ${X}: ${other[0]} is ${other[1]}. So ${rule}.`;
+      const params = { shape, total, ask };
+      if (ask === 'rule') {
+        const all = [form].concat(wrong);
+        params.forms = all; params.texts = all.map(cxForm);
+        return { prompt: `${setup} Which function gives the area?`, type: 'choice', choices: options(cxForm(form), wrong.map(cxForm)), answer: cxForm(form), params,
+          hints: [`Write the other length in terms of ${X}: ${other[0]} is ${other[1]}.`, shape === 'tri' ? `The area of a triangle is ½ × leg × leg.` : `The area of a rectangle is length × width.`, `So ${V('A')}(${X}) = <b>${cxForm(form)}</b>.`] };
+      }
+      if (ask === 'domain') {
+        const answer = between(0, zero);
+        return { prompt: `${setup} The area is ${rule}. What is the domain of this function in the situation?`, type: 'choice', choices: options(answer, [between(0, 2 * zero), between(0, xs), `${X} &gt; 0`]), answer, params,
+          hints: [`Every length must be positive. The ${X}-length gives ${X} &gt; 0.`, `Also ${other[0]}, ${other[1]}, must be positive, which is true only while ${X} &lt; ${N(zero)}.`, `The domain is <b>${answer}</b>.`] };
+      }
+      const hv = `The area is zero at ${X} = 0 and at ${X} = ${N(zero)}. The vertex of the parabola is halfway between: ${X} = ${N(xs)}.`;
+      if (ask === 'best') return { prompt: `${setup} What value of ${X} gives the largest possible area?`, type: 'number', answer: xs, unit, params,
+        hints: [h1, hv, `The largest area comes at ${X} = <b>${N(xs)}</b> ${unit}.`] };
+      return { prompt: `${setup} What is the largest possible area?`, type: 'number', answer: best, unit: unit + '²', params,
+        hints: [h1, hv, `${V('A')}(${N(xs)}) = ${cxForm(form).replace(new RegExp(X.replace(/[()]/g, '\\$&'), 'g'), `(${N(xs)})`)} = <b>${N(best)} ${unit}²</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      // the area straight from the lengths in the story
+      const area = x => P.shape === 'rect' ? x * (P.total - 2 * x) / 2 : P.shape === 'wall' ? x * (P.total - 2 * x) : x * (P.total - x) / 2;
+      let hi = 0; while (area(hi + 0.5) > 0) hi += 0.5;
+      const top = hi + 0.5;                                   // the first half-step where the area stops being positive
+      if (P.ask === 'domain') return q.answer === between(0, top) && area(top) === 0;
+      if (P.ask === 'rule') {
+        const ok = P.forms.map(([c, a, b]) => [0.7, 2.3, 5.1].every(x => close(c * x * (a - b * x), area(x))));
+        return ok.filter(Boolean).length === 1 && P.texts[ok.indexOf(true)] === q.answer;
+      }
+      let bx = 0, bA = -1; for (let x = 0; x <= top; x += 0.01) { const a = area(x); if (a > bA + 1e-9) { bA = a; bx = x; } }
+      return P.ask === 'best' ? close(bx, q.answer, 0.006) : close(bA, q.answer, 1e-6);
+    },
+  });
+
+  /** x^h (L − kl·x)(W − kw·x) as text */
+  const boxForm = (L, W, [h, kl, kw]) => `${h ? X : ''}(${N(L)} − ${kl === 1 ? '' : N(kl)}${X})(${N(W)} − ${kw === 1 ? '' : N(kw)}${X})`;
+  A.skill({
+    id: 'int3.box-volume', title: 'Volume of an open box',
+    learn: p(`An open box can be folded from a flat sheet by cutting a square of side ${X} from each corner and folding up the flaps. <b>Each pair of cuts takes ${X} off both ends of the length and of the width, and the flaps become the height ${X}.</b>`) +
+      p(`For a sheet ${V('L')} by ${V('W')}, <b>${V('V')}(${X}) = ${X}(${V('L')} − 2${X})(${V('W')} − 2${X})</b>. Every length must be positive, so the domain is 0 &lt; ${X} &lt; ${F(V('W'), 2)}, where ${V('W')} is the shorter side.`) +
+      p(`To find the best cut, make a table of ${V('V')}(${X}) or read the highest point of the graph. A tiny cut gives a flat box and a big cut gives a thin tower; the most volume is in between.`) +
+      example('Example', `A sheet is 20 cm by 12 cm, and the cut is ${X} = 2 cm.${big(`${V('V')}(2) = 2(20 − 4)(12 − 4) = 2 × 16 × 8`)}The volume is <b>256 cm³</b>, and the domain is 0 &lt; ${X} &lt; 6.`),
+    make(rng) {
+      const ask = rng.pick(['eval', 'eval', 'domain', 'rule', 'best']), unit = rng.pick(['cm', 'in']);
+      const W = rng.int(8, ask === 'best' ? 16 : 24), L = rng.int(W + 2, ask === 'best' ? 30 : 40), name = rng.pick(NAMES);
+      const setup = `${name} makes an open box from a sheet of card ${L} ${unit} by ${W} ${unit}, cutting a square of side ${X} ${unit} from each corner and folding up the sides.`;
+      const rule = `${V('V')}(${X}) = ${boxForm(L, W, [1, 2, 2])}`;
+      const params = { ask, L, W };
+      if (ask === 'eval') {
+        const x = rng.int(2, W - 1) / 2, l = L - 2 * x, w = W - 2 * x, vol = x * l * w;
+        params.x = x;
+        return { prompt: `${setup} What is the volume of the box when ${X} = ${N(x)}?`, type: 'number', answer: vol, unit: unit + '³', params,
+          hints: [`The box is ${L} − 2(${N(x)}) = ${N(l)} long, ${W} − 2(${N(x)}) = ${N(w)} wide and ${N(x)} tall.`, `${V('V')} = ${N(x)} × ${N(l)} × ${N(w)}.`, `The volume is <b>${N(vol)} ${unit}³</b>.`] };
+      }
+      if (ask === 'domain') {
+        const answer = between(0, W / 2);
+        return { prompt: `${setup} The volume is ${rule}. What is the domain of this function in the situation?`, type: 'choice', choices: options(answer, [between(0, L / 2), between(0, W), between(0, L)]), answer, params,
+          hints: [`The height ${X} must be positive, and so must the length ${L} − 2${X} and the width ${W} − 2${X}.`, `The width runs out first: ${W} − 2${X} &gt; 0 means ${X} &lt; ${N(W / 2)}.`, `The domain is <b>${answer}</b>.`] };
+      }
+      if (ask === 'rule') {
+        const forms = [[1, 2, 2], [1, 1, 1], [0, 2, 2], [1, 2, 1]];
+        params.forms = forms; params.texts = forms.map(f => boxForm(L, W, f));
+        const answer = params.texts[0];
+        return { prompt: `${setup} Which function gives the volume of the box?`, type: 'choice', choices: options(answer, params.texts.slice(1)), answer, params,
+          hints: [`A square is cut from both ends of each side, so the length shrinks by 2${X} to ${L} − 2${X}, and the width to ${W} − 2${X}.`, `The folded flaps make the height ${X}. Volume = height × length × width.`, `<b>${rule}</b>.`] };
+      }
+      const xs = []; for (let x = 1; 2 * x < W; x++) xs.push(x);
+      const vols = xs.map(x => x * (L - 2 * x) * (W - 2 * x)), top = Math.max(...vols), bx = xs[vols.indexOf(top)];
+      if (vols.filter(v => v === top).length > 1) return this.make(rng);
+      return { prompt: `${setup} The cut must be a whole number of ${unit === 'cm' ? 'centimetres' : 'inches'}. Which cut gives the box with the greatest volume?`, type: 'number', answer: bx, unit, params,
+        hints: [`Use ${rule}, for every whole-number cut from 1 up to ${xs[xs.length - 1]}.`, `${xs.map((x, i) => `${V('V')}(${x}) = ${N(vols[i])}`).join(', ')}.`, `The greatest volume is ${N(top)} ${unit}³, at ${X} = <b>${bx}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params, cubic = x => peval([4, -2 * (P.L + P.W), P.L * P.W, 0], x);   // the expanded volume
+      if (P.ask === 'eval') return close(cubic(P.x), q.answer);
+      if (P.ask === 'domain') { let hi = 0; while ([hi + 0.5, P.L - 2 * hi - 1, P.W - 2 * hi - 1].every(v => v > 0)) hi += 0.5; return q.answer === between(0, hi + 0.5); }
+      if (P.ask === 'rule') {
+        const ok = P.forms.map(([h, kl, kw]) => [0.6, 1.7, 3.2].every(x => close((h ? x : 1) * (P.L - kl * x) * (P.W - kw * x), cubic(x))));
+        return ok.filter(Boolean).length === 1 && P.texts[ok.indexOf(true)] === q.answer;
+      }
+      // the true peak of the cubic, from V′(x) = 12x² − 4(L + W)x + LW = 0, then the better whole number beside it
+      const peak = ((P.L + P.W) - Math.sqrt(P.L * P.L - P.L * P.W + P.W * P.W)) / 6;
+      const lo = Math.max(1, Math.floor(peak)), hi2 = Math.min(Math.ceil(peak), Math.ceil(P.W / 2) - 1);
+      return q.answer === (cubic(hi2) > cubic(lo) ? hi2 : lo);
+    },
+  });
+
+  /* ---------- Unit 10: Surveys, studies and data ---------- */
+  /** each topic: a fairly worded question, two that push toward an answer, and one that asks two things at once */
+  const SURVEY_TOPICS = [
+    { fair: 'Would you like the cafeteria to add more choices to the lunch menu, or keep the menu as it is?',
+      lead: ['Don’t you agree that the cafeteria’s boring lunch menu needs more choices?', 'Most students want more lunch choices. Do you want more choices too?'],
+      two: 'Should the cafeteria add more lunch choices and make the lunch period longer?' },
+    { fair: 'Do you support or oppose building a skate park in Elm Park?',
+      lead: ['Wouldn’t a skate park be a great way to keep teenagers healthy and active?', 'Should the town spend money on a noisy, dangerous skate park?'],
+      two: 'Do you support building a skate park and a new swimming pool in Elm Park?' },
+    { fair: 'Should the school day start at 8:00 a.m. or at 8:45 a.m.?',
+      lead: ['Doctors say teenagers need more sleep. Shouldn’t school start later?', 'Wouldn’t starting school later just make students lazy?'],
+      two: 'Should school start later in the morning and have a shorter lunch break?' },
+    { fair: 'Should students be allowed to use their phones at lunch, yes or no?',
+      lead: ['Should students be allowed to waste their whole lunch break staring at phones?', 'Since phones help students relax, shouldn’t they be allowed at lunch?'],
+      two: 'Should students be allowed to use phones at lunch and listen to music in class?' },
+    { fair: 'Do you support or oppose a rule that students wear school uniforms?',
+      lead: ['Don’t you agree that uniforms would stop students teasing each other about clothes?', 'Should students be forced to wear ugly, uncomfortable uniforms every day?'],
+      two: 'Should the school make students wear uniforms and ban hats?' },
+    { fair: 'Should the town library stay open later on weekdays, or keep its current hours?',
+      lead: ['Shouldn’t hard-working students be able to use the library in the evening?', 'The library is already open plenty of hours. Does it really need to stay open later?'],
+      two: 'Should the library stay open later and stop charging late fees?' },
+    { fair: 'Would you rather the class trip go to the science museum or to the aquarium?',
+      lead: ['Would you rather go to the exciting aquarium or the dusty old science museum?', 'Teachers say the science museum is far more educational. Where should the class trip go?'],
+      two: 'Should the class trip go to the aquarium and stay overnight in a hotel?' },
+    { fair: 'Do you support or oppose adding bike lanes to Main Street?',
+      lead: ['Do you support adding bike lanes to make Main Street safe for our children?', 'Do you support getting rid of parking spaces on Main Street to make room for bike lanes?'],
+      two: 'Do you support adding bike lanes and lowering the speed limit on Main Street?' },
+  ];
+  const SURVEY_FAULTS = { lead: 'It pushes people toward one answer.', two: 'It asks about two different things at once.', fair: 'Nothing: it is worded fairly.', hard: 'It uses words most people would not understand.' };
+  A.skill({
+    id: 'int3.survey-questions', title: 'Biased and leading survey questions',
+    learn: p('The way a survey question is worded can change the answers people give. <b>A fair question is neutral: it does not hint at which answer is “right”, and it asks about one thing only.</b>') +
+      p('Watch for two common faults. A <b>leading</b> question pushes people toward an answer, with loaded words (“boring”, “waste”, “dangerous”), a reason for one side only, or a claim about what most people or experts think. A <b>double-barrelled</b> question asks about two things at once, so someone who likes one part and not the other cannot answer honestly.') +
+      p('To fix a question, remove the opinion words and give both sides equal weight: “Do you support or oppose …?” or “Would you rather A or B?”.') +
+      example('Example', `${big('“Don’t you agree that the noisy new gym is a waste of money?”')}The words “Don’t you agree”, “noisy” and “waste” all push toward no, so this is <b>a leading question</b>. A fair version: “Do you support or oppose building the new gym?”`),
+    make(rng) {
+      const t = rng.int(0, SURVEY_TOPICS.length - 1), T = SURVEY_TOPICS[t];
+      if (rng.bool()) {
+        const answer = T.fair;
+        return { prompt: 'A student council is writing a survey. Which question is worded most fairly?', type: 'choice', choices: [T.fair, T.lead[0], T.lead[1], T.two], answer, params: { kind: 'pick', t },
+          hints: ['Look for opinion words, or a reason given for one side only: those push people toward an answer.', 'Also look for a question that asks about two things at once; it cannot be answered with one honest yes or no.', `The neutral one asks about one thing and favours neither answer: <b>“${answer}”</b>`] };
+      }
+      const variant = rng.pick(['fair', 'lead0', 'lead1', 'two']), text = variant === 'fair' ? T.fair : variant === 'two' ? T.two : T.lead[Number(variant.slice(4))];
+      const fault = variant.startsWith('lead') ? 'lead' : variant, answer = SURVEY_FAULTS[fault];
+      const why = { lead: 'The wording favours one answer: it uses loaded words, gives a reason for only one side, or says what others think.', two: 'It joins two separate proposals with “and”, so a person who wants one but not the other cannot answer.', fair: 'It names both options evenly, uses no opinion words, and asks about one thing only.' }[fault];
+      return { prompt: `What, if anything, is wrong with this survey question?${big(`“${text}”`)}`, type: 'choice', choices: [SURVEY_FAULTS.lead, SURVEY_FAULTS.two, SURVEY_FAULTS.fair, SURVEY_FAULTS.hard], answer, params: { kind: 'fault', t, variant },
+        hints: ['Check two things: does the wording hint at an answer, and does it ask about more than one thing?', why, `<b>${answer}</b>`] };
+    },
+    verify(q) {
+      const P = q.params, T = SURVEY_TOPICS[P.t];
+      if (P.kind === 'pick') return q.answer === T.fair && q.choices.length === 4;
+      const text = P.variant === 'fair' ? T.fair : P.variant === 'two' ? T.two : T.lead[Number(P.variant.slice(4))];
+      if (!q.prompt.includes(text)) return 'the question shown is not the one classified';
+      // a second reading: the fair version is the only one with no loaded phrasing, and the two-part version is the one built with “and”
+      const fault = text === T.fair ? 'fair' : text === T.two ? 'two' : T.lead.includes(text) ? 'lead' : null;
+      return q.answer === SURVEY_FAULTS[fault];
+    },
+  });
+
+  const STUDY_KINDS = ['Survey', 'Observational study', 'Experiment'];
+  const STUDY_CASES = {
+    Survey: [
+      'A town council mails a questionnaire to 500 randomly chosen households, asking whether they would use a new bus route.',
+      'A newspaper phones 1,000 adults chosen at random and asks which candidate they plan to vote for.',
+      'The student council asks 120 students to rate the cafeteria food on a scale from 1 to 5.',
+      'A sports club emails all of its members to ask which day of the week they would prefer for practice.',
+    ],
+    'Observational study': [
+      'Researchers look through the medical records of 3,000 adults and compare the blood pressure of people who drink coffee with that of people who do not.',
+      'A scientist watches a busy crossroads for a week and records how many drivers come to a full stop at the stop sign.',
+      'Researchers compare the test scores of students who chose to take music lessons with the scores of students who did not.',
+      'A biologist counts the birds visiting feeders in 40 gardens, noting which gardens have a pet cat.',
+    ],
+    Experiment: [
+      'Researchers randomly split 60 volunteers into two groups. One group chews gum during a memory test and the other does not.',
+      'A gardener randomly chooses 20 of her 40 tomato plants to get a new fertilizer, gives the other 20 plain water, and compares their heights after six weeks.',
+      'A coach randomly assigns 30 runners to either a new warm-up routine or the usual one, then times them over 400 m.',
+      'A teacher randomly assigns half of a class to study with flash cards and the other half to reread their notes, then gives everyone the same quiz.',
+    ],
+  };
+  /** experiments with their parts named */
+  const EXPERIMENTS = [
+    { setup: 'Researchers randomly split 60 volunteers into two groups of 30. One group chews gum during a memory test and the other group does not. They count how many words each person remembers.',
+      treat: 'The 30 volunteers who chew gum', ctrl: 'The 30 volunteers who do not chew gum', all: 'All 60 volunteers together', resp: 'How many words each person remembers', factor: 'Whether or not a person chews gum', size: 'The number of volunteers in each group' },
+    { setup: 'A gardener randomly chooses 20 of her 40 tomato plants to get a new fertilizer and gives the other 20 plain water. After six weeks she measures the height of every plant.',
+      treat: 'The 20 plants given the fertilizer', ctrl: 'The 20 plants given plain water', all: 'All 40 tomato plants together', resp: 'The height of each plant after six weeks', factor: 'Whether or not a plant gets the fertilizer', size: 'The number of plants in each group' },
+    { setup: 'A coach randomly assigns 15 of 30 runners to a new warm-up routine; the other 15 do the usual warm-up. Then every runner is timed over 400 m.',
+      treat: 'The 15 runners who do the new warm-up', ctrl: 'The 15 runners who do the usual warm-up', all: 'All 30 runners together', resp: 'Each runner’s time over 400 m', factor: 'Which warm-up routine a runner does', size: 'The number of runners in each group' },
+    { setup: 'A teacher randomly assigns 14 of 28 students to study with flash cards; the other 14 reread their notes. Everyone then takes the same quiz, and the teacher records the scores.',
+      treat: 'The 14 students who use flash cards', ctrl: 'The 14 students who reread their notes', all: 'All 28 students together', resp: 'Each student’s quiz score', factor: 'Which way a student studies', size: 'The number of students in each group' },
+  ];
+  const RANDOM_WHY = ['So the groups are alike in every way except the treatment.', 'So more subjects can take part in the study.', 'So the treatment is sure to show an effect.', 'So each subject ends up in the group they prefer.'];
+  A.skill({
+    id: 'int3.study-types', title: 'Surveys, observational studies, and experiments',
+    learn: p('Statistical studies come in three kinds. <b>A survey asks people questions</b> about their opinions or habits. <b>An observational study watches or records what already happens</b>, without changing anything. <b>An experiment imposes a treatment</b>: the researcher decides which subjects get it.') +
+      p('In an experiment, the <b>treatment group</b> gets the new thing being tested and the <b>control group</b> does not (it gets nothing, the usual thing, or a fake). The <b>response variable</b> is what is measured to compare the groups.') +
+      p('<b>Subjects are assigned to the groups at random</b>, so that the groups are alike in every other way. Then a big difference in the response can be put down to the treatment.') +
+      example('Example', `${big('A doctor randomly gives 50 patients a new cream and 50 patients a cream with no medicine, then measures how fast their rashes heal.')}The doctor decides who gets what, so this is an <b>experiment</b>. The treatment group gets the new cream, the control group gets the plain cream, and the response is healing time.`),
+    make(rng) {
+      const kind = rng.pick(['classify', 'classify', 'classify', 'part', 'part', 'random']);
+      if (kind === 'classify') {
+        const type = rng.pick(STUDY_KINDS), i = rng.int(0, 3), text = STUDY_CASES[type][i];
+        return { prompt: `What kind of study is this?${big(text)}`, type: 'choice', choices: STUDY_KINDS.slice(), answer: type, keepOrder: true, params: { kind, type, i },
+          hints: ['Ask: does the researcher decide who gets a treatment? If so, it is an experiment.', 'If not, ask: are people being asked questions (a survey), or is existing behaviour or data just being watched and recorded (an observational study)?',
+            `${type === 'Experiment' ? 'The researcher assigns the treatment' : type === 'Survey' ? 'People are asked questions and nothing is assigned' : 'Nothing is assigned and no one is asked questions; what already happens is recorded'}, so it is <b>${type === 'Experiment' ? 'an experiment' : type === 'Survey' ? 'a survey' : 'an observational study'}</b>.`] };
+      }
+      const e = rng.int(0, EXPERIMENTS.length - 1), E = EXPERIMENTS[e];
+      if (kind === 'random') {
+        return { prompt: `${E.setup} Why are the groups chosen at random?`, type: 'choice', choices: RANDOM_WHY.slice(), answer: RANDOM_WHY[0], params: { kind, e },
+          hints: ['If subjects chose their own groups, the groups might differ in other ways too, such as health, effort or skill.', 'Random assignment spreads those other differences evenly, so only the treatment differs between the groups.', `<b>${RANDOM_WHY[0]}</b>`] };
+      }
+      const ask = rng.pick(['ctrl', 'treat', 'resp']);
+      const answer = E[ask], what = { ctrl: 'the control group', treat: 'the treatment group', resp: 'the response variable' }[ask];
+      const pool = ask === 'resp' ? [E.factor, E.size, E.all] : [ask === 'ctrl' ? E.treat : E.ctrl, E.all, E.resp];
+      return { prompt: `${E.setup} What is ${what}?`, type: 'choice', choices: [answer].concat(pool), answer, params: { kind, e, ask },
+        hints: [ask === 'resp' ? 'The response variable is what is measured at the end to compare the groups.' : 'The treatment group gets the new thing being tested; the control group gets nothing or the usual thing, for comparison.',
+          ask === 'resp' ? 'What does the researcher record for every subject at the end?' : `Find the group that ${ask === 'ctrl' ? 'does not get' : 'gets'} the new thing.`, `${what.charAt(0).toUpperCase() + what.slice(1)}: <b>${answer.charAt(0).toLowerCase() + answer.slice(1)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'classify') {
+        const text = STUDY_CASES[P.type][P.i];
+        // a second reading of the description: assigning means an experiment; asking means a survey; otherwise observing
+        const got = /random(ly)? (split|chooses|assigns)/.test(text) ? 'Experiment' : /\b(asks?|asking|questionnaire|phones|emails)\b/.test(text) ? 'Survey' : 'Observational study';
+        return q.answer === got && got === P.type;
+      }
+      const E = EXPERIMENTS[P.e];
+      if (P.kind === 'random') return q.answer === RANDOM_WHY[0];
+      if (P.ask === 'resp') return q.answer === E.resp && /measure|count|time|record|scores?|height/i.test(E.setup);
+      return q.answer === E[P.ask] && (P.ask === 'treat' ? !/not|usual|plain|reread/.test(E.treat) : /not|usual|plain|reread/.test(E.ctrl));
+    },
+  });
+
+  /** studies that found a difference: observational ones show a link only; randomized experiments show cause and effect */
+  const CONCLUSION_CASES = [
+    { obs: true, text: 'Researchers studied the records of 2,000 students. Students who eat breakfast every day had higher grades, on average, than students who usually skip it.',
+      cause: 'The study shows that eating breakfast raises students’ grades.', link: 'The study shows a link between breakfast and grades, but not a cause.', none: 'The study shows that eating breakfast has no link to grades.', reverse: 'The study shows that good grades make students eat breakfast.',
+      lurk: 'how much sleep they get', assign: 'Randomly assign students to eat breakfast or skip it, then compare grades.', subj: 'students' },
+    { obs: true, text: 'A study of 1,500 students found that those who play a musical instrument score higher on math tests, on average, than those who do not.',
+      cause: 'The study shows that playing an instrument raises math scores.', link: 'The study shows a link between music and math scores, but not a cause.', none: 'The study shows that playing an instrument has no link to math.', reverse: 'The study shows that being good at math makes students play music.',
+      lurk: 'family income', assign: 'Randomly assign students to take music lessons or not, then compare scores.', subj: 'students' },
+    { obs: true, text: 'Over several summers, a city noticed that on days with more ice-cream sales there were also more swimming accidents.',
+      cause: 'The data show that eating ice cream causes swimming accidents.', link: 'The data show a link between ice cream and accidents, but not a cause.', none: 'The data show that ice-cream sales have no link to accidents.', reverse: 'The data show that swimming accidents make people buy ice cream.',
+      lurk: 'hot weather', assign: null, subj: 'days' },
+    { obs: true, text: 'Researchers asked 800 teenagers to keep a diary for a month. Teens who spent more time on screens slept less, on average, than teens who spent less time on screens.',
+      cause: 'The study shows that screen time makes teenagers sleep less.', link: 'The study shows a link between screens and sleep, but not a cause.', none: 'The study shows that screen time has no link to sleep.', reverse: 'The study shows that sleeping less makes teenagers use screens.',
+      lurk: 'stress or homework', assign: 'Randomly assign teenagers a short or a long screen time, then compare sleep.', subj: 'teenagers' },
+    { obs: true, text: 'A study of 1,200 children found that children with more books at home have larger vocabularies, on average.',
+      cause: 'The study shows that having more books gives children more words.', link: 'The study shows a link between books and vocabulary, but not a cause.', none: 'The study shows that books at home have no link to vocabulary.', reverse: 'The study shows that a large vocabulary makes families buy books.',
+      lurk: 'how often parents read with them', assign: null, subj: 'children' },
+    { obs: false, text: 'Researchers randomly assigned 60 volunteers to chew gum or not during a memory test. The gum chewers remembered more words, on average, by much more than chance alone would explain.',
+      cause: 'The study shows that chewing gum helped these people remember.', link: 'The study shows a link between gum and memory, but not a cause.', none: 'The study shows that chewing gum has no effect on memory.', reverse: 'The study shows that a good memory makes people chew gum.' },
+    { obs: false, text: 'A gardener randomly chose 20 of 40 tomato plants to get a new fertilizer; the rest got plain water. After six weeks the fertilized plants were taller, on average, by much more than chance alone would explain.',
+      cause: 'The study shows that the fertilizer made the plants grow taller.', link: 'The study shows a link between fertilizer and height, but not a cause.', none: 'The study shows that the fertilizer has no effect on height.', reverse: 'The study shows that tall plants take in more fertilizer.' },
+    { obs: false, text: 'A coach randomly assigned 30 runners to a new warm-up routine or the usual one. The new-routine group ran 400 m faster, on average, by much more than chance alone would explain.',
+      cause: 'The study shows that the new warm-up made these runners faster.', link: 'The study shows a link between warm-up and speed, but not a cause.', none: 'The study shows that the warm-up has no effect on speed.', reverse: 'The study shows that fast runners choose the new warm-up.' },
+    { obs: false, text: 'A teacher randomly assigned half of a class to study with flash cards and half to reread their notes. The flash-card group scored higher on the quiz, on average, by much more than chance alone would explain.',
+      cause: 'The study shows that flash cards raised these students’ scores.', link: 'The study shows a link between flash cards and scores, but not a cause.', none: 'The study shows that flash cards have no effect on scores.', reverse: 'The study shows that high scorers choose to use flash cards.' },
+  ];
+  A.skill({
+    id: 'int3.study-conclusions', title: 'Cause and effect or association',
+    learn: p('What a study can conclude depends on how its data were collected. <b>Only a randomized experiment can show cause and effect.</b> Because chance decided who got the treatment, the groups differ only in the treatment, so a difference too big for chance must come from the treatment.') +
+      p('<b>An observational study can show an association (a link), but not cause and effect.</b> The groups chose themselves, so they may differ in other ways. A <b>lurking variable</b> that affects both things can create a link on its own: hot weather raises both ice-cream sales and swimming accidents.') +
+      p('To test whether one thing causes another, design an experiment: randomly assign subjects to the treatment or to a control group and compare the results.') +
+      example('Example', `${big('People who take the stairs at work are fitter, on average, than people who take the lift.')}Nobody was assigned to the stairs, so this is observational. It shows <b>a link, not cause and effect</b>: fitter people may simply choose the stairs.`),
+    make(rng) {
+      const c = rng.int(0, CONCLUSION_CASES.length - 1), C = CONCLUSION_CASES[c];
+      const kind = C.obs ? rng.pick(C.assign ? ['conclude', 'why', 'fix'] : ['conclude', 'why']) : 'conclude';
+      if (kind === 'conclude') {
+        const answer = C.obs ? C.link : C.cause;
+        return { prompt: `${C.text} Which conclusion does this study support?`, type: 'choice', choices: [C.cause, C.link, C.none, C.reverse], answer, params: { kind, c },
+          hints: ['First decide how the data were collected: did the researchers randomly assign the treatment, or just observe what people already did?',
+            C.obs ? 'Nobody was assigned to a group, so this is an observational study. It can show a link, but other differences between the groups could be the real cause.' : 'The treatment was assigned at random and the difference was too big for chance, so this randomized experiment can show cause and effect.',
+            `<b>${answer}</b>`] };
+      }
+      if (kind === 'why') {
+        const answer = `Other differences, such as ${C.lurk}, could explain the link.`;
+        const wrong = [`The study used far too many ${C.subj} to give a fair result.`, 'Only a survey can show that one thing causes another.', 'A link found in real data can never be trusted.'];
+        return { prompt: `${C.text} Why can’t this study show that one of these things causes the other?`, type: 'choice', choices: [answer].concat(wrong), answer, params: { kind, c },
+          hints: ['Nobody was randomly assigned, so the groups being compared may differ in other ways.', 'A lurking variable that affects both things can produce a link even if neither causes the other.', `<b>${answer}</b>`] };
+      }
+      const answer = C.assign;
+      const wrong = [`Repeat the same study with twice as many ${C.subj}.`, `Ask the ${C.subj} whether they think one causes the other.`, 'Let each person choose a group, then compare the groups.'];
+      return { prompt: `${C.text} How could researchers test whether there is cause and effect?`, type: 'choice', choices: [answer].concat(wrong), answer, params: { kind, c },
+        hints: ['Cause and effect needs an experiment, where the researcher decides who gets the treatment.', 'The groups must be formed by chance, not by choice, so that they are alike in every other way.', `<b>${answer}</b>`] };
+    },
+    verify(q) {
+      const P = q.params, C = CONCLUSION_CASES[P.c];
+      const randomized = /randomly assigned|randomly chose/.test(C.text);          // read the design from the description itself
+      if (randomized === C.obs) return 'the case is labelled with the wrong design';
+      if (P.kind === 'conclude') return q.answer === (randomized ? C.cause : C.link);
+      if (P.kind === 'why') return !randomized && q.answer.includes(C.lurk);
+      return !randomized && /^Randomly assign/.test(q.answer);
+    },
+  });
+
+  /** a histogram: bars over consecutive bins, each labelled with its value */
+  function histogram(edges, vals, labels, yTitle, xTitle) {
+    const k = vals.length, W0 = 40, Wd = 260, bw = Wd / k, top = Math.max(...vals), H = 120, base = 150;
+    let s = `<svg class="figure" viewBox="0 0 320 200" width="320" height="200" role="img" aria-label="histogram of ${xTitle}">`;
+    vals.forEach((v, i) => {
+      const h = top ? v / top * H : 0, x = W0 + i * bw;
+      s += `<rect x="${r1(x)}" y="${r1(base - h)}" width="${r1(bw)}" height="${r1(h)}" class="fill"/>`;
+      s += `<text x="${r1(x + bw / 2)}" y="${r1(base - h - 5)}" font-size="12" text-anchor="middle">${labels[i]}</text>`;
+    });
+    s += `<line x1="${W0}" y1="${base}" x2="${W0 + Wd}" y2="${base}" class="stroke"/><line x1="${W0}" y1="${base}" x2="${W0}" y2="20" class="stroke"/>`;
+    edges.forEach((e, i) => { s += `<text x="${r1(W0 + i * bw)}" y="${base + 16}" font-size="12" text-anchor="middle">${e}</text>`; });
+    s += `<text x="${W0 + Wd / 2}" y="${base + 36}" font-size="12" text-anchor="middle">${xTitle}</text>`;
+    s += `<text x="14" y="${base / 2 + 10}" font-size="12" text-anchor="middle" transform="rotate(-90 14 ${base / 2 + 10})">${yTitle}</text></svg>`;
+    return s;
+  }
+  const HIST_CTX = [
+    { intro: n => `${n} students recorded how many minutes they spent on homework last night.`, axis: 'minutes', subj: 'students', start: 0, w: 15, ge: v => `spent at least ${v} minutes`, lt: v => `spent less than ${v} minutes` },
+    { intro: n => `A farmer measured the heights of ${n} sunflowers, in centimetres.`, axis: 'height (cm)', subj: 'sunflowers', start: 100, w: 20, ge: v => `were at least ${v} cm tall`, lt: v => `were shorter than ${v} cm` },
+    { intro: n => `${n} runners were each timed over one mile, in minutes.`, axis: 'time (minutes)', subj: 'runners', start: 6, w: 1, ge: v => `took at least ${v} minutes`, lt: v => `took less than ${v} minutes` },
+    { intro: n => `The ages of ${n} people at a concert were recorded.`, axis: 'age (years)', subj: 'people', start: 10, w: 10, ge: v => `were at least ${v} years old`, lt: v => `were younger than ${v}` },
+  ];
+  A.skill({
+    id: 'int3.relative-frequency', title: 'Relative frequency histograms',
+    learn: p(`A frequency histogram shows how many data values fall in each interval (bin). <b>A relative frequency histogram shows what fraction of all the data falls in each bin: relative frequency = ${F('frequency of the bin', 'total number of values')}</b>. It can be written as a decimal or a percent, and the bars always add up to 1, or 100%.`) +
+      p('To find the share of the data in a range of bins, add their relative frequencies. To turn a relative frequency back into a count, multiply it by the total. Each bin here includes its left end but not its right end, so the bin 10–20 holds values from 10 up to, but not including, 20.') +
+      p('Relative frequencies let you compare data sets of different sizes, because they do not depend on how many values were collected.') +
+      example('Example', `40 students record their homework time. 6 of them are in the bin 30–45 minutes.${big(`${F(6, 40, { raw: true })} = 0.15`)}The relative frequency of that bin is <b>0.15</b>, or 15%.`),
+    make(rng) {
+      const ctx = rng.pick(HIST_CTX), kind = rng.pick(['bin', 'range', 'range', 'count']), k = rng.int(5, 6);
+      const edges = []; for (let i = 0; i <= k; i++) edges.push(ctx.start + i * ctx.w);
+      const binName = i => `${edges[i]}–${edges[i + 1]}`;
+      if (kind === 'count') {
+        const n = rng.pick([20, 40, 60, 80, 200]);
+        let pcts; do { pcts = []; let left = 20; for (let i = 0; i < k - 1; i++) { const v = rng.int(0, Math.min(left, 8)); pcts.push(v); left -= v; } pcts.push(left); } while (Math.max(...pcts) > 9 || pcts.filter(v => v > 0).length < 4);
+        pcts = pcts.map(v => v * 5);
+        const i = rng.int(0, k - 1); if (pcts[i] === 0) return this.make(rng);
+        const ans = pcts[i] * n / 100;
+        return { prompt: `${ctx.intro(n)} The relative frequency histogram shows the results; each bar includes its left end but not its right end. How many ${ctx.subj} are in the bin ${binName(i)}?${histogram(edges, pcts, pcts.map(v => v + '%'), 'relative frequency', ctx.axis)}`, type: 'number', answer: ans, unit: ctx.subj, params: { kind, n, pct: pcts[i], pcts },
+          hints: [`Read the bar for ${binName(i)}: ${pcts[i]}% of the ${ctx.subj}.`, `Multiply by the total: ${pcts[i]}% of ${n} = ${N(pcts[i] / 100)} × ${n}.`, `That is <b>${N(ans)}</b> ${ctx.subj}.`] };
+      }
+      const n = rng.pick([20, 25, 40, 50]);
+      let counts; do { counts = []; let left = n; for (let i = 0; i < k - 1; i++) { const v = rng.int(0, Math.min(left, Math.round(n * 0.4))); counts.push(v); left -= v; } counts.push(left); } while (Math.max(...counts) > n * 0.45 || counts.filter(v => v > 0).length < 4);
+      if (kind === 'bin') {
+        const i = rng.int(0, k - 1); if (counts[i] === 0) return this.make(rng);
+        const ans = counts[i] / n;
+        return { prompt: `${ctx.intro(n)} The table shows the results; each bin includes its left end but not its right end. What is the relative frequency of the bin ${binName(i)}? Give a decimal.${M.table([ctx.axis.charAt(0).toUpperCase() + ctx.axis.slice(1), 'Frequency'], counts.map((c, j) => [binName(j), c]))}`, type: 'number', answer: ans, params: { kind, n, counts, i, ctx: HIST_CTX.indexOf(ctx) },
+          hints: [`Relative frequency = frequency ÷ total. The total is ${n}.`, `${binName(i)} has ${counts[i]} ${ctx.subj}: ${F(counts[i], n, { raw: true })}.`, `${counts[i]} ÷ ${n} = <b>${N(ans)}</b>.`] };
+      }
+      const cut = rng.int(1, k - 1), above = rng.bool(), idx = counts.map((_, j) => j).filter(j => above ? j >= cut : j < cut);
+      const got = idx.reduce((s, j) => s + counts[j], 0), ans = got / n * 100;
+      return { prompt: `${ctx.intro(n)} The histogram shows the results; each bar includes its left end but not its right end. What percent of the ${ctx.subj} ${above ? ctx.ge(edges[cut]) : ctx.lt(edges[cut])}?${histogram(edges, counts, counts.map(String), 'frequency', ctx.axis)}`, type: 'number', answer: ans, unit: '%', params: { kind, n, counts, cut, above, ctx: HIST_CTX.indexOf(ctx) },
+        hints: [`${above ? `At least ${edges[cut]}` : `Less than ${edges[cut]}`} means the bars ${M.list(idx.map(binName))}.`, `Add their frequencies: ${idx.map(j => counts[j]).join(' + ')} = ${got} out of ${n}.`, `${got} ÷ ${n} = ${N(got / n)}, which is <b>${N(ans)}%</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'count') { const tot = P.pcts.reduce((s, v) => s + v, 0); return tot === 100 && close(q.answer / P.n * 100, P.pct); }
+      // rebuild a data list with one value per subject at its bin's middle, then count values directly
+      const ctx = HIST_CTX[P.ctx], data = [];
+      P.counts.forEach((c, j) => { for (let t = 0; t < c; t++) data.push(ctx.start + (j + 0.5) * ctx.w); });
+      if (data.length !== P.n) return 'the counts do not add up to the total';
+      if (P.kind === 'bin') { const lo = ctx.start + P.i * ctx.w; return close(data.filter(x => x >= lo && x < lo + ctx.w).length / data.length, q.answer); }
+      const edge = ctx.start + P.cut * ctx.w, hits = data.filter(x => P.above ? x >= edge : x < edge).length;
+      return close(100 * hits / data.length, q.answer);
+    },
+  });
+
+  /* ---------- Unit 11: Simulation and inference ---------- */
+  const dRange = (a, b) => a === b ? `${a}` : `${a}–${b}`;
+  const pad2 = v => (v < 10 ? '0' : '') + v;
+  const SIM_CTX = [
+    { setup: (nm, pc) => `${nm} makes ${pc}% of free throws.`, one: 'one free throw', succ: 'a make', fail: 'a miss', group: r => `${r} free throws`,
+      ev: { atleast1: () => 'at least one goes in', all: r => r === 2 ? 'both go in' : 'all three go in', exactly1: () => 'exactly one goes in', atleast2: () => 'at least two go in' } },
+    { setup: (nm, pc) => `${nm} has a packet of seeds, and ${pc}% of these seeds sprout.`, one: 'one seed', succ: 'it sprouts', fail: 'it does not', group: r => `planting ${r} seeds`,
+      ev: { atleast1: () => 'at least one seed sprouts', all: r => r === 2 ? 'both seeds sprout' : 'all three seeds sprout', exactly1: () => 'exactly one seed sprouts', atleast2: () => 'at least two seeds sprout' } },
+    { setup: (nm, pc) => `${nm}’s school bus is late on ${pc}% of days.`, one: 'one day', succ: 'late', fail: 'on time', group: r => `${r} school days`,
+      ev: { atleast1: () => 'the bus is late at least once', all: r => r === 2 ? 'the bus is late on both days' : 'the bus is late on all three days', exactly1: () => 'the bus is late exactly once', atleast2: () => 'the bus is late at least twice' } },
+  ];
+  const simHit = (ev, r, s) => ev === 'atleast1' ? s >= 1 : ev === 'all' ? s === r : ev === 'exactly1' ? s === 1 : s >= 2;
+  A.skill({
+    id: 'int3.simulations', title: 'Simulating probability with random digits',
+    learn: p(`A <b>simulation</b> estimates a probability by acting out the situation with random numbers. <b>Give each outcome a share of the digits that matches its probability.</b> For a 30% chance, let 0, 1 and 2 mean “yes” and 3 to 9 mean “no”. For a 35% chance, use pairs of digits: 00 to 34 mean yes (35 of the 100 pairs).`) +
+      p('Each <b>trial</b> acts out the whole situation once, using as many digits as it needs. Run many trials, count the ones where the event happens, and divide: <b>estimated probability = successful trials ÷ total trials</b>.') +
+      p(`The estimate is close to the <b>theoretical probability</b>, which you can work out with the rules of probability, and it gets closer as you run more trials. For two independent 30% events, the chance both happen is 0.3 × 0.3 = 0.09.`) +
+      example('Example', `A spinner lands on red 40% of the time; digits 0–3 mean red. To spin twice, read the digits in pairs:${big('37 &nbsp; 02 &nbsp; 85 &nbsp; 61 &nbsp; 49')}Trials with at least one red: 37, 02, 61, 49. The estimate is 4 ÷ 5 = <b>0.8</b>; the theory gives 1 − 0.6² = 0.84.`),
+    make(rng) {
+      const kind = rng.pick(['assign', 'estimate', 'estimate', 'theory']), ci = rng.int(0, SIM_CTX.length - 1), C = SIM_CTX[ci], nm = rng.pick(NAMES);
+      if (kind === 'assign') {
+        if (rng.bool()) {
+          const k = rng.int(3, 8), dg = (a, b) => a === b ? `digit ${a} means` : `digits ${dRange(a, b)} mean`, say = (a, b) => { const t = `${dg(a, b)} ${C.succ}; ${dg(b + 1, 9)} ${C.fail}.`; return t.charAt(0).toUpperCase() + t.slice(1); };
+          const answer = say(0, k - 1), wrong = [say(0, k), say(0, k - 2), k === 5 ? say(0, 6) : say(0, 9 - k)];
+          return { prompt: `${C.setup(nm, 10 * k)} Which way of using one random digit (0 to 9) simulates ${C.one}?`, type: 'choice', choices: options(answer, wrong), answer, params: { kind, pc: 10 * k, digits: 1 },
+            hints: ['There are 10 digits, 0 to 9, all equally likely, so each digit is worth 10%.', `${10 * k}% needs ${k} of the 10 digits for ${C.succ}.`, `0 to ${k - 1} is ${k} digits: <b>${answer}</b>`] };
+        }
+        const pc = rng.pick([15, 25, 35, 45, 55, 65, 75, 85]), say = (a, b) => `Pairs ${pad2(a)}–${pad2(b)} mean ${C.succ}; all other pairs mean ${C.fail}.`;
+        const answer = say(0, pc - 1), wrong = [say(0, pc), say(1, pc - 1), say(pc, 99)];
+        return { prompt: `${C.setup(nm, pc)} Which way of using pairs of random digits (00 to 99) simulates ${C.one}?`, type: 'choice', choices: options(answer, wrong), answer, params: { kind, pc, digits: 2 },
+          hints: ['There are 100 pairs, 00 to 99, so each pair is worth 1%.', `${pc}% needs exactly ${pc} pairs. Count carefully: 00 to ${pad2(pc)} is ${pc + 1} pairs, one too many.`, `00 to ${pad2(pc - 1)} is ${pc} pairs: <b>${answer}</b>`] };
+      }
+      const r = rng.pick([2, 3, 3]), ev = rng.pick(r === 3 ? ['atleast1', 'all', 'exactly1', 'atleast2'] : ['atleast1', 'all', 'exactly1']), k = rng.int(2, 7), pr = k / 10;
+      const evText = C.ev[ev](r);
+      if (kind === 'theory') {
+        const q1 = 1 - pr, th = M.round(ev === 'atleast1' ? 1 - q1 ** r : ev === 'all' ? pr ** r : ev === 'exactly1' ? r * pr * q1 ** (r - 1) : 3 * pr * pr * q1 + pr ** 3, 6);
+        const trials = rng.pick([50, 100, 200]), got = Math.max(0, Math.min(trials, Math.round(th * trials) + rng.pick([-6, -4, -3, 3, 4, 6]) * trials / 100));
+        const askDiff = rng.chance(0.4), est = got / trials, ans = askDiff ? M.round(Math.abs(est - th), 6) : th;
+        const work = { atleast1: `1 − P(none) = 1 − ${N(q1)}${M.sup('', r)}`, all: `${N(pr)}${M.sup('', r)}`, exactly1: `${r} × ${N(pr)} × ${N(q1)}${r > 2 ? M.sup('', r - 1) : ''}`, atleast2: `3 × ${N(pr)}² × ${N(q1)} + ${N(pr)}³` }[ev];
+        return { prompt: `${C.setup(nm, 10 * k)} ${nm} simulated ${C.group(r)} ${trials} times, and in ${got} of the trials ${evText}. ${askDiff ? `How far is the simulation’s estimate from the theoretical probability? Give a decimal.` : `What is the theoretical probability that ${evText}? Give an exact decimal.`}`, type: 'number', answer: ans, params: { kind, r, ev, pr, trials, got, askDiff },
+          hints: [`Each ${C.one.replace('one ', '')} is independent, with probability ${N(pr)} of ${C.succ} and ${N(q1)} of ${C.fail}.`, `The theoretical probability is ${work} = ${N(th)}.`,
+            askDiff ? `The estimate is ${got} ÷ ${trials} = ${N(est)}, and |${N(est)} − ${N(th)}| = <b>${N(ans)}</b>.` : `The probability is <b>${N(th)}</b>. (The simulation gave ${N(est)}, which is close.)`] };
+      }
+      const T = 20, groups = [];
+      for (let t = 0; t < T; t++) { let g = ''; for (let i = 0; i < r; i++) g += rng.int(0, 9); groups.push(g); }
+      const succ = g => [...g].filter(d => Number(d) < k).length, hits = groups.map((g, i) => simHit(ev, r, succ(g)) ? i + 1 : 0).filter(Boolean);
+      const grid = `<table class="mtable compact"><tbody>${[0, 1, 2, 3].map(row => `<tr>${groups.slice(row * 5, row * 5 + 5).map((g, j) => `<td>${row * 5 + j + 1}: <b>${g}</b></td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      const ans = hits.length / T;
+      return { prompt: `${C.setup(nm, 10 * k)} To simulate ${C.group(r)}, ${nm} reads random digits in groups of ${r}: digits ${dRange(0, k - 1)} mean ${C.succ} and ${dRange(k, 9)} mean ${C.fail}. Here are 20 trials. Estimate the probability that ${evText}. Give a decimal.${grid}`, type: 'number', answer: ans, params: { kind, r, ev, k, groups },
+        hints: [`In each group, count the digits from 0 to ${k - 1}. The trial is a success when ${evText}.`, hits.length ? `The successful trials are numbers ${M.list(hits.map(String))}: ${hits.length} of the 20.` : 'None of the 20 trials is a success.', `The estimate is ${hits.length} ÷ 20 = <b>${N(ans)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'assign') {
+        // count how many digits (or pairs) the chosen rule gives to success
+        const m = A.stripTags(q.answer).match(/(\d+)(?:–(\d+))?/), a = Number(m[1]), b = m[2] == null ? a : Number(m[2]);
+        return (b - a + 1) * (P.digits === 1 ? 10 : 1) === P.pc && m[1].length === P.digits;
+      }
+      if (P.kind === 'theory') {
+        // list every outcome of r trials with the digits model: 10^r equally likely strings
+        let hit = 0, tot = 0, k = Math.round(P.pr * 10);
+        for (let v = 0; v < 10 ** P.r; v++) { let s = 0; for (let i = 0, x = v; i < P.r; i++, x = Math.floor(x / 10)) if (x % 10 < k) s++; tot++; if (simHit(P.ev, P.r, s)) hit++; }
+        const th = hit / tot;
+        return close(q.answer, P.askDiff ? Math.abs(P.got / P.trials - th) : th, 1e-9);
+      }
+      let hits = 0;
+      for (const g of P.groups) { let s = 0, x = Number(g); for (let i = 0; i < P.r; i++, x = Math.floor(x / 10)) if (x % 10 < P.k) s++; if (simHit(P.ev, P.r, s)) hits++; }
+      return close(q.answer, hits / P.groups.length);
+    },
+  });
+
+  const RERAND_CTX = [
+    { what: 'the growth of plants', unit: 'cm', tLabel: 'New fertilizer', cLabel: 'Plain water', col: 'Growth (cm)', lo: 8, hi: 20,
+      groups: 'plants given a new fertilizer and plants given plain water', more: d => `the plants given the new fertilizer grew ${d} cm more, on average, than the plants given plain water` },
+    { what: 'quiz scores', unit: 'points', tLabel: 'Flash cards', cLabel: 'Reread notes', col: 'Quiz score (points)', lo: 10, hi: 20,
+      groups: 'students who studied with flash cards and students who reread their notes', more: d => `the students who used flash cards scored ${d} points higher, on average, than the students who reread their notes` },
+    { what: 'word recall', unit: 'words', tLabel: 'Chewed gum', cLabel: 'No gum', col: 'Words remembered', lo: 6, hi: 18,
+      groups: 'volunteers who chewed gum during a memory test and volunteers who did not', more: d => `the volunteers who chewed gum remembered ${d} more words, on average, than those who did not` },
+  ];
+  const SIG = ['It is statistically significant: chance alone rarely gives a difference this big.', 'It is not statistically significant: chance alone often gives a difference this big.', 'It proves that the treatment has no effect at all.'];
+  A.skill({
+    id: 'int3.randomization-tests', title: 'Re-randomization tests',
+    learn: p('An experiment finds that the treatment group did better than the control group on average. <b>Could the difference just be chance, from how the subjects happened to be split?</b> A <b>re-randomization test</b> checks this by acting out a world where the treatment does nothing.') +
+      p('Put all the results together, shuffle them, deal them into two new groups of the same sizes, and record the difference in means. Repeat hundreds of times. <b>The share of re-randomized differences at least as large as the real one shows how often chance alone produces such a difference.</b>') +
+      p('If that share is small, less than about 5%, the result is <b>statistically significant</b>: chance alone is an unlikely explanation. If it is large, chance could easily explain it. A result that is not significant does not prove the treatment does nothing; it just has not shown an effect.') +
+      example('Example', `The treatment group’s mean was 3.4 points higher. In 500 re-randomizations, 8 differences were 3.4 or more.${big('8 ÷ 500 = 0.016 = 1.6%')}That is less than 5%, so the difference is <b>statistically significant</b>.`),
+    make(rng) {
+      const kind = rng.pick(['diff', 'share', 'share', 'decide']), C = rng.pick(RERAND_CTX);
+      if (kind === 'diff') {
+        const n = 5, gen = shift => { const v = []; for (let i = 0; i < n; i++) v.push(rng.int(C.lo, C.hi) + shift); return v; };
+        const a = gen(rng.int(1, 4)), b = gen(0), sa = a.reduce((s, x) => s + x, 0), sb = b.reduce((s, x) => s + x, 0), ans = M.round((sa - sb) / n, 6);
+        return { prompt: `An experiment compares ${C.groups}. What is the observed difference in means, treatment minus control?${M.table(['Group', C.col], [[C.tLabel, a.join(', ')], [C.cLabel, b.join(', ')]])}`, type: 'number', answer: ans, unit: C.unit, params: { kind, a, b },
+          hints: [`Treatment mean: (${a.join(' + ')}) ÷ ${n} = ${sa} ÷ ${n} = ${N(sa / n)}.`, `Control mean: (${b.join(' + ')}) ÷ ${n} = ${sb} ÷ ${n} = ${N(sb / n)}.`, `The difference is ${N(sa / n)} − ${N(sb / n)} = <b>${N(ans)}</b> ${C.unit}.`] };
+      }
+      if (kind === 'share') {
+        const vals = [-4, -3, -2, -1, 0, 1, 2, 3, 4], base = [1, 4, 11, 19, 30, 19, 11, 4, 1].map(w => Math.max(0, w + rng.int(-2, 2)));
+        const tot = rng.pick([100, 200]), sum = base.reduce((s, x) => s + x, 0);
+        const counts = base.map(w => Math.round(w * tot / sum)); counts[4] += tot - counts.reduce((s, x) => s + x, 0);
+        const d = rng.pick([1, 2, 2, 3, 3]), ans = M.round(counts.filter((_, i) => vals[i] >= d).reduce((s, x) => s + x, 0) / tot * 100, 6);
+        return { prompt: `In an experiment on ${C.what}, ${C.more(d)}. The results were re-randomized ${tot} times; the table shows how often each difference in means came up. In what percent of the re-randomizations was the difference at least ${d} ${C.unit}?${M.table(['Difference', ...vals.map(N)], [['Count', ...counts]])}`, type: 'number', answer: ans, unit: '%', params: { kind, vals, counts, d },
+          hints: [`Look at the differences of ${d} or more: ${M.list(vals.filter(v => v >= d).map(N))}.`, `Their counts add to ${counts.filter((_, i) => vals[i] >= d).join(' + ')} = ${counts.filter((_, i) => vals[i] >= d).reduce((s, x) => s + x, 0)} out of ${tot}.`, `That is <b>${N(ans)}%</b> of the re-randomizations.`] };
+      }
+      const N0 = rng.pick([100, 200, 500, 1000]), sig = rng.bool(), x = sig ? rng.int(0, Math.floor(N0 / 100)) : rng.int(Math.ceil(N0 * 0.2), Math.floor(N0 * 0.45));
+      const d = rng.int(2, 9) / 2, answer = sig ? SIG[0] : SIG[1];
+      return { prompt: `In an experiment on ${C.what}, ${C.more(N(d))}. In ${N(N0)} re-randomizations of the results, ${N(x)} gave a difference of at least ${N(d)} ${C.unit}. What can you conclude?`, type: 'choice', choices: SIG.slice(), answer, params: { kind, N0, x },
+        hints: [`Find the share of re-randomizations at least as extreme as the real result: ${N(x)} ÷ ${N(N0)} = ${N(M.round(x / N0 * 100, 2))}%.`, sig ? 'That is well under 5%, so chance alone rarely produces a difference this large.' : 'That is far above 5%, so chance alone often produces a difference this large. That does not prove there is no effect.', `<b>${answer}</b>`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'diff') { const n = P.a.length; let s = 0; for (let i = 0; i < n; i++) s += (P.a[i] - P.b[i]) / n; return close(s, q.answer); }   // mean of the paired gaps equals the gap in means
+      if (P.kind === 'share') { const all = []; P.vals.forEach((v, i) => { for (let t = 0; t < P.counts[i]; t++) all.push(v); }); return close(100 * all.filter(v => v >= P.d).length / all.length, q.answer); }
+      return q.answer === (P.x / P.N0 < 0.05 ? SIG[0] : SIG[1]);
+    },
+  });
+
+  /* ---------- Unit 12: Roots of polynomials ---------- */
+  const divisors = n => { const out = []; for (let d = 1; d <= Math.abs(n); d++) if (n % d === 0) out.push(d); return out; };
+  /** every ± p/q with p | constant and q | leading, as reduced [p, q] pairs, smallest first */
+  function rrtCandidates(lead, cons) {
+    const seen = new Map();
+    for (const pp of divisors(cons)) for (const qq of divisors(lead)) for (const s of [1, -1]) { const [a, b] = M.simp(s * pp, qq); seen.set(a + '/' + b, [a, b]); }
+    return [...seen.values()].sort((u, v) => u[0] / u[1] - v[0] / v[1]);
+  }
+  A.skill({
+    id: 'int3.rational-roots', title: 'The rational root theorem',
+    learn: p(`<b>The rational root theorem:</b> if a polynomial has integer coefficients, every rational root, written in lowest terms as ${F(V('p'), V('q'))}, has <b>${V('p')} a factor of the constant term and ${V('q')} a factor of the leading coefficient</b>.`) +
+      p(`So list ± (factors of the constant) ÷ (factors of the leading coefficient). That list is every rational number that <i>could</i> be a root. Test them by substituting or with synthetic division; once one works, divide it out and solve what is left.`) +
+      p('The theorem only gives candidates. A polynomial may have no rational roots at all, and its other roots may be irrational or complex.') +
+      example('Example', `${big(M.poly([2, -3, -8, -3]))}The candidates are ±1, ±3, ±${F(1, 2)}, ±${F(3, 2)}. Testing: 2(27) − 3(9) − 8(3) − 3 = 0, so <b>${X} = 3</b> is a root.`),
+    make(rng) {
+      const kind = rng.pick(['not', 'not', 'count', 'find']);
+      if (kind === 'find') {
+        const [pp, qq] = rng.pick([[1, 2], [3, 2], [-1, 2], [-3, 2], [1, 3], [2, 3], [-2, 3], [-1, 3], [5, 2], [-5, 2], [4, 3], [-4, 3], [2, 1], [-3, 1], [3, 1], [-2, 1]]);
+        let b, d; do { b = rng.int(-4, 4); d = rng.int(-6, 6); } while (d === 0 || (b * b - 4 * d >= 0 && Number.isInteger(Math.sqrt(b * b - 4 * d))));
+        const coefs = pmul([qq, -pp], [1, b, d]), cands = rrtCandidates(coefs[0], coefs[3]);
+        const ans = pp / qq;
+        return { prompt: `This polynomial has exactly one rational root. Find it.${big(`${V('p')}(${X}) = ${M.poly(coefs)}`)}`, type: 'number', answer: ans, answerText: M.fracText(pp, qq), params: { kind, coefs },
+          hints: [`Candidates are ± factors of ${N(Math.abs(coefs[3]))} over factors of ${N(coefs[0])}: ${cands.filter(c => c[0] > 0).map(c => '±' + M.fracText(c[0], c[1])).join(', ')}.`,
+            `Test them. ${V('p')}(${M.fracText(pp, qq)}) = 0, so ${lin(qq, -pp)} is a factor; the rest is ${M.poly([1, b, d])}, which has no rational roots.`, `The rational root is <b>${M.fracText(pp, qq)}</b>.`] };
+      }
+      const lead = rng.pick([2, 3, 4, 5, 6]), cons = rng.pick([2, 3, 4, 5, 6, 8, 9, 10, 12, 15]) * rng.sign();
+      const coefs = [lead, rng.int(-9, 9), rng.int(-9, 9), cons], cands = rrtCandidates(lead, Math.abs(cons));
+      const fac = n => divisors(n).join(', ');
+      const h1 = `The constant term is ${N(cons)}; its factors are ${fac(Math.abs(cons))}. The leading coefficient is ${lead}; its factors are ${fac(lead)}.`;
+      if (kind === 'count') {
+        return { prompt: `How many different possible rational roots does the rational root theorem give for this polynomial?${big(`${V('p')}(${X}) = ${M.poly(coefs)}`)}`, type: 'number', answer: cands.length, params: { kind, coefs },
+          hints: [h1, `Form every ${F(V('p'), V('q'))} with ${V('p')} from the first list and ${V('q')} from the second, simplify, and drop repeats: ${cands.filter(c => c[0] > 0).map(c => M.fracText(c[0], c[1])).join(', ')}.`, `That is ${cands.length / 2} positive values, and each can be + or −, so there are <b>${cands.length}</b>.`] };
+      }
+      // a number that is not a candidate: often a factor of the leading coefficient over a factor of the constant (upside down)
+      const isCand = (a, b) => cands.some(c => c[0] * b === c[1] * a);
+      const bads = [];
+      for (const top of divisors(lead)) for (const bot of divisors(Math.abs(cons))) { const [a, b] = M.simp(top * rng.sign(), bot); if (!isCand(a, b)) bads.push([a, b]); }
+      for (const extra of [7, 11, 13]) if (Math.abs(cons) % extra) bads.push([extra * rng.sign(), 1]);
+      const bad = rng.pick(bads), goods = rng.sample(cands.filter(c => c[1] > 1 || rng.chance(0.5)), 3);
+      if (goods.length < 3) return this.make(rng);
+      const show = ([a, b]) => F(a, b);
+      const answer = show(bad);
+      return { prompt: `Which of these numbers <b>cannot</b> be a rational root of the polynomial?${big(`${V('p')}(${X}) = ${M.poly(coefs)}`)}`, type: 'choice', choices: [answer].concat(goods.map(show)), answer, params: { kind, coefs, bad, goods },
+        hints: [h1, `A possible root, in lowest terms, has a numerator from the first list and a denominator from the second.`, `In ${M.fracText(bad[0], bad[1])}, ${lead % bad[1] ? `the denominator ${bad[1]} is not a factor of ${lead}` : `the numerator ${Math.abs(bad[0])} is not a factor of ${Math.abs(cons)}`}, so <b>${answer}</b> cannot be a root.`] };
+    },
+    verify(q) {
+      const P = q.params, c = P.coefs, lead = c[0], cons = c[c.length - 1];
+      // a reduced fraction a/b passes the theorem when a divides the constant and b divides the leading coefficient
+      const ok = (a, b) => cons % a === 0 && lead % b === 0;
+      if (P.kind === 'count') { let k = 0; for (let b = 1; b <= Math.abs(lead); b++) for (let a = -Math.abs(cons); a <= Math.abs(cons); a++) if (a && M.gcd(a, b) === 1 && ok(a, b)) k++; return k === q.answer; }
+      if (P.kind === 'not') return !ok(P.bad[0], P.bad[1]) && P.goods.every(([a, b]) => ok(a, b)) && q.answer === F(P.bad[0], P.bad[1]);
+      // exact test: q³·p(a/b) = Σ cᵢ aⁱ b³⁻ⁱ must be 0 at the answer and at no other candidate
+      const roots = []; for (let b = 1; b <= Math.abs(lead); b++) for (let a = -Math.abs(cons); a <= Math.abs(cons); a++) if (a && M.gcd(a, b) === 1 && peval(c.map((ci, i) => ci * b ** i), a) === 0) roots.push(a / b);
+      return roots.length === 1 && close(roots[0], q.answer);
+    },
+  });
+
+  /** "3 + 2i", "−1 − 4i", "2 + √5" */
+  const cplx = (a, b, root) => { const im = root ? M.sqrt(Math.abs(b)) : `${Math.abs(b) === 1 ? '' : N(Math.abs(b))}${V('i')}`; return a === 0 ? `${b < 0 ? '−' : ''}${im}` : `${N(a)} ${b < 0 ? '−' : '+'} ${im}`; };
+  /** a polynomial (highest power first) at a complex number re + im·i, by Horner's rule */
+  const cEval = (cs, re, im) => cs.reduce(([x, y], k) => [x * re - y * im + k, x * im + y * re], [0, 0]);
+  A.skill({
+    id: 'int3.poly-from-roots', title: 'Writing a polynomial from its roots',
+    learn: p(`Each root ${V('r')} gives a factor (${X} − ${V('r')}), so a polynomial with roots ${V('r')}, ${V('s')}, ${V('t')} is ${V('a')}(${X} − ${V('r')})(${X} − ${V('s')})(${X} − ${V('t')}). Multiply out to get standard form.`) +
+      p(`<b>Complex roots of a polynomial with real coefficients come in conjugate pairs: if ${V('a')} + ${V('b')}${V('i')} is a root, so is ${V('a')} − ${V('b')}${V('i')}.</b> In the same way, if the coefficients are rational and ${V('a')} + √${V('k')} is a root, so is ${V('a')} − √${V('k')}.`) +
+      p(`A conjugate pair multiplies to a real quadratic: (${X} − (${V('a')} + ${V('b')}${V('i')}))(${X} − (${V('a')} − ${V('b')}${V('i')})) = <b>${M.sup(X, 2)} − 2${V('a')}${X} + (${M.sup(V('a'), 2)} + ${M.sup(V('b'), 2)})</b>, because ${M.sup(V('i'), 2)} = −1.`) +
+      example('Example', `Roots 2 and 1 ± 3${V('i')}:${big(`(${X} − 2)(${M.sup(X, 2)} − 2${X} + 10)`)}Multiply out: <b>${M.poly([1, -4, 14, -20])}</b>.`),
+    make(rng) {
+      const kind = rng.pick(['pair', 'quad', 'cubic', 'cubic', 'const']), root = kind !== 'cubic' && kind !== 'const' && rng.chance(0.4);
+      let a = rng.nz(-5, 5), b = rng.int(1, 6) * rng.sign();
+      if (root) { b = rng.pick([2, 3, 5, 6, 7, 10]) * rng.sign(); }
+      const rootTxt = cplx(a, b, root), conj = cplx(a, -b, root), coefWord = root ? 'rational' : 'real';
+      if (kind === 'pair') {
+        const wrong = [cplx(-a, b, root), cplx(-a, -b, root), root ? cplx(a, -b, false) : cplx(b, a, false), cplx(-b, a, false), N(a)].filter(w => key(w) !== key(rootTxt));
+        return { prompt: `A polynomial with ${coefWord} coefficients has ${rootTxt} as a root. Which other number must also be a root?`, type: 'choice', choices: options(conj, wrong), answer: conj, params: { kind, a, b, root },
+          hints: [root ? 'With rational coefficients, roots of the form a + √k come in pairs: the sign in front of the square root flips.' : 'With real coefficients, complex roots come in conjugate pairs: the sign of the imaginary part flips.', `Keep the real part ${N(a)} and change the sign of the ${root ? 'root' : 'imaginary'} part.`, `The other root is <b>${conj}</b>.`] };
+      }
+      const sum = 2 * a, prod = root ? a * a - Math.abs(b) : a * a + b * b;     // the pair gives x² − (sum)x + (product)
+      const pairQuad = [1, -sum, prod];
+      if (kind === 'quad') {
+        const forms = [pairQuad, [1, sum, prod], [1, -sum, root ? a * a + Math.abs(b) : a * a - b * b], [1, -a, prod]];
+        const texts = forms.map(f => M.poly(f));
+        return { prompt: `Which quadratic, with leading coefficient 1, has roots ${rootTxt} and ${conj}?`, type: 'choice', choices: options(texts[0], texts.slice(1)), answer: texts[0], params: { kind, a, b, root, forms },
+          hints: [`The sum of the roots is ${N(a)} + ${pw(a)} = ${N(sum)}. The product is ${pw(a)}² − (${root ? M.sqrt(Math.abs(b)) : (Math.abs(b) === 1 ? '' : N(Math.abs(b))) + V('i')})² = ${N(a * a)} ${root ? `− ${Math.abs(b)}` : `+ ${b * b}`} = ${N(prod)}${root ? '' : `, since ${M.sup(V('i'), 2)} = −1`}.`, `A quadratic with leading coefficient 1 is ${M.sup(X, 2)} − (sum)${X} + (product).`, `<b>${texts[0]}</b>`] };
+      }
+      const r = rng.nz(-5, 5), cubic = pmul([1, -r], pairQuad);
+      if (kind === 'const') {
+        return { prompt: `A cubic polynomial ${V('p')}(${X}) has leading coefficient 1 and roots ${N(r)}, ${rootTxt} and ${conj}. What is its constant term?`, type: 'number', answer: cubic[3], params: { kind, a, b, r },
+          hints: [`The conjugate pair gives the factor ${M.poly(pairQuad)}; the root ${N(r)} gives ${lin(1, -r)}.`, `The constant term of ${lin(1, -r)}(${M.poly(pairQuad)}) is ${pw(-r)} × ${pw(prod)}.`, `That is <b>${N(cubic[3])}</b>.`] };
+      }
+      const forms = [cubic, pmul([1, r], pairQuad), pmul([1, -r], [1, sum, prod]), pmul([1, -r], [1, -sum, a * a - b * b])];
+      const texts = forms.map(f => M.poly(f));
+      return { prompt: `Which polynomial, with leading coefficient 1, has roots ${N(r)}, ${rootTxt} and ${conj}?`, type: 'choice', choices: options(texts[0], texts.slice(1)), answer: texts[0], params: { kind, a, b, r, forms },
+        hints: [`The conjugate pair multiplies to ${M.sup(X, 2)} − ${pw(sum)}${X} + ${pw(prod)} = ${M.poly(pairQuad)}.`, `The root ${N(r)} gives the factor ${lin(1, -r)}. Multiply: ${lin(1, -r)}(${M.poly(pairQuad)}).`, `<b>${texts[0]}</b>`] };
+    },
+    verify(q) {
+      const P = q.params, { a, b } = P;
+      // is each of the roots really a root? complex roots by complex arithmetic, radical roots in decimals
+      const vanishes = cs => (P.root ? [Math.sqrt(Math.abs(b)), -Math.sqrt(Math.abs(b))].every(t => close(peval(cs, a + t), 0, 1e-7))
+        : [b, -b].every(t => { const [x, y] = cEval(cs, a, t); return close(x, 0, 1e-9) && close(y, 0, 1e-9); })) && (P.r == null || close(peval(cs, P.r), 0));
+      if (P.kind === 'pair') {
+        const want = P.root ? cplx(a, -b, true) : cplx(a, -b, false);
+        if (P.root) return q.answer === want && close(peval([1, -2 * a, a * a - Math.abs(b)], a - Math.sign(b) * Math.sqrt(Math.abs(b))), 0, 1e-9);
+        const [x, y] = cEval([1, -2 * a, a * a + b * b], a, -b);               // the conjugate satisfies the pair’s quadratic
+        return q.answer === want && close(x, 0) && close(y, 0);
+      }
+      if (P.kind === 'const') { const cs = pmul([1, -P.r], [1, -2 * a, a * a + b * b]); return vanishes(cs) && cs[3] === q.answer && -P.r * (a * a + b * b) === q.answer; }
+      const good = P.forms.map(vanishes);
+      return good.filter(Boolean).length === 1 && good[0] && q.answer === M.poly(P.forms[0]);
+    },
+  });
+
+  /* ---------- Unit 13: More trigonometry ---------- */
+  const S2 = M.sqrt(2), S3 = M.sqrt(3), S6 = M.sqrt(6);
+  /** exact values of tan, sec, csc and cot as HTML */
+  const TVALS = [
+    { v: 0, h: '0' }, { v: 1 / Math.sqrt(3), h: F(S3, 3) }, { v: 1, h: '1' }, { v: Math.sqrt(3), h: S3 },
+    { v: Math.SQRT2, h: S2 }, { v: 2 / Math.sqrt(3), h: F(`2${S3}`, 3) }, { v: 2, h: '2' },
+  ];
+  const tvHtml = x => { if (x === null) return 'Undefined'; const e = TVALS.find(t => close(t.v, Math.abs(x), 1e-9)); return (x < -1e-12 ? '−' : '') + e.h; };
+  const tvValue = h => { if (h === 'Undefined') return null; for (const t of TVALS) for (const s of [1, -1]) if ((s < 0 ? '−' : '') + t.h === h) return s * t.v; return NaN; };
+  const snap0 = x => Math.abs(x) < 1e-12 ? 0 : x;
+  const TRIG = {
+    sin: d => Math.sin(rad(d)), cos: d => Math.cos(rad(d)),
+    tan: d => close(Math.cos(rad(d)), 0, 1e-12) ? null : snap0(Math.tan(rad(d))),
+    sec: d => close(Math.cos(rad(d)), 0, 1e-12) ? null : 1 / Math.cos(rad(d)),
+    csc: d => close(Math.sin(rad(d)), 0, 1e-12) ? null : 1 / Math.sin(rad(d)),
+    cot: d => close(Math.sin(rad(d)), 0, 1e-12) ? null : snap0(Math.cos(rad(d)) / Math.sin(rad(d))),
+  };
+  const angleTxt = (dg, inRad) => inRad ? (dg === 0 ? '0' : piFrac(...M.simp(dg, 180))) : M.deg(dg);
+  /** "x = π/2" from n/d of π */
+  const xEq = (n, d) => `${X} = ${n === 0 ? '0' : piFrac(n, d)}`;
+
+  A.skill({
+    id: 'int3.tangent-function', title: 'The tangent function',
+    learn: p(`On the unit circle the point at angle θ is (cos θ, sin θ), and <b>tan θ = ${F('sin θ', 'cos θ')} = ${F(V('y'), V('x'))}</b>, the slope of the radius. So tan 45° = 1, tan 30° = ${F(S3, 3)} and tan 60° = ${S3}. Tangent is positive in quadrants 1 and 3, where ${V('x')} and ${V('y')} have the same sign.`) +
+      p(`<b>When cos θ = 0, tangent is undefined</b>, so the graph of ${V('y')} = tan ${X} has vertical asymptotes at ${X} = ${F('π', 2)} + ${V('k')}π. Between them the graph rises from −∞ to ∞, crossing zero at ${X} = ${V('k')}π.`) +
+      p(`<b>The period of tangent is π</b> (180°), half that of sine and cosine. For ${V('y')} = tan(${V('b')}${X}) the period is ${F('π', V('b'))}, and the asymptotes are squeezed together the same way.`) +
+      example('Example', `Find tan ${F('5π', 6)}.${big(`${F('5π', 6)} = 150°: &nbsp; (cos, sin) = (−${F(S3, 2)}, ${F(1, 2)})`)}tan = ${F(1, 2)} ÷ (−${F(S3, 2)}) = −${F(1, S3)} = <b>−${F(S3, 3)}</b>.`),
+    make(rng) {
+      const kind = rng.pick(['exact', 'exact', 'period', 'asym', 'point']);
+      if (kind === 'exact') {
+        const dg = rng.pick([0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330]), inRad = rng.bool();
+        const v = TRIG.tan(dg), answer = tvHtml(v), c = Math.cos(rad(dg)), s = Math.sin(rad(dg));
+        const pool = v === null ? ['0', '1', '−1', S3] : [tvHtml(-v || 0), tvHtml(v === 0 ? 1 : 1 / v), 'Undefined', tvHtml(v === 0 ? -1 : -1 / v), '0', '1'];
+        return { prompt: `Find the exact value.${big(`tan ${angleTxt(dg, inRad)}`)}`, type: 'choice', choices: options(answer, pool), answer, params: { kind, dg },
+          hints: [`${inRad ? `${angleTxt(dg, true)} = ${M.deg(dg)}. ` : ''}The unit-circle point is (${exactHtml(c)}, ${exactHtml(s)}).`,
+            v === null ? `tan = ${V('y')} ÷ ${V('x')}, and ${V('x')} = 0 here, so the division cannot be done.` : `tan = ${V('y')} ÷ ${V('x')} = ${exactHtml(s)} ÷ ${c < 0 ? `(${exactHtml(c)})` : exactHtml(c)}${dg % 180 === 0 ? ' = 0' : ''}.`,
+            v === null ? `tan ${angleTxt(dg, inRad)} does not exist: <b>${answer}</b>.` : `tan ${angleTxt(dg, inRad)} is <b>${answer}</b>.`] };
+      }
+      if (kind === 'period') {
+        if (rng.bool()) {
+          const h = rng.pick([2, 3, 4, 5, 6, 8]), a = rng.pick([1, 2, 3, -1, -2]);
+          return { prompt: `What is the period of this function?${big(`${V('y')} = ${a === 1 ? '' : a === -1 ? '−' : N(a)}tan(${F(`π${X}`, h)})`)}`, type: 'number', answer: h, params: { kind, b: Math.PI / h },
+            hints: [`The period of ${V('y')} = tan(${V('b')}${X}) is ${F('π', V('b'))}. The number in front only stretches the graph vertically.`, `Here ${V('b')} = ${F('π', h)}, so the period is π ÷ ${F('π', h)} = π × ${F(h, 'π')}.`, `The period is <b>${h}</b>.`] };
+        }
+        const b = rng.pick([2, 3, 4, 6]), answer = piFrac(1, b);
+        return { prompt: `What is the period of this function?${big(`${V('y')} = tan(${b}${X})`)}`, type: 'choice', choices: options(answer, [piFrac(2, b), piFrac(b, 1), piFrac(1, 2 * b)]), answer, params: { kind, b },
+          hints: [`The period of ${V('y')} = tan ${X} is π, not 2π as for sine and cosine.`, `Multiplying ${X} by ${b} squeezes the graph, so the period is π ÷ ${b}.`, `The period is <b>${answer}</b>.`] };
+      }
+      if (kind === 'asym') {
+        const b = rng.pick([1, 1, 2, 3, 4]), k = rng.int(0, 2 * b - 1);
+        const good = [2 * k + 1, 2 * b], wrong = [[k, b], [k + 1, b], [4 * k + 1, 4 * b], [4 * k + 3, 4 * b]];
+        const opts = [good].concat(wrong.filter(([n, d]) => n * 2 * b !== (2 * k + 1) * d)).slice(0, 4);
+        const texts = opts.map(([n, d]) => xEq(...M.simp(n, d)));
+        return { prompt: `Which line is a vertical asymptote of the graph?${big(`${V('y')} = tan${b === 1 ? ` ${X}` : `(${b}${X})`}`)}`, type: 'choice', choices: options(texts[0], texts.slice(1)), answer: texts[0], params: { kind, b, opts, texts },
+          hints: [`Tangent is not defined where cosine is zero: ${b === 1 ? X : `${b}${X}`} = ${F('π', 2)} + ${V('k')}π.`, b === 1 ? `So the asymptotes are at ${X} = ${F('π', 2)}, ${F('3π', 2)}, ${F('5π', 2)}, … and ${X} = −${F('π', 2)}, ….` : `Divide by ${b}: ${X} = ${piFrac(1, 2 * b)} + ${V('k')}·${piFrac(1, b)}, which gives ${[0, 1, 2].map(j => piFrac(2 * j + 1, 2 * b)).join(', ')}, ….`, `<b>${texts[0]}</b> is an asymptote.`] };
+      }
+      const [x, y] = [rng.nz(-9, 9), rng.nz(-9, 9)];
+      if (Math.abs(x) === Math.abs(y)) return this.make(rng);
+      return { prompt: `The terminal side of angle θ passes through the point ${M.pt(x, y)}. Find tan θ.`, type: 'number', answer: y / x, answerText: M.fracText(y, x), params: { kind, x, y },
+        hints: [`tan θ = ${F(V('y'), V('x'))} for any point (${V('x')}, ${V('y')}) on the terminal side; the distance from the origin cancels.`, `tan θ = ${F(N(y), N(x), { raw: true })}.`, `tan θ = <b>${M.fracText(y, x)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'exact') { const s = Math.sin(rad(P.dg)), c = Math.cos(rad(P.dg)); return Math.abs(c) < 1e-12 ? q.answer === 'Undefined' : close(tvValue(q.answer), s / c, 1e-9); }
+      if (P.kind === 'period') {
+        const f = x => Math.tan(P.b * x), pts = [0.13, 0.41, 0.77];
+        const per = typeof q.answer === 'number' ? q.answer : Math.PI / P.b;
+        if (typeof q.answer !== 'number' && q.answer !== piFrac(1, P.b)) return 'wrong period text';
+        return pts.every(x => close(f(x + per), f(x), 1e-6)) && !pts.every(x => close(f(x + per / 2), f(x), 1e-6));
+      }
+      if (P.kind === 'asym') {
+        const isAsym = ([n, d]) => close(Math.cos(P.b * n * Math.PI / d), 0, 1e-9);
+        const hits = P.opts.map(isAsym);
+        return hits.filter(Boolean).length === 1 && P.texts[hits.indexOf(true)] === q.answer;
+      }
+      return close(Math.tan(Math.atan2(P.y, P.x)), q.answer, 1e-9);
+    },
+  });
+
+  A.skill({
+    id: 'int3.reciprocal-trig', title: 'Secant, cosecant, and cotangent',
+    learn: p(`Three more trig functions are the reciprocals of the first three: <b>sec θ = ${F(1, 'cos θ')}, csc θ = ${F(1, 'sin θ')}, cot θ = ${F(1, 'tan θ')} = ${F('cos θ', 'sin θ')}</b>. Each is undefined where the function on the bottom is zero, so sec 90° and csc 0° do not exist.`) +
+      p(`To find an exact value, find the sine, cosine or tangent first, then flip it and tidy any root on the bottom: sec 30° = 1 ÷ ${F(S3, 2)} = ${F(2, S3)} = ${F(`2${S3}`, 3)}. In a right triangle, sec = ${F('hypotenuse', 'adjacent')}, csc = ${F('hypotenuse', 'opposite')} and cot = ${F('adjacent', 'opposite')}.`) +
+      p('A reciprocal has the same sign as the function it flips: sec θ is negative wherever cos θ is.') +
+      example('Example', `Find csc 210°.${big(`sin 210° = −${F(1, 2)}`)}So csc 210° = 1 ÷ (−${F(1, 2)}) = <b>−2</b>.`),
+    make(rng) {
+      const kind = rng.pick(['exact', 'exact', 'flip', 'triangle']), fn = rng.pick(['sec', 'csc', 'cot']);
+      const base = { sec: 'cos', csc: 'sin', cot: 'tan' }[fn];
+      if (kind === 'exact') {
+        const dg = rng.pick([0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330]), inRad = rng.chance(0.4);
+        const v = TRIG[fn](dg), answer = tvHtml(v), bv = TRIG[base](dg);
+        const baseTxt = bv === null ? 'Undefined' : base === 'tan' ? tvHtml(bv) : exactHtml(bv);
+        const pool = [v === null ? '0' : tvHtml(-v || 0), baseTxt, v === null ? '1' : 'Undefined', '1', '2', S2, F(`2${S3}`, 3), S3, F(S3, 3)];
+        return { prompt: `Find the exact value.${big(`${fn} ${angleTxt(dg, inRad)}`)}`, type: 'choice', choices: options(answer, pool), answer, params: { kind, fn, dg },
+          hints: [`${fn} is the reciprocal of ${base}. ${inRad ? `${angleTxt(dg, true)} = ${M.deg(dg)}, and ` : ''}${base} ${M.deg(dg)} ${bv === null ? 'is not defined' : `= ${baseTxt}`}.`,
+            v === null ? `${base} ${M.deg(dg)} = 0, and 1 ÷ 0 cannot be done.` : bv === null ? `tan ${M.deg(dg)} is not defined because cos ${M.deg(dg)} = 0, so use cot = cos ÷ sin = 0 ÷ ${exactHtml(Math.sin(rad(dg)))} = 0.` : `Flip it: 1 ÷ ${bv < 0 ? `(${baseTxt})` : baseTxt}${Math.abs(Math.abs(v) - 2 / Math.sqrt(3)) < 1e-9 ? `, and ${F(2, S3)} = ${F(`2${S3}`, 3)}` : Math.abs(Math.abs(v) - 1 / Math.sqrt(3)) < 1e-9 ? `, and ${F(1, S3)} = ${F(S3, 3)}` : Math.abs(Math.abs(v) - Math.SQRT2) < 1e-9 ? `, and ${F(2, S2)} = ${S2}` : ''}.`,
+            v === null ? `${fn} ${angleTxt(dg, inRad)} does not exist: <b>${answer}</b>.` : `${fn} ${angleTxt(dg, inRad)} = <b>${answer}</b>.`] };
+      }
+      if (kind === 'flip') {
+        let n = rng.int(1, 9), d = rng.int(2, 9); if (base !== 'tan' && n >= d) [n, d] = [Math.max(1, d - n), d]; [n, d] = M.simp(n, d);
+        if (d === 1 || n === 0) return this.make(rng);
+        n *= rng.sign();
+        return { prompt: `${base} θ = ${F(n, d)}. Find ${fn} θ.`, type: 'number', answer: d / n, answerText: M.fracText(d, n), params: { kind, fn, n, d },
+          hints: [`${fn} θ = ${F(1, `${base} θ`)}.`, `1 ÷ ${n < 0 ? `(${F(n, d)})` : F(n, d)} flips the fraction.`, `${fn} θ = <b>${M.fracText(d, n)}</b>.`] };
+      }
+      const [aa, bb, cc] = rng.pick([[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29], [9, 40, 41]]);
+      const [opp, adj] = rng.bool() ? [aa, bb] : [bb, aa];
+      const [n, d] = { sec: [cc, adj], csc: [cc, opp], cot: [adj, opp] }[fn];
+      const ratio = { sec: 'hypotenuse ÷ adjacent', csc: 'hypotenuse ÷ opposite', cot: 'adjacent ÷ opposite' }[fn];
+      return { prompt: `In right triangle ${V('ABC')}, angle ${V('C')} is the right angle, ${V('BC')} = ${opp}, ${V('AC')} = ${adj} and ${V('AB')} = ${cc}. Find ${fn} ${V('A')}. Give a fraction.`, type: 'number', answer: n / d, answerText: M.fracText(n, d), params: { kind, fn, opp, adj, hyp: cc },
+        hints: [`From angle ${V('A')}: the opposite side is ${V('BC')} = ${opp}, the adjacent side is ${V('AC')} = ${adj}, and the hypotenuse is ${V('AB')} = ${cc}.`, `${fn} ${V('A')} = ${ratio} = ${F(n, d, { raw: true })}.`, `${fn} ${V('A')} = <b>${M.fracText(n, d)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'exact') { const s = Math.sin(rad(P.dg)), c = Math.cos(rad(P.dg)); const den = P.fn === 'sec' ? c : s; if (Math.abs(den) < 1e-12) return q.answer === 'Undefined'; return close(tvValue(q.answer), P.fn === 'sec' ? 1 / c : P.fn === 'csc' ? 1 / s : c / s, 1e-9); }
+      if (P.kind === 'flip') { const v = P.n / P.d; return close(q.answer * v, 1); }
+      const A0 = Math.atan2(P.opp, P.adj);                // the angle itself, from its two legs
+      if (!close(Math.hypot(P.opp, P.adj), P.hyp)) return 'not a right triangle';
+      return close(q.answer, P.fn === 'sec' ? 1 / Math.cos(A0) : P.fn === 'csc' ? 1 / Math.sin(A0) : 1 / Math.tan(A0), 1e-9);
+    },
+  });
+
+  /** θ = A ± B with A, B special angles, one of them 45° */
+  const SUMDIFF = { 15: [45, 30, -1], 75: [45, 30, 1], 105: [60, 45, 1], 165: [120, 45, 1], 195: [150, 45, 1], 255: [210, 45, 1], 285: [240, 45, 1], 345: [300, 45, 1] };
+  const SD_OPTS = [{ v: (Math.sqrt(6) + Math.SQRT2) / 4, h: F(`${S6} + ${S2}`, 4) }, { v: (Math.sqrt(6) - Math.SQRT2) / 4, h: F(`${S6} − ${S2}`, 4) },
+    { v: (Math.SQRT2 - Math.sqrt(6)) / 4, h: F(`${S2} − ${S6}`, 4) }, { v: -(Math.sqrt(6) + Math.SQRT2) / 4, h: '−' + F(`${S6} + ${S2}`, 4) }];
+  const PYTH = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]];
+  A.skill({
+    id: 'int3.sum-difference-identities', title: 'Angle sum and difference identities',
+    learn: p(`<b>sin(${V('A')} ± ${V('B')}) = sin ${V('A')} cos ${V('B')} ± cos ${V('A')} sin ${V('B')}</b> and <b>cos(${V('A')} ± ${V('B')}) = cos ${V('A')} cos ${V('B')} ∓ sin ${V('A')} sin ${V('B')}</b>. Note that the cosine formula flips the sign: cos(${V('A')} + ${V('B')}) has a minus in the middle.`) +
+      p(`Use them to find exact values for angles that are sums or differences of special angles: 15° = 45° − 30°, 75° = 45° + 30°, 105° = 60° + 45°. Never split the function: sin(45° + 30°) is not sin 45° + sin 30°.`) +
+      p(`They also work with any angles whose sine and cosine you know, such as angles in 3-4-5 or 5-12-13 right triangles.`) +
+      example('Example', `${big('sin 15° = sin(45° − 30°) = sin 45° cos 30° − cos 45° sin 30°')}= ${F(S2, 2)} · ${F(S3, 2)} − ${F(S2, 2)} · ${F(1, 2)} = <b>${F(`${S6} − ${S2}`, 4)}</b>.`),
+    make(rng) {
+      const kind = rng.pick(['exact', 'exact', 'expand', 'triple']);
+      if (kind === 'triple') {
+        const [t1, t2] = rng.sample(PYTH, 2), fn = rng.pick(['sin', 'cos']), op = rng.pick([1, -1]);
+        const sA = t1[0] / t1[2], cA = t1[1] / t1[2], sB = t2[0] / t2[2], cB = t2[1] / t2[2], den = t1[2] * t2[2];
+        const num = fn === 'sin' ? t1[0] * t2[1] + op * t1[1] * t2[0] : t1[1] * t2[1] - op * t1[0] * t2[0];
+        const giveA = rng.bool() ? `sin ${V('A')} = ${F(t1[0], t1[2])}` : `cos ${V('A')} = ${F(t1[1], t1[2])}`, giveB = rng.bool() ? `sin ${V('B')} = ${F(t2[0], t2[2])}` : `cos ${V('B')} = ${F(t2[1], t2[2])}`;
+        const expr = `${fn}(${V('A')} ${op > 0 ? '+' : '−'} ${V('B')})`;
+        const form = fn === 'sin' ? `sin ${V('A')} cos ${V('B')} ${op > 0 ? '+' : '−'} cos ${V('A')} sin ${V('B')}` : `cos ${V('A')} cos ${V('B')} ${op > 0 ? '−' : '+'} sin ${V('A')} sin ${V('B')}`;
+        const vals = fn === 'sin' ? `${F(t1[0], t1[2])} · ${F(t2[1], t2[2])} ${op > 0 ? '+' : '−'} ${F(t1[1], t1[2])} · ${F(t2[0], t2[2])}` : `${F(t1[1], t1[2])} · ${F(t2[1], t2[2])} ${op > 0 ? '−' : '+'} ${F(t1[0], t1[2])} · ${F(t2[0], t2[2])}`;
+        return { prompt: `${V('A')} and ${V('B')} are acute angles with ${giveA} and ${giveB}. Find ${expr}. Give a fraction.`, type: 'number', answer: num / den, answerText: M.fracText(num, den), params: { kind, t1, t2, fn, op },
+          hints: [`Find the missing values with right triangles (or sin² + cos² = 1): sin ${V('A')} = ${F(t1[0], t1[2])}, cos ${V('A')} = ${F(t1[1], t1[2])}, sin ${V('B')} = ${F(t2[0], t2[2])}, cos ${V('B')} = ${F(t2[1], t2[2])}.`,
+            `${expr} = ${form} = ${vals}.`, `= ${F(num, den, { raw: true })}${M.gcd(num, den) > 1 ? ` = ${M.fracText(num, den)}` : ''}, so the answer is <b>${M.fracText(num, den)}</b>.`] };
+      }
+      const th = Number(rng.pick(Object.keys(SUMDIFF))), [a, b, sg] = SUMDIFF[th], fn = rng.pick(['sin', 'cos']);
+      const o = sg > 0 ? '+' : '−';
+      const right = fn === 'sin' ? `sin ${M.deg(a)} cos ${M.deg(b)} ${o} cos ${M.deg(a)} sin ${M.deg(b)}` : `cos ${M.deg(a)} cos ${M.deg(b)} ${sg > 0 ? '−' : '+'} sin ${M.deg(a)} sin ${M.deg(b)}`;
+      if (kind === 'expand') {
+        const wrong = fn === 'sin' ? [`sin ${M.deg(a)} cos ${M.deg(b)} ${sg > 0 ? '−' : '+'} cos ${M.deg(a)} sin ${M.deg(b)}`, `cos ${M.deg(a)} cos ${M.deg(b)} ${sg > 0 ? '−' : '+'} sin ${M.deg(a)} sin ${M.deg(b)}`, `sin ${M.deg(a)} ${o} sin ${M.deg(b)}`]
+          : [`cos ${M.deg(a)} cos ${M.deg(b)} ${o} sin ${M.deg(a)} sin ${M.deg(b)}`, `sin ${M.deg(a)} cos ${M.deg(b)} ${o} cos ${M.deg(a)} sin ${M.deg(b)}`, `cos ${M.deg(a)} ${o} cos ${M.deg(b)}`];
+        return { prompt: `Which expression is equal to ${fn} ${M.deg(th)}?`, type: 'choice', choices: options(right, wrong), answer: right, params: { kind, th, fn, a, b, sg, texts: [right].concat(wrong) },
+          hints: [`Write ${M.deg(th)} = ${M.deg(a)} ${o} ${M.deg(b)}.`, fn === 'sin' ? `The sine formula keeps the sign: sin(${V('A')} ${o} ${V('B')}) = sin ${V('A')} cos ${V('B')} ${o} cos ${V('A')} sin ${V('B')}.` : `The cosine formula flips the sign: cos(${V('A')} ${o} ${V('B')}) = cos ${V('A')} cos ${V('B')} ${sg > 0 ? '−' : '+'} sin ${V('A')} sin ${V('B')}.`, `<b>${right}</b>`] };
+      }
+      const val = fn === 'sin' ? Math.sin(rad(th)) : Math.cos(rad(th)), answer = SD_OPTS.find(e => close(e.v, val, 1e-9)).h;
+      const ex = d => [exactHtml(Math.sin(rad(d))), exactHtml(Math.cos(rad(d)))];
+      const [sa, ca] = ex(a), [sb, cb] = ex(b), par = h => h.startsWith('−') ? `(${h})` : h;
+      const nums = fn === 'sin' ? `${par(sa)} · ${par(cb)} ${o} ${par(ca)} · ${par(sb)}` : `${par(ca)} · ${par(cb)} ${sg > 0 ? '−' : '+'} ${par(sa)} · ${par(sb)}`;
+      return { prompt: `Find the exact value.${big(`${fn} ${M.deg(th)}`)}`, type: 'choice', choices: SD_OPTS.map(e => e.h), answer, params: { kind, th, fn },
+        hints: [`Write ${M.deg(th)} = ${M.deg(a)} ${o} ${M.deg(b)}, two angles with known values.`, `${fn}(${M.deg(a)} ${o} ${M.deg(b)}) = ${right} = ${nums}.`, `Multiply and combine over 4: ${fn} ${M.deg(th)} = <b>${answer}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'triple') {
+        const A0 = Math.asin(P.t1[0] / P.t1[2]), B0 = Math.asin(P.t2[0] / P.t2[2]), t = A0 + P.op * B0;
+        return close(q.answer, P.fn === 'sin' ? Math.sin(t) : Math.cos(t), 1e-9);
+      }
+      const f = P.fn === 'sin' ? Math.sin : Math.cos;
+      if (P.kind === 'expand') {
+        // evaluate every option numerically: only the right one equals the function of the whole angle
+        const term = t => { const w = t.split(' '); let v = 1; for (let i = 0; i < w.length; i += 2) v *= (w[i] === 'sin' ? Math.sin : Math.cos)(rad(Number(w[i + 1]))); return v; };
+        const val = s => { const parts = A.stripTags(s).replace(/°/g, '').replace(/\s+/g, ' ').trim().split(/ ([+−]) /); let v = term(parts[0]); for (let i = 1; i < parts.length; i += 2) v += (parts[i] === '+' ? 1 : -1) * term(parts[i + 1]); return v; };
+        const hits = P.texts.map(s => close(val(s), f(rad(P.th)), 1e-9));
+        return hits.filter(Boolean).length === 1 && hits[0] && q.answer === P.texts[0];
+      }
+      const t = A.stripTags(q.answer).replace(/\s+/g, '');
+      const num = { '√6+√24': (Math.sqrt(6) + Math.sqrt(2)) / 4, '√6−√24': (Math.sqrt(6) - Math.sqrt(2)) / 4, '√2−√64': (Math.sqrt(2) - Math.sqrt(6)) / 4, '−√6+√24': -(Math.sqrt(6) + Math.sqrt(2)) / 4 }[t];
+      return close(num, f(rad(P.th)), 1e-9);
+    },
+  });
+
+  const SSA_OPTS = ['No triangle', 'Exactly one triangle', 'Two triangles'];
+  /** the positive values of c with a² = b² + c² − 2bc cos A (the law of cosines, solved for c) */
+  const ssaSides = (Ad, a, b) => { const ca = Math.cos(rad(Ad)), D = b * b * ca * ca - (b * b - a * a); if (D < -1e-7) return []; const r = Math.abs(D) < 1e-7 ? 0 : Math.sqrt(D); return [...new Set([b * ca - r, b * ca + r].map(c => M.round(c, 9)))].filter(c => c > 1e-9); };
+  A.skill({
+    id: 'int3.ambiguous-case', title: 'The ambiguous case (SSA)',
+    learn: p(`Knowing two sides and an angle <b>not</b> between them (SSA) may give no triangle, one, or two. Suppose you know angle ${V('A')}, the side ${V('a')} opposite it, and another side ${V('b')}. Side ${V('a')} swings from the end of ${V('b')}, and the question is how many times it can reach the third side.`) +
+      p(`<b>When ${V('A')} is acute, compare ${V('a')} with the height ${V('h')} = ${V('b')} sin ${V('A')}:</b> if ${V('a')} &lt; ${V('h')} there is no triangle; if ${V('a')} = ${V('h')}, one right triangle; if ${V('h')} &lt; ${V('a')} &lt; ${V('b')}, two triangles; if ${V('a')} ≥ ${V('b')}, one. <b>When ${V('A')} is obtuse</b>, there is one triangle if ${V('a')} &gt; ${V('b')} and none otherwise.`) +
+      p(`In the two-triangle case, the law of sines gives sin ${V('B')}, and both ${V('B')} and 180° − ${V('B')} work, because sine is positive in quadrants 1 and 2.`) +
+      example('Example', `${V('A')} = 30°, ${V('a')} = 6, ${V('b')} = 10.${big(`${V('h')} = 10 sin 30° = 5`)}5 &lt; 6 &lt; 10, so there are <b>two triangles</b>: sin ${V('B')} = ${F('10 sin 30°', 6)} ≈ 0.833 gives ${V('B')} ≈ 56.4° or 123.6°.`),
+    make(rng) {
+      const kind = rng.pick(['count', 'count', 'count', 'angle', 'side']);
+      if (kind === 'count') {
+        const want = rng.int(0, 2);
+        let Ad, a, b, h, ok = false, tries = 0;
+        while (!ok && tries++ < 200) {
+          const obtuse = want < 2 && rng.chance(0.3);
+          Ad = obtuse ? rng.int(100, 140) : rng.int(20, 70); b = rng.int(6, 20); h = b * Math.sin(rad(Ad));
+          if (obtuse) { a = want === 0 ? rng.int(3, b) : rng.int(b + 1, b + 8); ok = true; }
+          else if (want === 1 && rng.chance(0.25)) { Ad = 30; b = 2 * rng.int(3, 10); a = b / 2; h = a; ok = true; }
+          else if (want === 1) { a = rng.int(b, b + 8); ok = true; }
+          else if (want === 0) { const top = Math.ceil(h - 0.5) - 1; if (top >= 2) { a = rng.int(2, top); ok = true; } }
+          else { const lo = Math.floor(h + 0.5) + 1, hi = b - 1; if (lo <= hi) { a = rng.int(lo, hi); ok = true; } }
+        }
+        const answer = SSA_OPTS[want], acute = Ad < 90;
+        return { prompt: `In triangle ${V('ABC')}, ${V('A')} = ${Ad}°, ${V('a')} = ${a} and ${V('b')} = ${b}. How many triangles have these measurements?`, type: 'choice', choices: SSA_OPTS.slice(), answer, keepOrder: true, params: { kind, Ad, a, b },
+          hints: [acute ? `${V('A')} is acute, so find the height: ${V('h')} = ${V('b')} sin ${V('A')} = ${b} sin ${Ad}° ≈ ${N(r2(h))}.` : `${V('A')} is obtuse, so it must be the largest angle, and ${V('a')} must be the longest side: compare ${V('a')} = ${a} with ${V('b')} = ${b}.`,
+            acute ? (want === 0 ? `${V('a')} = ${a} is shorter than the height, so it cannot reach the third side.` : want === 2 ? `${N(r2(h))} &lt; ${a} &lt; ${b}: ${V('a')} is longer than the height but shorter than ${V('b')}, so it can reach the third side in two places.` : a === h ? `${V('a')} equals the height exactly, so it meets the third side at a right angle, once.` : `${V('a')} = ${a} is at least as long as ${V('b')} = ${b}, so only one of its crossings lands on the correct side of ${V('A')}.`)
+              : (want === 0 ? `${V('a')} is not longer than ${V('b')}, so no triangle is possible.` : `${V('a')} is longer than ${V('b')}, so exactly one triangle works.`),
+            `<b>${answer}</b>.`] };
+      }
+      let Ad, a, b, h;
+      do { Ad = rng.int(25, 65); b = rng.int(8, 20); h = b * Math.sin(rad(Ad)); a = Math.floor(h) + 1 <= b - 1 ? rng.int(Math.floor(h) + 1, b - 1) : 0; } while (!(a > h + 0.5 && a < b - 0.5));
+      const sB = b * Math.sin(rad(Ad)) / a, B1 = degOf(Math.asin(sB)), B2 = 180 - B1;
+      if (kind === 'angle') {
+        const big2 = rng.bool(), ans = r1(big2 ? B2 : B1);
+        return { prompt: `In triangle ${V('ABC')}, ${V('A')} = ${Ad}°, ${V('a')} = ${a} and ${V('b')} = ${b}. Two triangles fit these measurements. Find the ${big2 ? 'obtuse' : 'acute'} value of angle ${V('B')}. Round to the nearest tenth of a degree.`, type: 'number', answer: ans, unit: '°', tolerance: 0.05, params: { kind, Ad, a, b, big: big2 },
+          hints: [`Law of sines: sin ${V('B')} = ${F(`${b} sin ${Ad}°`, a)} ≈ ${N(M.round(sB, 4))}.`, `${M.sup('sin', '−1')}(${N(M.round(sB, 4))}) ≈ ${N(r1(B1))}°. The other angle with the same sine is 180° − ${N(r1(B1))}° ≈ ${N(r1(B2))}°.`, `The ${big2 ? 'obtuse' : 'acute'} value is ${V('B')} ≈ <b>${N(ans)}°</b>.`] };
+      }
+      const C2 = 180 - Ad - B2, c2 = a * Math.sin(rad(C2)) / Math.sin(rad(Ad)), C1 = 180 - Ad - B1, c1 = a * Math.sin(rad(C1)) / Math.sin(rad(Ad));
+      const shortSide = rng.bool(), ans = r1(shortSide ? c2 : c1);
+      return { prompt: `In triangle ${V('ABC')}, ${V('A')} = ${Ad}°, ${V('a')} = ${a} and ${V('b')} = ${b}. Two triangles fit these measurements. Find the ${shortSide ? 'shorter' : 'longer'} possible length of side ${V('c')}. Round to the nearest tenth.`, type: 'number', answer: ans, tolerance: 0.05, params: { kind, Ad, a, b, shortSide },
+        hints: [`Law of sines: sin ${V('B')} = ${F(`${b} sin ${Ad}°`, a)} ≈ ${N(M.round(sB, 4))}, so ${V('B')} ≈ ${N(r1(B1))}° or ${N(r1(B2))}°.`, `Then ${V('C')} = 180° − ${Ad}° − ${V('B')} ≈ ${N(r1(C1))}° or ${N(r1(C2))}°, and ${V('c')} = ${F(`${a} sin ${V('C')}`, `sin ${Ad}°`)} ≈ ${N(r1(c1))} or ${N(r1(c2))}.`, `The ${shortSide ? 'shorter' : 'longer'} length is <b>${N(ans)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params, cs = ssaSides(P.Ad, P.a, P.b);
+      if (P.kind === 'count') return q.answer === SSA_OPTS[cs.length];
+      if (cs.length !== 2) return 'expected two triangles';
+      if (P.kind === 'side') return Math.abs((P.shortSide ? Math.min(...cs) : Math.max(...cs)) - q.answer) <= 0.05 + 1e-9;
+      // angle B from the law of cosines in each triangle
+      const Bs = cs.map(c => degOf(Math.acos((P.a * P.a + c * c - P.b * P.b) / (2 * P.a * c))));
+      return Math.abs((P.big ? Math.max(...Bs) : Math.min(...Bs)) - q.answer) <= 0.05 + 1e-9;
+    },
+  });
+
+  /* ---------- Unit 14: Induction and the binomial theorem ---------- */
+  const KK = V('k'), NN = V('n');
+  const k1 = `(${KK} + 1)`;
+  /** sum formulas for induction: the left side, the right side, the (k + 1)th term and the target, each with a number version for checking */
+  const INDUCT = [
+    { lhs: v => `1 + 2 + 3 + … + ${v}`, rhs: v => F(`${v}(${v} + 1)`, 2), term: k => k, sum: n => n * (n + 1) / 2,
+      next: [F(`${k1}(${KK} + 2)`, 2), k => (k + 1) * (k + 2) / 2], badNext: [[`${F(`${KK}(${KK} + 1)`, 2)} + 1`, k => k * (k + 1) / 2 + 1], [F(`${k1}${KK}`, 2), k => (k + 1) * k / 2], [F(`${KK}(${KK} + 2)`, 2), k => k * (k + 2) / 2]],
+      add: [`${KK} + 1`, k => k + 1], badAdd: [[KK, k => k], [`${KK} + 2`, k => k + 2], [`2${KK} + 1`, k => 2 * k + 1]] },
+    { lhs: v => `1 + 3 + 5 + … + (2${v} − 1)`, rhs: v => M.sup(v, 2), term: k => 2 * k - 1, sum: n => n * n,
+      next: [M.sup(k1, 2), k => (k + 1) ** 2], badNext: [[`${M.sup(KK, 2)} + 1`, k => k * k + 1], [M.sup(`(${KK} + 2)`, 2), k => (k + 2) ** 2], [`${M.sup(KK, 2)} + ${KK}`, k => k * k + k]],
+      add: [`2${KK} + 1`, k => 2 * k + 1], badAdd: [[`2${KK} − 1`, k => 2 * k - 1], [`2${KK}`, k => 2 * k], [`2${KK} + 3`, k => 2 * k + 3]] },
+    { lhs: v => `2 + 4 + 6 + … + 2${v}`, rhs: v => `${v}(${v} + 1)`, term: k => 2 * k, sum: n => n * (n + 1),
+      next: [`${k1}(${KK} + 2)`, k => (k + 1) * (k + 2)], badNext: [[`${KK}(${KK} + 1) + 2`, k => k * (k + 1) + 2], [M.sup(k1, 2), k => (k + 1) ** 2], [`${KK}(${KK} + 2)`, k => k * (k + 2)]],
+      add: [`2${KK} + 2`, k => 2 * k + 2], badAdd: [[`2${KK}`, k => 2 * k], [`2${KK} + 1`, k => 2 * k + 1], [`${KK} + 1`, k => k + 1]] },
+    { lhs: v => `1 + 2 + 4 + … + ${M.sup(2, `${v} − 1`)}`, rhs: v => `${M.sup(2, v)} − 1`, term: k => 2 ** (k - 1), sum: n => 2 ** n - 1,
+      next: [`${M.sup(2, `${KK} + 1`)} − 1`, k => 2 ** (k + 1) - 1], badNext: [[`${M.sup(2, KK)} + 1`, k => 2 ** k + 1], [`2(${M.sup(2, KK)} − 1)`, k => 2 * (2 ** k - 1)], [`${M.sup(2, `${KK} + 1`)} + 1`, k => 2 ** (k + 1) + 1]],
+      add: [M.sup(2, KK), k => 2 ** k], badAdd: [[M.sup(2, `${KK} − 1`), k => 2 ** (k - 1)], [M.sup(2, `${KK} + 1`), k => 2 ** (k + 1)], [`2${KK}`, k => 2 * k]] },
+    { lhs: v => `1² + 2² + 3² + … + ${M.sup(v, 2)}`, rhs: v => F(`${v}(${v} + 1)(2${v} + 1)`, 6), term: k => k * k, sum: n => n * (n + 1) * (2 * n + 1) / 6,
+      next: [F(`${k1}(${KK} + 2)(2${KK} + 3)`, 6), k => (k + 1) * (k + 2) * (2 * k + 3) / 6], badNext: [[F(`${k1}(${KK} + 2)(2${KK} + 1)`, 6), k => (k + 1) * (k + 2) * (2 * k + 1) / 6], [`${F(`${KK}(${KK} + 1)(2${KK} + 1)`, 6)} + 1`, k => k * (k + 1) * (2 * k + 1) / 6 + 1], [F(`${k1}(${KK} + 2)(2${KK} + 2)`, 6), k => (k + 1) * (k + 2) * (2 * k + 2) / 6]],
+      add: [M.sup(k1, 2), k => (k + 1) ** 2], badAdd: [[M.sup(KK, 2), k => k * k], [`${M.sup(KK, 2)} + 1`, k => k * k + 1], [M.sup(`(${KK} + 2)`, 2), k => (k + 2) ** 2]] },
+    { lhs: v => `1 + 4 + 7 + … + (3${v} − 2)`, rhs: v => F(`${v}(3${v} − 1)`, 2), term: k => 3 * k - 2, sum: n => n * (3 * n - 1) / 2,
+      next: [F(`${k1}(3${KK} + 2)`, 2), k => (k + 1) * (3 * k + 2) / 2], badNext: [[F(`${k1}(3${KK} − 1)`, 2), k => (k + 1) * (3 * k - 1) / 2], [`${F(`${KK}(3${KK} − 1)`, 2)} + 1`, k => k * (3 * k - 1) / 2 + 1], [F(`${k1}(3${KK} + 3)`, 2), k => (k + 1) * (3 * k + 3) / 2]],
+      add: [`3${KK} + 1`, k => 3 * k + 1], badAdd: [[`3${KK} − 2`, k => 3 * k - 2], [`3${KK} − 1`, k => 3 * k - 1], [`3${KK} + 4`, k => 3 * k + 4]] },
+    { lhs: v => `3 + 9 + 27 + … + ${M.sup(3, v)}`, rhs: v => F(`${M.sup(3, `${v} + 1`)} − 3`, 2), term: k => 3 ** k, sum: n => (3 ** (n + 1) - 3) / 2,
+      next: [F(`${M.sup(3, `${KK} + 2`)} − 3`, 2), k => (3 ** (k + 2) - 3) / 2], badNext: [[F(`${M.sup(3, `${KK} + 2`)} − 1`, 2), k => (3 ** (k + 2) - 1) / 2], [F(`${M.sup(3, `${KK} + 1`)} − 2`, 2), k => (3 ** (k + 1) - 2) / 2], [F(M.sup(3, `${KK} + 2`), 2), k => 3 ** (k + 2) / 2]],
+      add: [M.sup(3, `${KK} + 1`), k => 3 ** (k + 1)], badAdd: [[M.sup(3, KK), k => 3 ** k], [M.sup(3, `${KK} + 2`), k => 3 ** (k + 2)], [`3${KK} + 3`, k => 3 * k + 3]] },
+  ];
+  const STEP_ORDER = [[0, 1, 2, 3], [1, 0, 2, 3], [0, 2, 1, 3], [1, 2, 3, 0]];
+  A.skill({
+    id: 'int3.induction', title: 'Proof by mathematical induction',
+    learn: p(`<b>Mathematical induction</b> proves that a statement is true for every whole number ${NN} ≥ 1, in two steps. <b>Base case:</b> show it is true for ${NN} = 1. <b>Inductive step:</b> assume it is true for some ${NN} = ${KK}, and use that to show it is true for ${NN} = ${KK} + 1. Then it is true for 1, so for 2, so for 3, and so on, like a row of falling dominoes.`) +
+      p(`For a sum formula, the inductive step goes like this: start from the assumed formula for ${KK}, <b>add the next term, the (${KK} + 1)th, to both sides</b>, and simplify the right side until it is the formula with ${KK} + 1 in place of ${NN}.`) +
+      p('Checking a few values of n is not a proof, but it is a good way to test the formula and to see the base case.') +
+      example('Example', `Prove 1 + 3 + 5 + … + (2${NN} − 1) = ${M.sup(NN, 2)}.${big(`Base: 1 = 1². &nbsp; Step: assume 1 + 3 + … + (2${KK} − 1) = ${M.sup(KK, 2)}.`)}Add the next term, 2${KK} + 1, to both sides: ${M.sup(KK, 2)} + 2${KK} + 1 = <b>${M.sup(k1, 2)}</b>, the formula for ${KK} + 1. So it holds for every ${NN} ≥ 1.`),
+    make(rng) {
+      const f = rng.int(0, INDUCT.length - 1), I = INDUCT[f], kind = rng.pick(['order', 'show', 'show', 'term', 'check']);
+      const claim = `${I.lhs(NN)} = ${I.rhs(NN)}`;
+      if (kind === 'check') {
+        const m = rng.int(3, 6);
+        const terms = []; for (let j = 1; j <= m; j++) terms.push(I.term(j));
+        return { prompt: `Test the formula for ${NN} = ${m}. What number do both sides equal?${big(claim)}`, type: 'number', answer: I.sum(m), params: { kind, f, m },
+          hints: [`The left side, up to the term for ${NN} = ${m}, is ${terms.join(' + ')}.`, `That adds to ${I.sum(m)}. Substitute ${NN} = ${m} into the right side and check it matches.`, `Both sides equal <b>${I.sum(m)}</b>.`] };
+      }
+      if (kind === 'order') {
+        const steps = [`Check ${NN} = 1: both sides equal ${I.sum(1)}.`, `Assume ${I.lhs(KK)} = ${I.rhs(KK)} for some ${KK} ≥ 1.`, `Add ${I.add[0]} to both sides and show the right side becomes ${I.next[0]}.`, `Conclude the formula is true for every whole number ${NN} ≥ 1.`];
+        const letters = rng.shuffle(['A', 'B', 'C', 'D']);                     // letters[i] labels step i
+        const listed = ['A', 'B', 'C', 'D'].map(L => `<p><b>${L}.</b> ${steps[letters.indexOf(L)]}</p>`).join('');
+        const texts = STEP_ORDER.map(o => o.map(i => letters[i]).join(', '));
+        return { prompt: `These are the steps of a proof by induction of the formula below, out of order. Which order is correct?${big(claim)}${listed}`, type: 'choice', choices: texts.slice(), answer: texts[0], params: { kind, f, letters, texts },
+          hints: ['An induction proof starts with the base case, the smallest value of n.', `Next comes the assumption for ${NN} = ${KK}, then the step that uses it to reach ${NN} = ${KK} + 1, and finally the conclusion.`, `The order is <b>${texts[0]}</b>.`] };
+      }
+      const assume = `${I.lhs(KK)} = ${I.rhs(KK)}`;
+      if (kind === 'term') {
+        const answer = I.add[0];
+        return { prompt: `You are proving the formula below by induction. In the inductive step you assume<br>${big(assume)}What term do you add to both sides to reach ${NN} = ${KK} + 1?`, type: 'choice', choices: options(answer, I.badAdd.map(b => b[0])), answer, params: { kind, f },
+          hints: [`The next term is the pattern’s term for ${NN} = ${KK} + 1, not for ${KK}.`, `Substitute ${KK} + 1 for ${NN} in the last term, ${I.lhs(NN).split(' + ').pop()}, and simplify.`, `The term to add is <b>${answer}</b>.`] };
+      }
+      const answer = I.next[0];
+      return { prompt: `You are proving the formula below by induction, and you assume it is true for ${NN} = ${KK}. After adding the next term, ${I.add[0]}, to both sides, which expression must the right side equal?${big(claim)}`, type: 'choice', choices: options(answer, I.badNext.map(b => b[0])), answer, params: { kind, f },
+        hints: [`To finish the inductive step you must reach the formula itself with ${NN} = ${KK} + 1.`, `Replace every ${NN} in ${I.rhs(NN)} by ${KK} + 1, then simplify.`, `The right side must equal <b>${answer}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params, I = INDUCT[P.f];
+      // the formula itself must hold: brute-force sums for n = 1 … 12
+      for (let n = 1, s = 0; n <= 12; n++) { s += I.term(n); if (!close(s, I.sum(n))) return `the formula fails at n = ${n}`; }
+      if (P.kind === 'check') { let s = 0; for (let j = 1; j <= P.m; j++) s += I.term(j); return s === q.answer; }
+      if (P.kind === 'order') return q.answer === P.texts[0] && P.texts[0] === [0, 1, 2, 3].map(i => P.letters[i]).join(', ');
+      const ks = [1, 2, 3, 4, 5, 7];
+      const [right, wrong, want] = P.kind === 'term' ? [I.add, I.badAdd, k => I.term(k + 1)] : [I.next, I.badNext, k => I.sum(k + 1)];
+      if (!ks.every(k => close(right[1](k), want(k)))) return 'the shown answer does not equal the target';
+      if (wrong.some(([, g]) => ks.every(k => close(g(k), want(k))))) return 'a distractor is also right';
+      return q.answer === right[0];
+    },
+  });
+
+  const nCk = (n, k) => { let c = 1; for (let i = 1; i <= k; i++) c = c * (n - k + i) / i; return Math.round(c); };
+  const Cn = (n, k) => `<sub>${n}</sub>C<sub>${k}</sub>`;
+  A.skill({
+    id: 'int3.binomial-theorem', title: 'Pascal’s triangle and the binomial theorem',
+    learn: p(`<b>The binomial theorem:</b> (${V('a')} + ${V('b')})<sup>${NN}</sup> = the sum of ${Cn(NN, KK)} ${M.sup(V('a'), `${NN} − ${KK}`)}${M.sup(V('b'), KK)} for ${KK} = 0 to ${NN}. The coefficients ${Cn(NN, KK)} are the numbers in row ${NN} of <b>Pascal’s triangle</b> (1; 1 1; 1 2 1; 1 3 3 1; 1 4 6 4 1; …), where each number is the sum of the two above it.`) +
+      p(`For a term such as ${M.sup(X, 2)} in (2${X} − 3)<sup>5</sup>, use ${V('a')} = 2${X} and ${V('b')} = −3. <b>The coefficient is ${Cn(NN, KK)} times the powers of both numbers</b>: the powers of ${V('a')} and ${V('b')} always add to ${NN}. Keep the sign of ${V('b')}: a negative number to an odd power is negative.`) +
+      example('Example', `Find the coefficient of ${M.sup(X, 2)} in (2${X} − 3)<sup>5</sup>.${big(`${Cn(5, 3)} (2${X})² (−3)³ = 10 × 4${M.sup(X, 2)} × (−27)`)}The coefficient is <b>−1,080</b>.`),
+    make(rng) {
+      const kind = rng.pick(['coef', 'coef', 'pascal', 'expand']);
+      if (kind === 'pascal') {
+        const n = rng.int(5, 10), k = rng.int(2, n - 2);
+        return { prompt: `In the expansion of (${V('a')} + ${V('b')})<sup>${n}</sup>, what is the coefficient of ${M.sup(V('a'), n - k)}${M.sup(V('b'), k)}?`, type: 'number', answer: nCk(n, k), params: { kind, n, k, pp: 1, qq: 1, j: n - k },
+          hints: [`The coefficient of ${M.sup(V('a'), n - k)}${M.sup(V('b'), k)} is ${Cn(n, k)}, the number of ways to choose ${V('b')} from ${k} of the ${n} brackets.`, `${Cn(n, k)} = ${F(`${n}!`, `${k}! · ${n - k}!`)}, or read entry ${k} of row ${n} of Pascal’s triangle (counting from 0).`, `The coefficient is <b>${nCk(n, k)}</b>.`] };
+      }
+      if (kind === 'expand') {
+        const n = rng.pick([3, 4]), qq = rng.nz(-3, 3);
+        const right = [], noC = [], alt = [];
+        for (let j = 0; j <= n; j++) { right.push(nCk(n, j) * qq ** j); noC.push(qq ** j); alt.push(nCk(n, j) * Math.abs(qq) ** j * (qq > 0 ? (j % 2 ? -1 : 1) : 1)); }
+        const ends = [1].concat(new Array(n - 1).fill(0), [qq ** n]);
+        const answer = M.poly(right), wrong = [M.poly(ends), M.poly(noC), M.poly(alt), M.poly(right.map((c, j) => j === 0 || j === n ? c : c / nCk(n, j) * n))];
+        return { prompt: `Expand.${big(`(${X} ${M.signed(qq)})<sup>${n}</sup>`)}`, type: 'choice', choices: options(answer, wrong), answer, params: { kind, n, pp: 1, qq, j: null },
+          hints: [`Row ${n} of Pascal’s triangle is ${[...Array(n + 1).keys()].map(j => nCk(n, j)).join(', ')}.`, `Each term is (row number) × ${M.sup(X, `${n} − ${KK}`)} × ${pw(qq)}<sup>${KK}</sup>, for ${KK} = 0 to ${n}.`, `<b>${answer}</b>`] };
+      }
+      const n = rng.int(3, 6), pp = rng.pick([1, 2, 3]), qq = rng.nz(-4, 4), j = rng.int(1, n - 1);
+      const c = nCk(n, n - j) * pp ** j * qq ** (n - j);
+      const base = `(${pp === 1 ? X : `${pp}${X}`} ${M.signed(qq)})<sup>${n}</sup>`;
+      return { prompt: `What is the coefficient of ${j === 1 ? X : M.sup(X, j)} in the expansion of ${base}?`, type: 'number', answer: c, params: { kind, n, pp, qq, j },
+        hints: [`In the ${j === 1 ? X : M.sup(X, j)} term, ${pp === 1 ? X : `${pp}${X}`} is raised to the power ${j} and ${N(qq)} to the power ${n - j}, since the powers add to ${n}: ${Cn(n, n - j)} (${pp === 1 ? X : `${pp}${X}`})<sup>${j}</sup> (${N(qq)})<sup>${n - j}</sup>.`,
+          `${Cn(n, n - j)} = ${nCk(n, n - j)}${pp === 1 ? '' : `, ${pp}<sup>${j}</sup> = ${pp ** j}`} and (${N(qq)})<sup>${n - j}</sup> = ${N(qq ** (n - j))}.`, `${nCk(n, n - j)} × ${pp ** j} × ${pw(qq ** (n - j))} = <b>${N(c)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      let prod = [1]; for (let i = 0; i < P.n; i++) prod = pmul(prod, [P.pp, P.qq]);          // multiply the brackets out one at a time
+      if (P.kind === 'expand') return q.answer === M.poly(prod);
+      return prod[P.n - P.j] === q.answer;
+    },
+  });
+
+  const BINOM_CTX = [
+    { setup: (nm, n, pc) => `${nm} makes ${pc}% of free throws and takes ${n} shots.`, ps: [60, 70, 75, 80, 90], ev: k => `exactly ${k} of the shots go in`, one: 'a shot goes in', any: 'at least one shot goes in' },
+    { setup: (nm, n, pc) => `${nm} guesses every answer on a ${n}-question quiz. Each question has ${pc === 25 ? 'four' : 'five'} choices.`, ps: [20, 25], ev: k => `exactly ${k} answers are right`, one: 'a guess is right', any: 'at least one answer is right' },
+    { setup: (nm, n, pc) => `${nm} plants ${n} seeds. Each seed sprouts with probability ${N(pc / 100)}.`, ps: [60, 70, 80, 90], ev: k => `exactly ${k} seeds sprout`, one: 'a seed sprouts', any: 'at least one seed sprouts' },
+    { setup: (nm, n, pc) => `A machine makes parts, and ${pc}% of them are faulty. ${nm} checks ${n} parts.`, ps: [5, 10, 20], ev: k => `exactly ${k} of the parts are faulty`, one: 'a part is faulty', any: 'at least one part is faulty' },
+  ];
+  A.skill({
+    id: 'int3.binomial-probability', title: 'Binomial probability',
+    learn: p(`A <b>binomial setting</b> has a fixed number ${NN} of independent trials, each a success with the same probability ${V('p')}. The chance of exactly ${KK} successes is <b>P(${KK}) = ${Cn(NN, KK)} ${M.sup(V('p'), KK)} (1 − ${V('p')})<sup>${NN} − ${KK}</sup></b>.`) +
+      p(`${M.sup(V('p'), KK)}(1 − ${V('p')})<sup>${NN} − ${KK}</sup> is the chance of one particular order of ${KK} successes and ${NN} − ${KK} failures, and ${Cn(NN, KK)} counts how many orders there are. For “at least one”, use the complement: P(at least 1) = 1 − P(0) = 1 − (1 − ${V('p')})<sup>${NN}</sup>.`) +
+      example('Example', `A player makes 70% of free throws and takes 5. P(exactly 4)?${big(`${Cn(5, 4)} (0.7)<sup>4</sup> (0.3)<sup>1</sup> = 5 × 0.2401 × 0.3`)}≈ <b>0.360</b>.`),
+    make(rng) {
+      const C = rng.pick(BINOM_CTX), pc = rng.pick(C.ps), pr = pc / 100, n = rng.int(4, 8), nm = rng.pick(NAMES), kind = rng.pick(['exact', 'exact', 'atleast', 'setup']);
+      const q1 = M.round(1 - pr, 2);
+      if (kind === 'setup') {
+        const k = rng.int(1, n - 1), pp = N(pr), qp = N(q1);
+        const answer = `${Cn(n, k)} (${pp})<sup>${k}</sup> (${qp})<sup>${n - k}</sup>`;
+        const wrong = [`(${pp})<sup>${k}</sup> (${qp})<sup>${n - k}</sup>`, `${Cn(n, k)} (${pp})<sup>${n - k}</sup> (${qp})<sup>${k}</sup>`, `${Cn(n, k)} (${pp})<sup>${k}</sup>`];
+        return { prompt: `${C.setup(nm, n, pc)} Which expression gives the probability that ${C.ev(k)}?`, type: 'choice', choices: options(answer, wrong), answer, params: { kind, n, k, pr },
+          hints: [`Each of the ${n} trials is independent with P(success) = ${pp}, where success means ${C.one}.`, `One order of ${k} successes and ${n - k} failures has probability (${pp})<sup>${k}</sup>(${qp})<sup>${n - k}</sup>, and there are ${Cn(n, k)} orders.`, `<b>${answer}</b>`] };
+      }
+      if (kind === 'atleast') {
+        const ans = M.round(1 - q1 ** n, 3);
+        return { prompt: `${C.setup(nm, n, pc)} What is the probability that ${C.any}? Round to the nearest thousandth.`, type: 'number', answer: ans, tolerance: 0.0005, params: { kind, n, pr, k: null },
+          hints: [`“At least one” is everything except “none”. P(none) = (${N(q1)})<sup>${n}</sup> ≈ ${N(M.round(q1 ** n, 5))}.`, `P(at least one) = 1 − ${N(M.round(q1 ** n, 5))}.`, `≈ <b>${N(ans)}</b>.`] };
+      }
+      let k = rng.int(1, n - 1); const pk = j => nCk(n, j) * pr ** j * q1 ** (n - j);
+      if (pk(k) < 0.01) k = Math.round(n * pr) || 1;
+      const ans = M.round(pk(k), 3);
+      return { prompt: `${C.setup(nm, n, pc)} What is the probability that ${C.ev(k)}? Round to the nearest thousandth.`, type: 'number', answer: ans, tolerance: 0.0005, params: { kind, n, k, pr },
+        hints: [`Use P = ${Cn(n, k)} (${N(pr)})<sup>${k}</sup> (${N(q1)})<sup>${n - k}</sup>.`, `${Cn(n, k)} = ${nCk(n, k)}, (${N(pr)})<sup>${k}</sup> ≈ ${N(M.round(pr ** k, 6))} and (${N(q1)})<sup>${n - k}</sup> ≈ ${N(M.round(q1 ** (n - k), 6))}.`, `Multiply: ≈ <b>${N(ans)}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      // list every one of the 2ⁿ success/failure patterns and add up the matching ones
+      let exact = 0, none = 0;
+      for (let m = 0; m < 2 ** P.n; m++) {
+        let s = 0, pr = 1; for (let i = 0; i < P.n; i++) { if (m >> i & 1) { s++; pr *= P.pr; } else pr *= 1 - P.pr; }
+        if (s === P.k) exact += pr; if (s === 0) none += pr;
+      }
+      if (P.kind === 'setup') return q.answer.startsWith(Cn(P.n, P.k)) && close(nCk(P.n, P.k) * P.pr ** P.k * (1 - P.pr) ** (P.n - P.k), exact, 1e-9) && q.answer.includes(`(${N(P.pr)})<sup>${P.k}</sup>`);
+      return Math.abs((P.kind === 'atleast' ? 1 - none : exact) - q.answer) <= 0.0005 + 1e-9;
+    },
+  });
+
+  /* ---------- Unit 15: Three dimensions and three-variable systems ---------- */
+  const Y = V('y'), Z = V('z');
+  const pt3 = (x, y, z) => `(${N(x)}, ${N(y)}, ${N(z)})`;
+  /** a picture of the box from the origin to (a, b, c): x comes toward you, y goes right, z goes up */
+  function box3d(a, b, c) {
+    const P = (x, y, z) => [M.round(100 + 22 * y - 9 * x, 1), M.round(175 - 20 * z + 7 * x, 1)];
+    const seg = (p1, p2, cls) => `<line x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}" ${cls}/>`;
+    let s = `<svg class="figure" viewBox="0 0 280 250" width="280" height="250" role="img" aria-label="a point in three dimensions">`;
+    s += seg(P(0, 0, 0), P(8, 0, 0), 'class="stroke"') + seg(P(0, 0, 0), P(0, 7, 0), 'class="stroke"') + seg(P(0, 0, 0), P(0, 0, 7), 'class="stroke"');
+    const [xe, ye, ze] = [P(8.4, 0, 0), P(0, 7.3, 0), P(0, 0, 7.4)];
+    s += `<text x="${xe[0] - 4}" y="${xe[1] + 6}" font-size="14" font-style="italic">x</text><text x="${ye[0] + 2}" y="${ye[1] + 5}" font-size="14" font-style="italic">y</text><text x="${ze[0] - 4}" y="${ze[1] - 2}" font-size="14" font-style="italic">z</text>`;
+    const v = [0, 1].flatMap(i => [0, 1].flatMap(j => [0, 1].map(k => [i * a, j * b, k * c])));
+    for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) { const d = [0, 1, 2].filter(t => v[i][t] !== v[j][t]); if (d.length === 1) s += seg(P(...v[i]), P(...v[j]), 'stroke="var(--muted)" stroke-dasharray="4 3" stroke-width="1.2"'); }
+    const tick = (q, lab, dx, dy) => `<circle cx="${q[0]}" cy="${q[1]}" r="2.5" fill="currentColor"/><text x="${q[0] + dx}" y="${q[1] + dy}" font-size="12">${lab}</text>`;
+    s += tick(P(a, 0, 0), a, -14, 4) + tick(P(0, b, 0), b, -3, 16) + tick(P(0, 0, c), c, -14, 4);
+    const pp = P(a, b, c);
+    s += `<circle cx="${pp[0]}" cy="${pp[1]}" r="5" fill="var(--primary)"/><text x="${pp[0] + 8}" y="${pp[1] - 6}" font-size="14" font-weight="700" stroke="var(--surface)" stroke-width="3" paint-order="stroke">P</text></svg>`;
+    return s;
+  }
+  const QUADS = [[1, 2, 2, 3], [2, 3, 6, 7], [1, 4, 8, 9], [4, 4, 7, 9], [2, 6, 9, 11], [6, 6, 7, 11], [3, 4, 12, 13], [2, 10, 11, 15], [1, 12, 12, 17], [8, 9, 12, 17]];
+  const WHERE = ['On the x-axis', 'On the y-axis', 'On the z-axis', 'In the xy-plane', 'In the xz-plane', 'In the yz-plane'];
+  A.skill({
+    id: 'int3.points-3d', title: 'Points in three dimensions',
+    learn: p(`Three-dimensional space has three axes at right angles: ${X}, ${Y} and ${Z}. In a drawing the ${X}-axis usually points toward you, the ${Y}-axis to the right and the ${Z}-axis up. <b>A point (${X}, ${Y}, ${Z}) is reached by moving ${X} along the ${X}-axis, then ${Y} parallel to the ${Y}-axis, then ${Z} up.</b> Drawing the box with one corner at the origin and the opposite corner at the point makes it easy to see.`) +
+      p(`<b>A coordinate of 0 puts the point in a coordinate plane:</b> ${X} = 0 is the ${Y}${Z}-plane, ${Y} = 0 the ${X}${Z}-plane, and ${Z} = 0 the ${X}${Y}-plane. With two zeros the point is on an axis.`) +
+      p(`The distance between two points comes from the Pythagorean theorem used twice: <b>${V('d')} = √(Δ${X}² + Δ${Y}² + Δ${Z}²)</b>.`) +
+      example('Example', `Find the distance from (1, 2, 3) to (3, 5, 9).${big('√(2² + 3² + 6²) = √(4 + 9 + 36) = √49')}The distance is <b>7</b>.`),
+    make(rng) {
+      const kind = rng.pick(['read', 'read', 'where', 'dist', 'dist']);
+      if (kind === 'read') {
+        const [a, b, c] = rng.sample([1, 2, 3, 4, 5, 6], 3);
+        const answer = pt3(a, b, c), wrong = [pt3(b, a, c), pt3(a, c, b), pt3(c, b, a), pt3(b, c, a)];
+        return { prompt: `What are the coordinates of point ${V('P')}? The dashed box runs from the origin to ${V('P')}.${box3d(a, b, c)}`, type: 'choice', choices: options(answer, wrong), answer, params: { kind, a, b, c },
+          hints: [`The ${X}-axis comes toward you, the ${Y}-axis goes right and the ${Z}-axis goes up.`, `The box meets the ${X}-axis at ${a}, the ${Y}-axis at ${b} and the ${Z}-axis at ${c}.`, `${V('P')} is <b>${answer}</b>; coordinates are always written in the order (${X}, ${Y}, ${Z}).`] };
+      }
+      if (kind === 'where') {
+        const w = rng.int(0, 5), c = [rng.nz(-7, 7), rng.nz(-7, 7), rng.nz(-7, 7)];
+        if (w < 3) [0, 1, 2].forEach(i => { if (i !== w) c[i] = 0; }); else c[5 - w] = 0;      // planes xy, xz, yz have z, y, x = 0
+        const contains = w < 3 ? [3, 4, 5].filter(pl => WHERE[pl].includes('xyz'[w])) : [];       // a point on an axis is also in the two planes through it
+        const pool = rng.shuffle([0, 1, 2, 3, 4, 5].filter(i => i !== w && !contains.includes(i))).slice(0, 3);
+        const answer = WHERE[w];
+        return { prompt: `Where is the point ${pt3(...c)}?`, type: 'choice', choices: [answer].concat(pool.map(i => WHERE[i])), answer, params: { kind, c },
+          hints: [`Look for the coordinates that are 0. Each 0 means the point has not moved in that direction.`, w < 3 ? `Two coordinates are 0, so the point only moves along the ${'xyz'[w]}-axis.` : `Only ${'xyz'[5 - w]} = 0, so the point stays in the plane of the other two axes.`, `The point is <b>${answer.charAt(0).toLowerCase() + answer.slice(1)}</b>.`] };
+      }
+      const q = rng.pick(QUADS), d = rng.shuffle(q.slice(0, 3)).map(t => t * rng.sign());
+      const p1 = [rng.int(-5, 5), rng.int(-5, 5), rng.int(-5, 5)], p2 = p1.map((t, i) => t + d[i]);
+      return { prompt: `Find the distance between ${pt3(...p1)} and ${pt3(...p2)}.`, type: 'number', answer: q[3], params: { kind, p1, p2 },
+        hints: [`Find the change in each coordinate: Δ${X} = ${N(d[0])}, Δ${Y} = ${N(d[1])}, Δ${Z} = ${N(d[2])}.`, `${V('d')} = √(${d.map(t => `${pw(t)}²`).join(' + ')}) = √(${d.map(t => t * t).join(' + ')}) = √${q[3] * q[3]}.`, `The distance is <b>${q[3]}</b>.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'read') return q.answer === pt3(P.a, P.b, P.c);
+      if (P.kind === 'dist') return close(Math.hypot(...P.p1.map((t, i) => t - P.p2[i])), q.answer);
+      const zeros = P.c.map(t => t === 0);
+      const want = zeros.filter(Boolean).length === 2 ? WHERE[zeros.indexOf(false)] : WHERE[{ 2: 3, 1: 4, 0: 5 }[zeros.indexOf(true)]];
+      // no other option may also be true: a point on an axis also lies in the two planes through that axis
+      const truths = q.choices.filter(ch => { const i = WHERE.indexOf(ch); return i < 3 ? zeros.filter((z, j) => j !== i).every(Boolean) : zeros[5 - i]; });
+      return q.answer === want && truths.length === 1;
+    },
+  });
+
+  /** "2x − 3y + z = 12" */
+  const eq3 = (a, b, c, d) => {
+    let s = '';
+    [[a, X], [b, Y], [c, Z]].forEach(([k, v]) => { if (!k) return; const t = `${Math.abs(k) === 1 ? '' : N(Math.abs(k))}${v}`; s += s ? ` ${k < 0 ? '−' : '+'} ${t}` : `${k < 0 ? '−' : ''}${t}`; });
+    return `${s} = ${N(d)}`;
+  };
+  const lcm = (a, b) => Math.abs(a * b) / M.gcd(a, b);
+  /** "2(3) − 4(−1) + 5z": a plane's left side with x and y filled in */
+  const sub3 = (a, b, c, x, y, zTxt) => `${N(a)}(${N(x)}) ${b < 0 ? '−' : '+'} ${N(Math.abs(b))}(${N(y)}) ${c < 0 ? '−' : '+'} ${Math.abs(c) === 1 && zTxt === Z ? '' : N(Math.abs(c))}${zTxt}`;
+  A.skill({
+    id: 'int3.plane-intercepts', title: 'Planes in three dimensions',
+    learn: p(`An equation ${V('a')}${X} + ${V('b')}${Y} + ${V('c')}${Z} = ${V('d')} with all three variables graphs as a <b>plane</b>. A point lies on the plane when its coordinates make the equation true.`) +
+      p(`<b>To sketch the plane, find where it crosses each axis.</b> On the ${X}-axis, ${Y} = ${Z} = 0, so the ${X}-intercept is ${F(V('d'), V('a'))}; in the same way the ${Y}-intercept is ${F(V('d'), V('b'))} and the ${Z}-intercept is ${F(V('d'), V('c'))}. Join the three intercepts to draw a triangle of the plane.`) +
+      p(`To find a missing coordinate of a point on the plane, substitute the two you know and solve for the third.`) +
+      example('Example', `${big(eq3(2, 3, 6, 12))}Set ${Y} = ${Z} = 0: 2${X} = 12, so the ${X}-intercept is <b>6</b>. Likewise the ${Y}-intercept is 4 and the ${Z}-intercept is 2.`),
+    make(rng) {
+      const kind = rng.pick(['intercept', 'intercept', 'missing', 'onplane', 'equation']);
+      if (kind === 'intercept' || kind === 'equation') {
+        const ints = rng.sample([1, 2, 3, 4, 6, 12], 3).map(t => t * rng.sign()), L = ints.reduce((m, t) => lcm(m, Math.abs(t)), 1);
+        const [a, b, c] = ints.map(t => L / t);
+        if (kind === 'equation') {
+          const answer = eq3(a, b, c, L), wrong = [eq3(...ints, L), eq3(a, b, c, 1), eq3(-a, b, c, L), eq3(a, -b, -c, L)];
+          return { prompt: `Which equation’s plane crosses the axes at ${pt3(ints[0], 0, 0)}, ${pt3(0, ints[1], 0)} and ${pt3(0, 0, ints[2])}?`, type: 'choice', choices: options(answer, wrong), answer, params: { kind, ints, opts: [[a, b, c, L], [...ints, L], [a, b, c, 1], [-a, b, c, L], [a, -b, -c, L]] },
+            hints: [`Test each equation by putting in an intercept: ${pt3(ints[0], 0, 0)} needs the ${X}-coefficient times ${N(ints[0])} to equal the right side.`, `${F(`${X}`, pw(ints[0]))} + ${F(Y, pw(ints[1]))} + ${F(Z, pw(ints[2]))} = 1 has those intercepts; multiply by ${L} to clear the fractions.`, `<b>${answer}</b>`] };
+        }
+        const ask = rng.int(0, 2), name = 'xyz'[ask], coef = [a, b, c][ask];
+        return { prompt: `Find the ${name}-intercept of the plane.${big(eq3(a, b, c, L))}`, type: 'number', answer: ints[ask], params: { kind, a, b, c, d: L, ask },
+          hints: [`On the ${name}-axis the other two coordinates are 0.`, coef === 1 ? `So the equation becomes ${V(name)} = ${L}.` : `So ${M.term(coef, name)} = ${L}, and ${V(name)} = ${L} ÷ ${pw(coef)}.`, `The ${name}-intercept is <b>${N(ints[ask])}</b>, the point ${pt3(...[0, 1, 2].map(i => i === ask ? ints[ask] : 0))}.`] };
+      }
+      const a = rng.nz(-4, 4), b = rng.nz(-4, 4), c = rng.nz(-4, 4), pt = [rng.int(-5, 5), rng.int(-5, 5), rng.int(-5, 5)], d = a * pt[0] + b * pt[1] + c * pt[2];
+      if (kind === 'missing') {
+        return { prompt: `The point (${N(pt[0])}, ${N(pt[1])}, ${Z}) lies on the plane below. Find ${Z}.${big(eq3(a, b, c, d))}`, type: 'number', answer: pt[2], params: { kind, a, b, c, d, x: pt[0], y: pt[1] },
+          hints: [`Substitute ${X} = ${N(pt[0])} and ${Y} = ${N(pt[1])}: ${sub3(a, b, c, pt[0], pt[1], Z)} = ${N(d)}.`, `${N(a * pt[0] + b * pt[1])} + ${M.term(c, 'z')} = ${N(d)}, so ${M.term(c, 'z')} = ${N(d - a * pt[0] - b * pt[1])}.`.replace('+ −', '− '), `${Z} = <b>${N(pt[2])}</b>.`] };
+      }
+      const cands = [[pt[0] + 1, pt[1], pt[2]], [pt[0], pt[1] - 1, pt[2]], [pt[1], pt[0], pt[2]], [pt[0], pt[1], -pt[2]], [-pt[0], -pt[1], -pt[2]]].filter(p3 => a * p3[0] + b * p3[1] + c * p3[2] !== d);
+      const seenP = new Set([pt3(...pt)]), wrong = rng.shuffle(cands).filter(p3 => !seenP.has(pt3(...p3)) && seenP.add(pt3(...p3))).slice(0, 3);
+      if (wrong.length < 3) return this.make(rng);
+      const answer = pt3(...pt);
+      return { prompt: `Which point lies on this plane?${big(eq3(a, b, c, d))}`, type: 'choice', choices: [answer].concat(wrong.map(p3 => pt3(...p3))), answer, params: { kind, a, b, c, d, pts: [pt].concat(wrong) },
+        hints: ['Substitute each point into the left side and see which one gives the right side.', `For the right point, ${sub3(a, b, c, pt[0], pt[1], `(${N(pt[2])})`)} = ${N(d)}. The other points give different totals.`, `<b>${answer}</b> lies on the plane.`] };
+    },
+    verify(q) {
+      const P = q.params;
+      if (P.kind === 'intercept') { const pt = [0, 0, 0]; pt[P.ask] = q.answer; return P.a * pt[0] + P.b * pt[1] + P.c * pt[2] === P.d; }
+      if (P.kind === 'missing') return P.a * P.x + P.b * P.y + P.c * q.answer === P.d;
+      if (P.kind === 'onplane') { const on = P.pts.filter(([x, y, z]) => P.a * x + P.b * y + P.c * z === P.d); return on.length === 1 && q.answer === pt3(...on[0]); }
+      // the equation must pass through all three intercept points; only the right option does
+      const hits = P.opts.filter(([a, b, c, d]) => a * P.ints[0] === d && b * P.ints[1] === d && c * P.ints[2] === d);
+      return hits.length === 1 && q.answer === eq3(...hits[0]);
+    },
+  });
+
+  const det3 = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  /** "(2) − 3(1)": how to combine equation j with equation 1 to remove z */
+  const combo = (j, m) => m === 0 ? `(${j}) already has no ${Z}` : `(${j}) ${m > 0 ? '−' : '+'} ${Math.abs(m) === 1 ? '' : Math.abs(m)}(1)`;
+  A.skill({
+    id: 'int3.three-variable-systems', title: 'Systems of three equations in three variables',
+    learn: p(`A system of three linear equations in ${X}, ${Y} and ${Z} describes three planes; usually they meet at a single point (${X}, ${Y}, ${Z}). <b>To solve it, use elimination to remove one variable twice</b>, leaving two equations in two variables.`) +
+      p(`<b>Step 1:</b> pick a variable, say ${Z}, and combine equations (1) and (2) to cancel it, then (1) and (3). <b>Step 2:</b> solve the two new equations for ${X} and ${Y}. <b>Step 3:</b> substitute back into one of the original equations to find ${Z}. Check the answer in all three equations.`) +
+      example('Example', `${big(`${X} + ${Y} + ${Z} = 6<br>2${X} − ${Y} + ${Z} = 3<br>${X} + 2${Y} − ${Z} = 2`)}(2) − (1) gives ${X} − 2${Y} = −3, and (3) + (1) gives 2${X} + 3${Y} = 8. Solving, ${X} = 1 and ${Y} = 2, then (1) gives ${Z} = 3: <b>(1, 2, 3)</b>.`),
+    make(rng) {
+      let rows, sol, D, tries = 0;
+      do {
+        sol = [rng.int(-5, 5), rng.int(-5, 5), rng.int(-5, 5)];
+        rows = [[rng.int(-3, 3), rng.int(-3, 3), rng.pick([1, -1])], [rng.int(-3, 3), rng.int(-3, 3), rng.int(-3, 3)], [rng.int(-3, 3), rng.int(-3, 3), rng.int(-3, 3)]];
+        D = det3(rows); tries++;
+      } while ((D === 0 || rows.some(r => r.filter(Boolean).length < 2)) && tries < 100);
+      const ds = rows.map(r => r[0] * sol[0] + r[1] * sol[1] + r[2] * sol[2]);
+      const c1 = rows[0][2], red = [1, 2].map(j => { const m = rows[j][2] * c1; return { j: j + 1, m, u: rows[j][0] - m * rows[0][0], v: rows[j][1] - m * rows[0][1], w: ds[j] - m * ds[0] }; });
+      const two = red.map(e => eq3(e.u, e.v, 0, e.w)).join(' and ');
+      const sys = rows.map((r, i) => `${eq3(r[0], r[1], r[2], ds[i])} &nbsp; (${i + 1})`).join('<br>');
+      const hints = [`Eliminate ${Z}: ${red.map(e => combo(e.j, e.m)).join(', and ')}. That leaves ${two}.`,
+        `Solve those two equations: ${X} = ${N(sol[0])} and ${Y} = ${N(sol[1])}.`, `Substitute into (1): ${N(rows[0][0] * sol[0] + rows[0][1] * sol[1])} ${c1 > 0 ? '+' : '−'} ${Z} = ${N(ds[0])}, so ${Z} = ${N(sol[2])}.`];
+      if (rng.chance(0.4)) {
+        const answer = pt3(...sol), [x, y, z] = sol;
+        const wrong = [pt3(y, x, z), pt3(x, z, y), pt3(-x, y, z), pt3(x, -y, z), pt3(x, y, -z), pt3(z, y, x)];
+        hints.push(`The solution is <b>${answer}</b>.`);
+        return { prompt: `Solve the system.${big(sys)}`, type: 'choice', choices: options(answer, wrong.filter(w => key(w) !== key(answer))), answer, hints, params: { kind: 'triple', rows, ds } };
+      }
+      const ask = rng.int(0, 2), ans = sol[ask];
+      hints.push(`So (${X}, ${Y}, ${Z}) = ${pt3(...sol)}, and ${'xyz'[ask]} = <b>${N(ans)}</b>.`);
+      return { prompt: `Solve the system, and enter the value of ${V('xyz'[ask])}.${big(sys)}`, type: 'number', answer: ans, hints, params: { kind: 'one', rows, ds, ask } };
+    },
+    verify(q) {
+      const P = q.params, D = det3(P.rows);
+      if (!D) return 'the system has no single solution';
+      // Cramer’s rule: replace one column by the right-hand sides
+      const sol = [0, 1, 2].map(i => det3(P.rows.map((r, j) => r.map((t, k) => k === i ? P.ds[j] : t))) / D);
+      return P.kind === 'triple' ? q.answer === pt3(...sol) : close(sol[P.ask], q.answer);
+    },
+  });
+
+  A.skill({
+    id: 'int3.curve-fitting', title: 'Fitting a parabola through three points',
+    learn: p(`Three points with different ${X}-values fix exactly one parabola ${Y} = ${V('a')}${M.sup(X, 2)} + ${V('b')}${X} + ${V('c')}. <b>Substitute each point to get three equations in ${V('a')}, ${V('b')} and ${V('c')}</b>, then solve that system.`) +
+      p(`Subtracting one equation from another removes ${V('c')}. Do it twice, then subtract again to find ${V('a')}. Work back to ${V('b')} and ${V('c')}. If one point has ${X} = 0, it gives ${V('c')} straight away.`) +
+      example('Example', `Through (0, 3), (1, 4) and (2, 9):${big(`${V('c')} = 3, &nbsp; ${V('a')} + ${V('b')} + 3 = 4, &nbsp; 4${V('a')} + 2${V('b')} + 3 = 9`)}So ${V('a')} + ${V('b')} = 1 and 2${V('a')} + ${V('b')} = 3, giving ${V('a')} = 2, ${V('b')} = −1: <b>${Y} = 2${M.sup(X, 2)} − ${X} + 3</b>.`),
+    make(rng) {
+      const a = rng.nz(-3, 3), b = rng.int(-6, 6), c = rng.int(-9, 9), xs = rng.sample([-3, -2, -1, 0, 1, 2, 3, 4], 3).sort((u, v) => u - v);
+      const ys = xs.map(x => a * x * x + b * x + c);
+      const s12 = (ys[1] - ys[0]) / (xs[1] - xs[0]), s23 = (ys[2] - ys[1]) / (xs[2] - xs[1]);
+      const ptsTxt = M.list(xs.map((x, i) => M.pt(x, ys[i])));
+      const abc = x => x === 0 ? V('c') : `${M.term(x * x, 'a')} ${x < 0 ? '−' : '+'} ${M.term(Math.abs(x), 'b')} + ${V('c')}`, ab = t => t === 0 ? V('b') : `${M.term(t, 'a')} + ${V('b')}`;
+      const hints = [`Substitute each point into ${Y} = ${V('a')}${M.sup(X, 2)} + ${V('b')}${X} + ${V('c')}: ${xs.map((x, i) => `${abc(x)} = ${N(ys[i])}`).join('; ')}.`,
+        `Subtract neighbouring equations to remove ${V('c')}, and divide by the change in ${X}: ${ab(xs[0] + xs[1])} = ${N(s12)} and ${ab(xs[1] + xs[2])} = ${N(s23)}.`,
+        `Subtract these: ${M.term(xs[2] - xs[0], 'a')} = ${N(s23 - s12)}, so ${V('a')} = ${N(a)}. Then ${V('b')} = ${N(s12)} − ${pw(a)}(${N(xs[0] + xs[1])}) = ${N(b)}, and ${V('c')} = ${N(c)}.`];
+      if (rng.chance(0.35)) {
+        const answer = `${Y} = ${M.poly([a, b, c])}`, wrong = [`${Y} = ${M.poly([a, -b, c])}`, `${Y} = ${M.poly([-a, b, c])}`, `${Y} = ${M.poly([c, b, a])}`, `${Y} = ${M.poly([a, b, -c])}`];
+        hints.push(`<b>${answer}</b>`);
+        return { prompt: `Which parabola passes through ${ptsTxt}?`, type: 'choice', choices: options(answer, wrong.filter(w => key(w) !== key(answer))), answer, hints, params: { kind: 'eq', xs, ys, a, b, c } };
+      }
+      const ask = rng.int(0, 2), ans = [a, b, c][ask];
+      hints.push(`So ${Y} = ${M.poly([a, b, c])}, and ${V('abc'[ask])} = <b>${N(ans)}</b>.`);
+      return { prompt: `The parabola ${Y} = ${V('a')}${M.sup(X, 2)} + ${V('b')}${X} + ${V('c')} passes through ${ptsTxt}. Find ${V('abc'[ask])}.`, type: 'number', answer: ans, hints, params: { kind: 'one', xs, ys, ask } };
+    },
+    verify(q) {
+      const { xs, ys } = q.params;
+      // Lagrange’s form: the coefficients of the one quadratic through the three points
+      let A2 = 0, B1 = 0, C0 = 0;
+      for (let i = 0; i < 3; i++) {
+        const [j, k] = [0, 1, 2].filter(t => t !== i), den = (xs[i] - xs[j]) * (xs[i] - xs[k]), w = ys[i] / den;
+        A2 += w; B1 += -w * (xs[j] + xs[k]); C0 += w * xs[j] * xs[k];
+      }
+      const co = [A2, B1, C0].map(t => M.round(t, 9));
+      if (q.params.kind === 'eq') return q.answer === `${Y} = ${M.poly(co)}`;
+      return close(co[q.params.ask], q.answer);
     },
   });
 })();
