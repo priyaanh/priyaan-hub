@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-/* Runs a page in headless Chrome over the DevTools protocol and prints its console output, in REAL time.
-   Needed for tests/offline.html: --virtual-time-budget fast-forwards timers but service-worker install and
-   cache writes are real work, so the usual --dump-dom run exits before any of it happens.
-   Usage: node tests/cdp.js <url> [maxMs] [stopWhenLineContains] */
+/* Runs a page in headless Chrome over the DevTools protocol and prints its console output in REAL time.
+   (--virtual-time-budget fast-forwards timers, so suites that wait on real work end early under it.)
+   Usage: node tests/cdp.js <url> [maxMs] [stopWhenLineContains] [--dark]
+   NB: never pass --user-data-dir to Chrome here; it makes headless Chrome hang on macOS. */
 'use strict';
 const { spawn } = require('child_process');
 const url = process.argv[2];

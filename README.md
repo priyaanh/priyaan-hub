@@ -1,170 +1,76 @@
-# Priyaan's Hub
+# Procademy
 
-Sixteen small practice apps in one folder, with no build step. Open `index.html` in a browser, or visit the GitHub Pages site once it is enabled.
+Math for every grade, Kindergarten to Precalculus: a Khan Academy-style practice site in one folder,
+with no build step. Open `index.html` in a browser,
+or visit the GitHub Pages site. Everything is saved in the browser; nothing is sent anywhere.
 
-| App | File | What it does |
+**Courses → units → skills.** Every skill has a short *Learn* article and endless *Practice*: a set of
+seven questions with step-by-step hints, checked on the page. Answers can be typed (numbers, fractions,
+words) or picked from choices whose wrong options are real mistakes.
+
+**Mastery levels.** Each skill is *Not started*, *Attempted*, *Familiar*, *Proficient* or *Mastered*,
+worth 0 / 0 / 50 / 80 / 100 mastery points:
+
+| What you do | What happens |
+| --- | --- |
+| Practice set, all 7 right first try without hints | up to **Proficient** |
+| Practice set, at least 5 of 7 | up to **Familiar** |
+| Practice set, fewer | **Attempted** (practice never lowers a level) |
+| Unit test, course challenge, mastery challenge | each skill goes **up one** level when right (**Mastered** needs one of these) or **down one** when wrong, never below Attempted |
+
+A *unit test* asks one question per skill in the unit. A *course challenge* asks up to 30 across every
+unit. A *mastery challenge* asks six questions on the skills you are Familiar or Proficient in, to push
+them higher. *Energy points* reward every right answer, finished set and level-up; a *streak* counts the
+days in a row with practice.
+
+**Review.** Every question missed anywhere is rebuilt from its seed and collected under Progress → Review.
+Get it right and it comes off the list. Nothing is stored but (skill, seed).
+
+**Courses** (`content/`, one file each, in grade order):
+
+| Elementary | Middle school | High school |
 | --- | --- | --- |
-| 🎹 Piano Practice | `piano.html` | Log daily practice by piece, track minutes, keep a streak. Trinity Grade 4 (2021–2023) pieces preloaded. Prints a month's practice log for the teacher: minutes per piece per day, weekly totals, recent notes, and lines to sign. Has a metronome too: 40–208 BPM with the Italian tempo name, a beat light, beats per bar, and tap tempo. |
-| 🏕️ Merit Badges | `badges.html` | Requirement checklists for Kayaking, Canoeing, Photography, and Fingerprinting, plus a catalog of all 139 merit badges by category with status and earned dates, a Trail to Eagle tracker (14 required + 7 electives), and a workbook PDF for each (offline after one download). |
-| 🧮 Math Worksheets | `math.html` | Printable Integrated Math 1 worksheets with answer keys, from 11 topic generators covering CPM chapters 1-9. Pick topics, count, level and seed; practice on screen with instant checking, or print. The same generator runs from the command line. |
-| 🗨️ Ask for Practice | `ask.html` | Say what you want to practise in ordinary words — "10 questions on slope", "Spanish ser vs estar, hard", "lesson 1.1.1", "grade 7 percents", "moon phases" — and it asks you in a thread, one multiple-choice question at a time, says whether you were right and explains why. It reads the request on the device and draws the questions from every generator in the repo, so it works offline and costs nothing. The wrong options are real answers to other questions of the same topic and the same shape. |
-| 📝 Lesson Quizzes | `quizzes.html` | A separate quiz for each CPM Integrated II lesson, chapters 1 and 2 — 1.1.1 to 1.3.4 and 2.1.1 to 2.3.3: polygons, predictions from data, tile patterns, area models, describing graphs, angle pairs, transversals and triangles, then similarity, the conditions for similar and congruent triangles, flowchart proofs, and quadrilaterals on a coordinate grid. 348 entries, many with drawn diagrams, of which 90 are templates that make fresh numbers every time, so a second attempt is a different quiz rather than the same one again; 10 per attempt on screen, or print any lesson as a paper quiz with its diagrams and an answer key. |
-| 💬 Spanish Practice | `spanish.html` | Endless Spanish, asked and marked on the page: the present tense and the preterite, ser vs estar, stem changers, reflexive verbs, tener, ir and the al/del contractions, gustar, saber vs conocer, articles and agreement, possessives, question words, numbers, telling time, the weather, and vocabulary both ways. A round is an ordinary seeded worksheet asked one question at a time, so when it runs out another starts. Accents are not needed to be marked right, and there are accent keys for a keyboard without them. A printable set is offered as an extra. |
-| 🔬 Science | `science.js`, asked in `ask.html` | Eighteen topics for grades 4 to 8: moon phases, the solar system, seasons, states of matter, the water cycle, energy, forces and motion, cells, the human body, heredity, food chains, atoms and mixtures, electricity and magnets, simple machines, light and sound, rocks, plate tectonics, and working scientifically. Each question carries its own options, because the wrong answers to "which phase comes next" have to be other phases. |
-| 📚 Books & Help | `books.html` | The CPM Integrated I, II and III books gathered in one place: homework help for every problem, the eBook sign-in, and the chapter guides. The books are CPM's, so nothing is copied here — every link opens on cpm.org, where CPM publishes it. |
-| 📖 Hindi Flashcards | `hindi.html` | About 400 words from every chapter of NCERT Malhar (मल्हार) Class 6 and Class 7, in Devanagari with transliteration, meaning, and a Hindi hint. Flip flashcards in either direction, rate them Again / Got it for a Leitner spaced review (due cards come back after 1, 3, 7, 21 days), take a 10-question quiz per chapter, add your own words, print a two-column word list, or print cut-out flashcards, nine to a page with the backs already mirrored for double-sided printing. |
-| 📅 Weekly Plan | `schedule.html` | One week of piano, dance, Scouts, math, and Hindi with checkboxes per day, plus any Google Tasks that are due or overdue. |
-| 🐍 Python Practice | `python.html` | Short rounds of "what does this print?" on eleven topics: types, strings, lists, loops, if/elif/else, functions, dictionaries, f-strings, list comprehensions, tuples and sets, and errors. A quick reference sits under the topic picker. Multiple choice or typed, with an explanation after each one, a review of what you missed, and history. Questions are generated on the device. |
-| ✏️ Make Practice | `ai.html` | **By grade:** pick Grade 4, 5, 6, 7 or 8, or Integrated Math 1, 2 or 3, choose topics, and get a printable worksheet with an answer key immediately - generated on the device, no key, no internet. Grades 6 to 8 follow the CPM Core Connections courses, and Integrated 2 and 3 follow Integrated II and III. **From a PDF:** turn a chapter or study guide into fresh problems or a quiz with the free ChatGPT (copy a prompt, paste the reply back) or, with an API key, with Claude or ChatGPT directly. |
-| 👤 Profile | `profile.html` | Your name, the colour theme, and a plain list of everything the hub has saved — what each app holds, how much space it takes, and a way to forget any one of them. Save or load a copy as a file, or connect a private GitHub gist so a second device can see the same hub. |
-| 🎯 Review Mistakes | `review.html` | Every question missed anywhere on the site — lesson quizzes, maths worksheets, Python rounds, generated practice sets — collected in one place and asked again. Get one right and it comes off the list; miss it again later and it comes back. Nothing is stored but the list of what has since been put right: each question is rebuilt from the seed it was generated with. |
-| 📈 Progress | `progress.html` | Every app's history in one picture: an activity calendar going back up to a year, accuracy over time across quizzes, worksheets and Python rounds, piano minutes by week against the goal, Hindi words split across the five review boxes, merit badges by status, and records like the longest streak and the best round. Reads the other apps and writes nothing back. |
-| 🗓️ Calendar &amp; Tasks | `calendar.html` | Google Calendar embedded (week / month / agenda) for as many Google accounts as you add, one-tap "add event" buttons for each activity, and Google Tasks: tick items off, add tasks with due dates, grouped into Overdue / Today / Coming up. |
+| Kindergarten (`k.js`) | 6th grade (`g6.js`) | Algebra 1 (`alg1.js`) |
+| 1st grade (`g1.js`) | 7th grade (`math7.js`) | Geometry (`geo.js`) |
+| 2nd grade (`g2.js`) | 8th grade (`math8.js`) | Algebra 2 (`alg2.js`) |
+| 3rd grade (`g3.js`) | | Precalculus (`precalc.js`) |
+| 4th grade (`g4.js`) | | Integrated Math 1, 2, 3 (`int1.js`, `int2.js`, `int3.js`) |
+| 5th grade (`g5.js`) | | |
 
-## Whose hub it is
+A new learner picks a grade on the home page; a course they add or start then stays on it. Adding a
+course means adding a file and a `<script>` tag (and a line in `sw.js`); see [CONTENT.md](CONTENT.md).
 
-No name is written into any page. They all say **Practice Hub**, and whatever name is saved in the
-browser replaces it: the heading on the hub, the tab title, the footer of every printed worksheet and
-quiz, the heading on the piano practice log, and the name the “Make Practice” prompt uses. The hub asks
-once on first use and never again; **Profile** changes it later. With no name set, everything still
-reads sensibly — the greeting is just “Good morning 👋” and the printed name line is left blank to fill
-in by hand.
+## How it is built
 
-## Keeping it on more than one device
+| File | What it does |
+| --- | --- |
+| `index.html`, `app.css` | the shell and the only stylesheet; light and dark from tokens at the top |
+| `lib/rng.js` | seeded random numbers: a question is a pure function of (skill id, seed) |
+| `lib/math.js` | `M.*` helpers that turn numbers into HTML: fractions, powers, roots, polynomials |
+| `lib/content.js` | the registry (`ACADEMY.course`, `ACADEMY.skill`), question building and validation, answer checking |
+| `lib/store.js` | one localStorage key, `procademy.v1`; export and import |
+| `lib/engine.js` | practice sessions and every mastery and points rule |
+| `lib/views.js` | every screen, including the exercise player |
+| `lib/app.js` | hash routing (`#/course/math-7`), theme, search |
+| `sw.js` | offline support when served over http(s) |
 
-Everything lives in the browser, so a second device starts empty and a cleared browser starts over.
-**Profile** has two answers to that.
-
-**A file.** *Save a copy* downloads everything as JSON; *Load a copy* puts it back. Nothing leaves the
-device.
-
-**A private gist.** Connecting one gives the hub somewhere of its own to keep a copy. It needs a GitHub
-fine-grained token with **Gists: read and write** and nothing else; the page walks through making one.
-Press *Save to the gist* here, then *Load from the gist* on the other device. The gist is private, it
-costs nothing, and the data stays in an account you already own. The token is stored the way an API key
-is — on that device only, left out of every backup, and never written into the gist itself. One rule in
-`shared.js` decides what counts as a secret, so the backup file, the gist and the profile page can't
-disagree about it.
-
-## Themes
-
-The palette button in the top bar of every page changes the colours for the whole site: **Match my
-device** (the default, which keeps following the device so a phone that dims at sunset dims the hub
-too), **Light**, **Slate**, **Paper**, **Dark**, **Ink**, **Midnight**, **Dusk**, **Forest** and
-**High contrast**. The choice is saved in the browser and applied before the page paints, so switching
-pages never flashes the wrong colour.
-
-Adding a theme means adding one block to `shared.css`. Each one sets the six surface colours and five
-mix percentages — coloured text needs more contrast than a coloured fill, so each role is mixed toward
-the page's ink by its own amount. Every percentage was measured against all fifteen app accents on both
-surface colours: the strongest value that still clears WCAG AA, then a little back. `./tests/run.sh`
-re-measures every theme on every page, so changing one without re-measuring fails the suite.
-
-## How it works
-
-The hub page opens on a **Today** panel computed from the other apps' saved data: piano minutes against the daily goal, how much of today's plan is ticked off, today's calendar events with the next one named, Google Tasks that are due or overdue, Hindi words waiting for review, today's worksheet and quiz scores, merit badge requirements signed off this week, and any practice streaks. Keys **1**–**9** and **0** open the apps, and **?** names them. It only shows tiles that have something to say, and one line names the next unchecked thing on today's plan. A streak tile counts every day that any app recorded something and opens the Progress page. Underneath, a seven-day strip shows which days had piano, plan, maths and Hindi activity, with a count out of seven.
-
-**Search.** The box under the greeting searches the whole site: all 139 merit badges, every one of the 408 Hindi words in either script or by its English meaning, each CPM lesson, the Python topics, and the worksheet generators for Integrated Math 1 and Grades 6-8. Press **/** to jump to it, arrow keys to move, Enter to open; results link straight to the right card, chapter or lesson. The index is a generated file, so the hub itself stays small:
-
-```bash
-node build_search.js        # rewrites search_index.js after any content change
-```
-
-
-- Every page is a single HTML file using `shared.css` and `shared.js`. No frameworks, no network requests, no build. The palette button in the top bar is built by `shared.js`, so every page gets it without each one having to remember.
-- Question text is a little HTML — `<sup>` for exponents, `<br>` between the lines of a system, `&lt;` for a symbol. `PH.safeHTML` escapes everything and then re-allows exactly that short list, so the formatting shows but nothing with an attribute can get through; `PH.plainText` gives the same text with the markup taken out, for places only plain text fits.
-- Progress is saved in the browser's localStorage under keys named `ph.<app>.v1`. Each app also writes a short `summary` that the hub page shows on its card.
-- Data lives only in the browser you use. Use **Back up all data** on the hub page now and then, and **Restore** on a new device. The footer says how long it has been, and nags in amber past a month. API keys are deliberately left out of backups, so add those again per device.
-- If the browser ever refuses to save (a full quota, or a private window), the page says so instead of losing the work quietly.
-- Works when opened directly from disk (`file://`) and when hosted on GitHub Pages.
-
-## Math worksheets from the command line
-
-```bash
-node make_worksheet.js --list
-node make_worksheet.js --topics linear,systems,exponents --count 20 --difficulty 2 --seed 42 --out worksheets/
-node test_im1.js        # self-test of every topic generator
-```
-
-Output is a self-contained HTML file in `worksheets/` laid out like a real worksheet - numbered problems in two columns with work boxes, and the answer key on its own page. Open it and print.
-
-## Making practice
-
-Two ways, on one page.
-
-**By grade (the default).** `grades.js` holds 24 problem generators — eight each for Grade 6, 7 and 8 — covering integers and fractions, decimals, ratios and percents, expressions and equations, area and volume, statistics, proportional reasoning, probability, circles and angles, exponents and scientific notation, slope, systems, Pythagoras, transformations and functions. Pick a grade, narrow the topics if you want, choose how many and how hard, and the worksheet appears at once with its answer key. **Week's packet** prints five different sheets, one per school day, with a single answer key at the back. Any worksheet can also be answered on screen, and whatever you get wrong can be turned into a shorter set to try again. Nothing leaves the device, and the seed makes any sheet reproducible. `node test_grades.js` generates 600 problems per topic per level and checks the answers computationally: 109,213 checks.
-
-## Python questions
-
-`pyquiz.js` writes each snippet around values it has already chosen, so the answer is known without running
-anything. `node test_pyquiz.js` then checks that claim the only way that really counts: it executes every
-distinct snippet with `python3` in a fresh namespace and compares what Python actually prints (or raises)
-with the stated answer. 1,632 snippets, 41,527 checks.
-
-## Turning a PDF into practice
-
-`ai.html` sends a PDF (or a photo of a page) to Claude and asks for new problems that test the same skills, then shows them as a printable worksheet with an answer key or as an on-screen quiz. Everything it makes is saved in the browser, so old sets keep working offline.
-
-**Free ChatGPT (the default, no key, no cost).** The page writes the prompt for you: press **Copy prompt & open ChatGPT**, which copies it and opens ChatGPT in a new browser tab with the prompt already in its box. Attach the PDF there, send, then paste its whole reply back. (ChatGPT cannot be shown *inside* the page: chatgpt.com replies with `X-Frame-Options: SAMEORIGIN`, which forbids embedding, and a pop-up window gets blocked, so it opens as an ordinary tab. The hub's footer has the same 💬 ChatGPT link.) The page reads the JSON it returns - or, failing that, a plain numbered list - and builds the same worksheet. Nothing is sent anywhere by the hub itself in this mode.
-
-**With an API key (optional).** Pick **Claude API** or **ChatGPT API** instead and the page calls that service directly, so one press does the whole thing. Choose a model from the dropdown, which shows what each costs per million tokens. The key is entered once and kept in that browser's local storage only; keys are stored per service, so you can keep both. It is never committed, never included in an export, and never sent anywhere except to Anthropic. Get one at [console.anthropic.com](https://console.anthropic.com/), set a monthly spending limit, and expect a few cents per worksheet - the exact cost of each run is shown when it finishes. The API modes use a JSON schema (Claude's `output_config.format`, OpenAI's `text.format`) so questions always come back in a fixed shape, and **Another set** re-runs the same PDF for different numbers and contexts.
-
-## Google Calendar
-
-`calendar.html` embeds Google's own calendar view. **Several Google accounts can be added** (Priyaan, a parent, a troop or school calendar): each gets a label, a colour, and a show/hide toggle, and new events can be sent to whichever one you pick. A calendar shows up when the browser is signed in to an account that can see it, so the reliable way to combine accounts is to share the second calendar with the first (Google Calendar → Settings for my calendars → Share with specific people); the page has step-by-step instructions. The **Add to the calendar** buttons open Google Calendar's event form prefilled (piano practice, Scouts, math, Hindi, …). **Google Tasks** appears on the same page. Tasks has no public embed, so it needs the same one-time Google API client ID as the event list below it; once that is set up, one sign-in covers both, and ticking a task off in the hub updates Google. The last fetch is cached, so tasks still show (read-only) when offline. Listing events *inside* the hub needs that same free client ID; the page walks through the 5-minute setup (Google Cloud project → enable the Calendar API and the Tasks API → OAuth client with `https://priyaanh.github.io` as an authorized origin). No calendar data is stored in the repository or on any server; sign-in happens in the browser only.
-
-## Use it offline / add to the home screen
-
-The hosted site installs a small service worker (`sw.js`) the first time you open it. After that every page you have visited keeps working with no internet, and updates are picked up automatically the next time you are online. On a phone or iPad, open https://priyaanh.github.io/priyaan-hub/ and use **Share → Add to Home Screen** (iOS) or **Install app** (Android/Chrome) to get a 🚀 icon that opens the hub full-screen. Long-pressing that icon jumps straight to today's plan, piano practice, a new worksheet, or Hindi flashcards. `manifest.webmanifest` and the `icon-*.png` files describe the app; nothing about this runs when the folder is opened from disk.
-
-## Merit badge workbooks offline
-
-The badges page lists every merit badge with three links: **Workbook PDF** (the free study workbook from the U.S. Scouting Service Project), **Requirements** (current wording), and **Official** (Scouting America's page). To make the workbooks open with no internet, run once in this folder:
-
-```bash
-node fetch_workbooks.js          # downloads all 138 workbooks (~70 MB) into badges/pdf/
-node fetch_workbooks.js kayak    # just the badges whose name contains "kayak"
-```
-
-The page then shows **Workbook · offline** and opens the local file. The PDFs stay on your device: USSSP allows local Scouting use but not re-publishing, so `badges/pdf/*.pdf` is ignored by git and only an empty `manifest.js` is in the repository. Re-run the script when workbooks are updated.
+The name you give in Settings is used in the greeting and stays on the device. No name is written into
+any page.
 
 ## Tests
 
-```bash
+```
 ./tests/run.sh
 ```
 
-Loads every page in headless Chrome and fails on any console error, runs twenty-three browser suites (about 800
-checks) that drive the real pages with the network stubbed — including accessibility, phone layout, WCAG
-contrast in both light and dark, and the offline service worker — then runs the 142,148 maths-generator
-checks in `test_im1.js`, the 111,628 in `test_grades.js` and the 41,527 in `test_pyquiz.js`. See `tests/README.md`.
+runs three things in headless Chrome and node: the page loads without console errors on several routes;
+`tests/suite.html` drives the real app (mastery rules, the exercise player as a learner would use it,
+every route, every skill's article and a question, settings, search); and `tests/content.js` builds
+hundreds of questions per skill and checks structure, determinism, variety, that each answer passes the
+real checker, that choice questions have no giveaways, and each skill's own `verify()` re-derivation.
+`SEEDS=1500 ./tests/run.sh` checks more seeds.
 
-## Reviewing mistakes
+## History
 
-Every app that marks an answer now records *which* questions were wrong, not just how many. `review.html`
-gathers them and asks them again.
-
-Nothing is copied: each generator on this site is deterministic, so a saved `{seed, topics, difficulty,
-count}` plus an index is the whole question, and the page rebuilds it. Worksheet problems, Python snippets
-and the 139 fixed quiz questions come back exactly as they were. The 60 quiz entries that are templates
-rather than fixed questions come back as a sibling — the same skill with its own numbers, drawn from a seed
-fixed to that question so it is at least the same every time you see it.
-
-A lesson-quiz reference like `1.1.1:3` is turned back into a question by `cpm_int2_ch1.js`, which also holds
-the marking rules, so the quiz page and the review page can never disagree about whether `6 + 5x + x^2`
-answers `x^2 + 5x + 6`.
-
-A question is identified by what it *is*, not by the attempt it came from, so getting it right once clears
-it wherever it appeared, and missing it again on a later day puts it back. The only thing the page saves is
-that list of dates.
-
-## Editing the content
-
-- Piano pieces: edit the default list near the top of the script in `piano.html`, or add pieces in the app.
-- Badge requirements: the `BADGES` constant in `badges.html`. Custom badges can also be added in the app (the catalog's **＋ Checklist** button pre-fills the form). The list of all badges is `badges_catalog.js`, one badge per line.
-- Hindi vocabulary: the `CARDS` and `CHAPTERS` constants in `hindi_data.js`, one entry per line (`hi` Devanagari, `tr` transliteration, `en` meaning, `hint` Hindi gloss). A card's progress is keyed by chapter + `hi`, so renaming a word resets it. Extra words can also be added in the app under **My words**. Re-run `node build_search.js` afterwards so the hub can find them.
-- Weekly template: use **Edit plan** in the app, or change the default template in `schedule.html`.
-
-## Sources
-
-Piano piece titles come from the Trinity College London Piano Grade 4 2021–2023 book. Badge requirements are transcribed from the Scouting America merit badge pamphlets (Kayaking 2025, Canoeing 2024, Photography 2020, Fingerprinting). Hindi vocabulary is drawn from the NCERT Malhar textbooks. The books and pamphlets themselves are not included in this repository.
+Before this, the repository was a hub of sixteen separate practice apps. That version is kept at the
+git tag `hub-v1`.

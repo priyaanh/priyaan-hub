@@ -1,9 +1,3 @@
 .DS_Store
 node_modules/
 *.log
-# generated worksheets other than the checked-in sample
-worksheets/*
-!worksheets/sample_mixed_seed42.html
-!worksheets/.gitkeep
-# merit badge workbooks are downloaded per device (see fetch_workbooks.js), not committed
-badges/pdf/*.pdf

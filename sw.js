@@ -1,30 +1,11 @@
-/* Priyaan Hub service worker: makes the hosted site work offline.
-   Strategy: network first (so updates show as soon as you are online), falling back to the cached copy when offline.
-   Everything same-origin that has been visited is cached; the app shell below is cached up front on install. */
-const VERSION = 'ph-v15';
-const SHELL = [
-  './', 'index.html', 'shared.css', 'shared.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
-  'piano.html', 'badges.html', 'badges_catalog.js', 'badges/pdf/manifest.js', 'schedule.html',
-  'math.html', 'im1.js', 'spanish.html', 'spanish.js', 'ask.html', 'science.js', 'choices.js', 'hindi.html', 'hindi_data.js', 'quizzes.html', 'cpm_int2_ch1.js', 'cpm_int2_ch2.js', 'calendar.html', 'ai.html', 'grades.js', 'python.html', 'pyquiz.js', 'progress.html', 'review.html', 'profile.html', 'books.html', 'search_index.js'
-];
-self.addEventListener('install', event => {
-  event.waitUntil(caches.open(VERSION).then(cache =>
-    Promise.all(SHELL.map(url => cache.add(url).catch(() => null)))   // a page that does not exist yet is skipped, not fatal
-  ).then(() => self.skipWaiting()));
-});
-self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
-});
-self.addEventListener('fetch', event => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if (url.origin !== location.origin) return;                      // USSSP workbooks etc. are left alone
-  if (/\.pdf$/i.test(url.pathname)) return;                          // never cache big PDFs
-  event.respondWith(
-    fetch(req).then(res => {
-      if (res && res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
-      return res;
-    }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || (req.mode === 'navigate' ? caches.match('index.html') : undefined)))
-  );
+/* Offline support: network first, falling back to the last copy seen. Bump VERSION when files change shape. */
+const VERSION = 'procademy-v1';
+const SHELL = ['./', './index.html', './app.css', './icon.svg', './manifest.webmanifest',
+  './lib/rng.js', './lib/math.js', './lib/content.js', './lib/store.js', './lib/engine.js', './lib/views.js', './lib/app.js',
+  './content/k.js', './content/g1.js', './content/g2.js', './content/g3.js', './content/g4.js', './content/g5.js', './content/g6.js', './content/math7.js', './content/math8.js', './content/alg1.js', './content/geo.js', './content/alg2.js', './content/precalc.js', './content/int1.js', './content/int2.js', './content/int3.js'];
+self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
+  e.respondWith(fetch(e.request).then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); return res; }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html'))));
 });

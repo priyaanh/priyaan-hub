@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Procademy test suite</title>
+<link rel="stylesheet" href="../app.css">
+</head>
+<body>
+<header class="top"><div class="bar">
+  <a class="brand" href="#/"><span class="logo">✦</span><span class="word" data-brand>Procademy</span></a>
+  <nav class="nav"><a href="#/courses" data-nav="courses">Courses</a><a href="#/progress" data-nav="progress">Progress</a></nav>
+  <div class="search"><form id="search-form"><input id="search-input" type="search"></form></div>
+  <div class="stats" id="stats"></div>
+</div></header>
+<main id="main"></main>
+<div id="root" style="padding:16px"></div>
+<script src="../lib/rng.js"></script>
+<script src="../lib/math.js"></script>
+<script src="../lib/content.js"></script>
+<script src="../lib/store.js"></script>
+<script src="../lib/engine.js"></script>
+<script src="../content/k.js"></script>
+<script src="../content/g1.js"></script>
+<script src="../content/g2.js"></script>
+<script src="../content/g3.js"></script>
+<script src="../content/g4.js"></script>
+<script src="../content/g5.js"></script>
+<script src="../content/g6.js"></script>
+<script src="../content/math7.js"></script>
+<script src="../content/math8.js"></script>
+<script src="../content/alg1.js"></script>
+<script src="../content/geo.js"></script>
+<script src="../content/alg2.js"></script>
+<script src="../content/precalc.js"></script>
+<script src="../content/int1.js"></script>
+<script src="../content/int2.js"></script>
+<script src="../content/int3.js"></script>
+<script src="../lib/views.js"></script>
+<script>STORE.useMemory(true); /* the suite never touches real data */</script>
+<script src="../lib/app.js"></script>
+<script>
+(async function () {
+  let pass = 0, fail = 0;
+  const ok = (cond, msg) => { if (cond) { pass++; console.log('PASS ' + msg); } else { fail++; console.log('FAIL ' + msg); } };
+  const tick = (ms) => new Promise(r => setTimeout(r, ms || 0));
+  const A = ACADEMY, E = ENGINE, S = STORE, V = VIEWS;
+  const root = document.getElementById('root');
+  const text = el => (el ? el.innerText || el.textContent : '').replace(/\s+/g, ' ').trim();
+  const skillIds = Object.keys(A.skills).filter(id => A.whereIs(id));
+  ok(A.courses.length >= 1 && skillIds.length >= 10, `content loaded: ${A.courses.length} courses, ${skillIds.length} skills`);
+
+  /* ---- parsing and checking ---- */
+  const P = A.parseNumber;
+  ok(P('12') === 12 && P('-3') === -3 && P('−3') === -3 && P(' 4.50 ') === 4.5, 'parseNumber: integers, minus signs, decimals');
+  ok(P('3/4') === 0.75 && P('-1/2') === -0.5 && P('1 1/2') === 1.5 && P('-2 1/4') === -2.25, 'parseNumber: fractions and mixed numbers');
+  ok(P('75%') === 75 && P('$1,250.50') === 1250.5 && P('45°') === 45, 'parseNumber: %, $, commas and degrees are stripped');
+  ok(isNaN(P('abc')) && isNaN(P('')) && isNaN(P('1/0')) && isNaN(P('3 4')), 'parseNumber: nonsense is NaN');
+  ok(A.normText('¿Cómo estás?') === 'como estas' && A.normText('  Él   HABLA. ') === 'el habla', 'normText: case, accents, punctuation, spacing');
+  const qn = { type: 'number', answer: 0.75 };
+  ok(A.check(qn, '3/4').correct && A.check(qn, '0.75').correct && !A.check(qn, '0.7').correct && A.check(qn, 'x').unreadable, 'check: number answers accept equivalent forms');
+  ok(A.check({ type: 'number', answer: 31.4, tolerance: 0.05 }, '31.42').correct && !A.check({ type: 'number', answer: 31.4, tolerance: 0.05 }, '31.5').correct, 'check: tolerance');
+  const qt = { type: 'text', answer: 'hablamos', accept: ['nosotros hablamos'] };
+  ok(A.check(qt, 'Hablamos').correct && A.check(qt, 'nosotros hablamos').correct && !A.check(qt, 'hablan').correct && !A.check(qt, '').correct, 'check: text answers, alternates, empty');
+  const qc = A.question('math7.proportional-table', 'x');
+  ok(A.check(qc, qc.answerIndex).correct && A.check(qc, qc.answer).correct && !A.check(qc, (qc.answerIndex + 1) % qc.choices.length).correct, 'check: choice by index or by text');
+  ok(A.fixAngles('<i>x</i> < 4 and y > 2') === '<i>x</i> &lt; 4 and y &gt; 2', 'fixAngles: loose inequality signs become entities, tags survive');
+
+  /* ---- determinism and seeds ---- */
+  const q1 = A.question('math7.add-negatives', 'seed-1'), q2 = A.question('math7.add-negatives', 'seed-1'), q3 = A.question('math7.add-negatives', 'seed-2');
+  ok(JSON.stringify(q1) === JSON.stringify(q2) && q1.prompt !== q3.prompt, 'questions are deterministic from (skill, seed)');
+
+  /* ---- mastery rules ---- */
+  S.reset();
+  const sid = 'math7.add-negatives';
+  const wrongFor = q => q.type === 'number' ? q.answer + 1 : q.type === 'choice' ? (q.answerIndex + 1) % q.choices.length : 'zzz';
+  const drive = (s, plan) => { s.items.forEach((it, k) => { const r = plan(it, k); if (r === 'hint') { E.useHint(s); E.answer(s, it.q.answer); } else if (r === 'wrong') { const w = E.answer(s, wrongFor(it.q)); if (w.correct || w.unreadable) console.log('FAIL drive: wrong answer was ' + JSON.stringify(w)); E.answer(s, it.q.type === 'choice' ? it.q.answerIndex : it.q.answer); } else if (r === 'skip') { E.reveal(s); } else E.answer(s, it.q.type === 'choice' ? it.q.answerIndex : it.q.answer); E.next(s); }); return E.finish(s); };
+  let s = E.start('practice', { skillId: sid, seed: 't1' });
+  ok(s.items.length === E.PRACTICE_N && new Set(s.items.map(i => i.q.prompt)).size === s.items.length, 'practice set has 7 distinct questions');
+  let f = drive(s, () => 'right');
+  ok(f.right === 7 && S.skill(sid).level === 3 && f.changes.length === 1 && f.changes[0].to === 3, 'practice: 7/7 first try → Proficient');
+  ok(S.get().points === f.pts && f.pts === 7 * E.POINTS.correct + E.POINTS.set + E.POINTS.levelUp[3], 'practice: points = answers + set bonus + level-up bonus');
+  S.reset();
+  f = drive(E.start('practice', { skillId: sid, seed: 't2' }), (it, k) => k < 5 ? 'right' : 'wrong');
+  ok(f.right === 5 && S.skill(sid).level === 2, 'practice: 5/7 (retries do not count) → Familiar');
+  S.reset();
+  f = drive(E.start('practice', { skillId: sid, seed: 't3' }), (it, k) => k < 2 ? 'right' : 'hint');
+  ok(f.right === 2 && S.skill(sid).level === 1 && S.get().missed.length === 5, 'practice: hinted answers do not count; misses are saved for review');
+  f = drive(E.start('practice', { skillId: sid, seed: 't4' }), () => 'right');
+  ok(S.skill(sid).level === 3, 'practice: a perfect set later lifts Attempted to Proficient');
+  f = drive(E.start('practice', { skillId: sid, seed: 't5' }), () => 'skip');
+  ok(S.skill(sid).level === 3, 'practice never lowers a level');
+  // unit test
+  S.reset();
+  S.setSkill('math7.abs-distance', { level: 4 });
+  S.setSkill('math7.sub-negatives', { level: 3 });
+  s = E.start('unit-test', { courseId: 'math-7', unitId: 'negatives-add', seed: 'u1' });
+  ok(s.items.length === 3 && !s.hints && new Set(s.items.map(i => i.skillId)).size === 3, 'unit test: one question per skill, no hints');
+  f = drive(s, it => it.skillId === 'math7.abs-distance' ? 'wrong' : 'right');
+  ok(S.skill('math7.abs-distance').level === 3 && S.skill('math7.sub-negatives').level === 4 && S.skill('math7.add-negatives').level === 2, 'unit test: wrong → down one, right → up one, first right → Familiar');
+  f = drive(E.start('unit-test', { courseId: 'math-7', unitId: 'negatives-add', seed: 'u2' }), () => 'wrong');
+  ok(S.skill('math7.add-negatives').level === 1 && S.skill('math7.abs-distance').level === 2, 'unit test: misses step down, never below Attempted');
+  f = drive(E.start('unit-test', { courseId: 'math-7', unitId: 'negatives-add', seed: 'u3' }), () => 'wrong');
+  ok(S.skill('math7.add-negatives').level === 1, 'unit test: Attempted stays Attempted');
+  // course and mastery challenge
+  S.reset();
+  s = E.start('course-challenge', { courseId: 'math-7', seed: 'c1' });
+  const c7 = A.courseById('math-7'), n7 = A.courseSkills(c7).length;
+  ok(s.items.length === Math.min(E.CHALLENGE_N, n7) && new Set(s.items.map(i => i.skillId)).size === s.items.length, 'course challenge: distinct skills from across the course');
+  const unitsHit = new Set(s.items.map(i => A.whereIs(i.skillId).unit.id));
+  ok(unitsHit.size === c7.units.length, 'course challenge: every unit is represented');
+  let threw = false; try { E.start('mastery-challenge', { courseId: 'math-7', seed: 'm0' }); } catch (e) { threw = true; }
+  ok(threw && E.masteryPool(c7).length === 0, 'mastery challenge: unavailable until something is Familiar or Proficient');
+  ['math7.add-negatives', 'math7.sub-negatives'].forEach(id => S.setSkill(id, { level: 3 }));
+  S.setSkill('math7.abs-distance', { level: 2 });
+  S.setSkill('math7.circles', { level: 4 });
+  s = E.start('mastery-challenge', { courseId: 'math-7', seed: 'm1' });
+  ok(s.items.length === 3 && s.items.every(i => [2, 3].includes(S.skill(i.skillId).level)), 'mastery challenge: draws only Familiar and Proficient skills');
+  f = drive(s, () => 'right');
+  ok(S.skill('math7.add-negatives').level === 4 && S.skill('math7.abs-distance').level === 3, 'mastery challenge: right answers level up, Proficient → Mastered');
+  // review
+  S.reset();
+  drive(E.start('practice', { skillId: sid, seed: 'r1' }), (it, k) => k < 4 ? 'right' : 'skip');
+  ok(S.get().missed.length === 3, 'missed questions are collected');
+  const missedBefore = S.get().missed.slice();
+  s = E.start('review', { seed: 'r2' });
+  ok(s.items.length === 3 && s.items.every((it, k) => it.seed === missedBefore[k].seed) && s.hints, 'review rebuilds the exact missed questions, with hints');
+  f = drive(s, (it, k) => k === 0 ? 'right' : 'skip');
+  ok(S.get().missed.length === 2 && S.skill(sid).level === 1, 'review: a right answer clears the question; levels do not change');
+  // streak
+  S.reset();
+  const t = S.today();
+  S.get().days[S.dayShift(t, -2)] = { q: 3, right: 2, pts: 10 }; S.get().days[S.dayShift(t, -1)] = { q: 1, right: 1, pts: 5 };
+  ok(S.streak().days === 2 && !S.streak().today, 'streak: yesterday and the day before count, today still open');
+  S.countAnswer(true);
+  ok(S.streak().days === 3 && S.streak().today, 'streak: practising today extends it');
+  S.get().days[S.dayShift(t, -1)] = { q: 0, right: 0, pts: 0 };
+  ok(S.streak().days === 1, 'streak: a gap resets it');
+  // export / import
+  S.reset(); S.addPoints(123); S.setSkill(sid, { level: 2 }); S.setProfile({ name: 'Test' });
+  const json = S.exportJSON();
+  S.reset();
+  ok(S.get().points === 0, 'reset clears points');
+  S.importJSON(json);
+  ok(S.get().points === 123 && S.skill(sid).level === 2 && S.get().profile.name === 'Test', 'export → import round-trips points, levels and profile');
+  threw = false; try { S.importJSON('{"nope":1}'); } catch (e) { threw = true; }
+  ok(threw && S.get().points === 123, 'import rejects a foreign file and keeps the data');
+
+  /* ---- views render for every route ---- */
+  S.reset();
+  const go = async (hash) => { location.hash = hash; await tick(40); return document.getElementById('main'); };
+  for (const h of ['#/', '#/courses', '#/progress', '#/settings', '#/search/fraction', '#/review', '#/nowhere']) {
+    const m = await go(h);
+    ok(text(m).length > 20, `route ${h} renders (${document.title})`);
+  }
+  for (const c of A.courses) {
+    const m = await go('#/course/' + c.id);
+    ok(m.querySelectorAll('.unit-card').length === c.units.length && text(m).includes(c.title), `course page ${c.id}: ${c.units.length} units`);
+    const u = c.units[0];
+    const mu = await go(`#/unit/${c.id}/${u.id}`);
+    ok(mu.querySelectorAll('.skills li').length === u.skills.length + 1, `unit page ${c.id}/${u.id}: ${u.skills.length} skills + test`);
+  }
+  ok(document.title.includes('Procademy'), 'document title carries the brand');
+  // every skill: learn article and a practice question render
+  let bad = 0;
+  for (const id of skillIds) {
+    V.skill(root, id);
+    const learn = text(root.querySelector('.learn'));
+    V.practice(root, id);
+    const qtext = text(root.querySelector('.question'));
+    const hasAnswer = root.querySelector('#ans') || root.querySelector('#choices button');
+    if (learn.length < 100 || qtext.length < 3 || !hasAnswer) { bad++; console.log('FAIL skill renders: ' + id + ` learn=${learn.length} q=${qtext.length} answer=${!!hasAnswer}`); }
+  }
+  ok(bad === 0, `all ${skillIds.length} skills render a learn article and a practice question`);
+  // no stray entity text or raw tags visible anywhere in a batch of questions
+  let stray = 0;
+  for (const id of skillIds) for (const sd of ['v1', 'v2']) { const q = A.question(id, sd); const el = document.createElement('div'); el.innerHTML = q.prompt + q.hints.join('') + (q.choices || []).join(''); const tx = el.textContent; if (/&lt;|&gt;|&amp;|<\/?\w+>|undefined|NaN/.test(tx)) { stray++; if (stray < 6) console.log('FAIL stray markup in ' + id + ' ' + sd + ': ' + tx.slice(0, 120)); } }
+  ok(stray === 0, 'no raw tags or entities leak into visible text');
+
+  /* ---- the exercise player, driven like a learner ---- */
+  S.reset();
+  const answerCurrent = (rootEl, correct) => {
+    const sess = rootEl.__session; const q = sess.items[sess.i].q;
+    if (q.type === 'choice') { const k = correct ? q.answerIndex : (q.answerIndex + 1) % q.choices.length; rootEl.querySelector(`#choices button[data-k="${k}"]`).click(); }
+    else { const inp = rootEl.querySelector('#ans'); inp.value = correct ? String(q.answer) : String(wrongFor(q)); inp.dispatchEvent(new Event('input', { bubbles: true })); }
+    rootEl.querySelector('#check').click();
+  };
+  V.practice(root, 'math7.percent-of');
+  ok(root.__session && root.__session.kind === 'practice' && root.querySelectorAll('.dots span').length === 7, 'player: practice shows 7 progress dots');
+  for (let i = 0; i < 7; i++) {
+    answerCurrent(root, true); await tick();
+    if (i === 0) ok(root.querySelector('.feedback.good') && root.querySelector('#next') && !root.querySelector('#check'), 'player: a right answer shows green feedback and Next');
+    root.querySelector('#next').click(); await tick();
+  }
+  ok(text(root.querySelector('.summary .score')) === '7 / 7' && S.skill('math7.percent-of').level === 3 && text(root).includes('Proficient'), 'player: summary shows 7 / 7 and the level-up');
+  ok(text(document.getElementById('stats')).includes('⚡'), 'player: the header stats refresh after a set');
+  // wrong, retry, hints, give up
+  V.practice(root, 'math7.unit-rate');
+  answerCurrent(root, false); await tick();
+  ok(root.querySelector('.feedback.bad') && root.querySelector('#check') && root.querySelector('#ans') && !root.querySelector('#next'), 'player: a wrong answer in practice allows a retry');
+  answerCurrent(root, true); await tick();
+  ok(root.querySelector('.feedback.good') && root.querySelector('#next') && !E.counts(root.__session.results[0]), 'player: right on the second try, but it does not count');
+  root.querySelector('#next').click(); await tick();
+  const hq = root.__session.items[1].q;
+  for (let k = 0; k < hq.hints.length; k++) { root.querySelector('#hint').click(); await tick(); }
+  ok(root.querySelectorAll('.hints .hint').length >= hq.hints.length && root.querySelector('#next') && root.querySelector('#hint').disabled, 'player: the last hint reveals the question and offers Next');
+  root.querySelector('#next').click(); await tick();
+  root.querySelector('#giveup').click(); await tick();
+  ok(root.querySelector('.feedback.note') && text(root.querySelector('.feedback.note')).includes(String(A.answerText(root.__session.items[2].q)).trim().split(' ')[0]) && root.querySelector('#next'), 'player: "I don’t know" shows the answer and moves on');
+  // unreadable input
+  root.querySelector('#next').click(); await tick();
+  const inp = root.querySelector('#ans'); inp.value = 'seven'; inp.dispatchEvent(new Event('input', { bubbles: true })); root.querySelector('#check').click(); await tick();
+  ok(root.querySelector('.feedback.note') && root.__session.results[3].tries === 0, 'player: an unreadable number is not counted as an attempt');
+  // a test: no hints, one attempt
+  V.unitTest(root, 'math-7', 'negatives-add');
+  ok(!root.querySelector('#hint') && root.querySelectorAll('.dots span').length === 3, 'player: unit test has no hint button');
+  answerCurrent(root, false); await tick();
+  ok(root.querySelector('.feedback.bad') && root.querySelector('#next') && !root.querySelector('#check') && root.querySelector('details'), 'player: in a test a wrong answer reveals the answer and the steps');
+  for (let i = 0; i < 3; i++) { root.querySelector('#next').click(); await tick(); if (i < 2) { answerCurrent(root, true); await tick(); } }
+  ok(root.querySelector('.summary') && text(root.querySelector('.summary .score')) === '2 / 3', 'player: unit test summary 2 / 3');
+  // keyboard: Enter checks and advances
+  V.practice(root, 'math7.add-negatives');
+  { const sess = root.__session, q = sess.items[0].q; const el = root.querySelector('#ans'); el.value = String(q.answer); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await tick(); }
+  ok(root.querySelector('.feedback.good'), 'player: Enter checks the answer');
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await tick();
+  ok(root.__session.i === 1, 'player: Enter again moves to the next question');
+
+  /* ---- settings ---- */
+  await go('#/settings');
+  const main = document.getElementById('main');
+  const nameEl = main.querySelector('#name'); nameEl.value = 'Sam'; nameEl.dispatchEvent(new Event('input', { bubbles: true }));
+  ok(S.get().profile.name === 'Sam' && document.querySelector('[data-brand]').textContent === 'Procademy', 'settings: the name is saved; the brand stays Procademy');
+  const themeEl = main.querySelector('#theme'); themeEl.value = 'dark'; themeEl.dispatchEvent(new Event('change', { bubbles: true }));
+  ok(document.documentElement.getAttribute('data-theme') === 'dark', 'settings: theme applies to <html>');
+  themeEl.value = 'system'; themeEl.dispatchEvent(new Event('change', { bubbles: true }));
+  ok(!document.documentElement.hasAttribute('data-theme'), 'settings: system theme removes the attribute');
+  await go('#/');
+  ok(text(main).includes('Sam'), 'home greets by name');
+  await go('#/search/negative');
+  ok(text(main).includes('Adding negative numbers'), 'search finds skills by title');
+  // course enrol button
+  await go('#/course/math-7');
+  main.querySelector('#enroll').click(); await tick();
+  ok(S.get().profile.enrolled.includes('math-7') && text(main.querySelector('#enroll')).includes('On my home page'), 'course: add to home page toggles enrolment');
+
+  console.log(`RESULTS ${fail} failed of ${pass + fail}`);
+})().catch(e => { console.log('FAIL harness threw: ' + (e.stack || e.message)); console.log('RESULTS 1 failed of 1'); });
+</script>
+</body>
+</html>
