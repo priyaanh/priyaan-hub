@@ -40,6 +40,23 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
 A new learner picks a grade on the home page; a course they add or start then stays on it. Adding a
 course means adding a file and a `<script>` tag (and a line in `sw.js`); see [CONTENT.md](CONTENT.md).
 
+**CPM books** (`cpm/`, one file per book): Core Connections Courses 1, 2 and 3, and Integrated I, II
+and III, chapter by chapter and lesson by lesson. The lesson numbers are checked against CPM's own
+homework-help site. Each lesson has our own one-line summary and links to the Procademy skills that
+practise it, to a mixed practice set for the lesson or the whole chapter, to the tutor, and to CPM's
+homework help for that lesson. Press *I'm on this lesson in class* and the lesson stays on the home page.
+Nothing from the books is copied; see [CPM.md](CPM.md).
+
+**The tutor** (`lib/tutor.js`, `lib/tutor-ui.js`). Procademy has no videos, so a free AI explains instead.
+It runs a small open model (Qwen3, through WebLLM) on the device's own graphics chip: no account, no key,
+no cost, and nothing typed leaves the device. The first use downloads the model once (Light about 350 MB,
+Standard about 1 GB, Best about 2.3 GB), and after that it starts in seconds, even offline. It needs
+WebGPU: Chrome or Edge on a computer, or Safari on a recent Mac, iPhone or iPad. Where a browser ships its
+own model (Chrome's Prompt API), that is offered too. Every request carries what is on screen, such as the
+skill's lesson or the practice question with its checked steps, so the tutor explains a known-correct
+answer. Before the learner answers, the last step is withheld, so it can hint but not give the answer
+away. The tutor is the only part of the site that uses the network.
+
 ## How it is built
 
 | File | What it does |
@@ -51,7 +68,9 @@ course means adding a file and a `<script>` tag (and a line in `sw.js`); see [CO
 | `lib/store.js` | one localStorage key, `procademy.v1`; export and import |
 | `lib/engine.js` | practice sessions and every mastery and points rule |
 | `lib/views.js` | every screen, including the exercise player |
-| `lib/app.js` | hash routing (`#/course/math-7`), theme, search |
+| `lib/app.js` | hash routing (`#/course/math-7`, `#/cpm/int2/3.1.1`), theme, search |
+| `lib/cpm-views.js` | the CPM book, chapter and lesson pages |
+| `lib/tutor.js`, `lib/tutor-ui.js` | the in-browser AI tutor and its panel |
 | `sw.js` | offline support when served over http(s) |
 
 The name you give in Settings is used in the greeting and stays on the device. No name is written into
@@ -68,7 +87,8 @@ runs three things in headless Chrome and node: the page loads without console er
 every route, every skill's article and a question, settings, search); and `tests/content.js` builds
 hundreds of questions per skill and checks structure, determinism, variety, that each answer passes the
 real checker, that choice questions have no giveaways, and each skill's own `verify()` re-derivation.
-`SEEDS=1500 ./tests/run.sh` checks more seeds.
+`tests/cpm.js` checks every CPM book against CPM's lesson list. `SEEDS=1500 ./tests/run.sh` checks more
+seeds, and `./tests/run.sh --live-tutor` also downloads the Light tutor model and asks it two questions.
 
 ## History
 

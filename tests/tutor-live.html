@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tutor live test</title></head>
+<body>
+<p>Live tutor test: downloads the Light model (about 350 MB) once, then asks two questions. Not part of
+<code>run.sh</code>; run it with <code>./tests/run.sh --live-tutor</code>, or open it over http in Chrome.</p>
+<pre id="out"></pre>
+<script src="../lib/rng.js"></script>
+<script src="../lib/math.js"></script>
+<script src="../lib/content.js"></script>
+<script src="../lib/store.js"></script>
+<script src="../lib/tutor.js"></script>
+<script>
+(async function () {
+  const out = document.getElementById('out');
+  const log = s => { out.textContent += s + '\n'; console.log(s); };
+  let fail = 0, pass = 0;
+  const ok = (c, m) => { if (c) { pass++; log('PASS ' + m); } else { fail++; log('FAIL ' + m); } };
+  try {
+    ok(TUTOR.supported(), 'WebGPU is available (navigator.gpu)');
+    if (!TUTOR.supported()) throw new Error('no WebGPU here');
+    const adapter = await navigator.gpu.requestAdapter();
+    ok(!!adapter, 'a WebGPU adapter was found');
+    const model = new URLSearchParams(location.search).get('model') || 'Qwen3-0.6B-q4f16_1-MLC';
+    const t0 = performance.now();
+    let last = -1;
+    TUTOR.on(t => { const p = Math.round((t.progress.fraction || 0) * 10); if (t.state === 'loading' && p !== last) { last = p; log('progress ' + p * 10 + '% ' + (t.progress.text || '').slice(0, 80)); } });
+    await TUTOR.start(model);
+    ok(TUTOR.state === 'ready', `model ${model} loaded in ${Math.round((performance.now() - t0) / 1000)} s`);
+    // grounded explanation
+    const ctx = { course: '7th grade math', skill: 'Two-step equations', question: 'Solve for x. 3x + 5 = 20', steps: ['Subtract 5 from both sides: 3x = 15.', 'Divide both sides by 3: x = 15 ÷ 3.', 'x = 5. Check: 3(5) + 5 = 20.'], answer: '5', answerShown: true };
+    const t1 = performance.now();
+    let deltas = 0;
+    const a1 = await TUTOR.ask([{ role: 'user', content: 'Explain how to get this answer, step by step.' }], ctx, () => { deltas++; });
+    log('--- answer 1 (' + Math.round((performance.now() - t1) / 1000) + ' s) ---\n' + a1 + '\n---');
+    ok(a1.length > 40 && deltas > 3, 'the tutor streams an explanation');
+    ok(/5/.test(a1) && !/<think>/.test(a1), 'it uses the checked answer and shows no thinking block');
+    // hidden answer: should guide, not give it
+    const ctx2 = Object.assign({}, ctx, { steps: ctx.steps.slice(0, 2), answerShown: false });
+    const a2 = await TUTOR.ask([{ role: 'user', content: 'Give me a hint, without telling me the answer.' }], ctx2);
+    log('--- answer 2 ---\n' + a2 + '\n---');
+    ok(a2.length > 20, 'it gives a hint');
+    ok(!/x\s*=\s*5\b/.test(a2), 'the hint does not state x = 5');
+  } catch (e) { fail++; log('FAIL threw: ' + (e && e.stack || e)); }
+  log(`RESULTS ${fail} failed of ${pass + fail}`);
+})();
+</script>
+</body>
+</html>

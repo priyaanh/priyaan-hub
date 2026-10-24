@@ -8,7 +8,7 @@
 <body>
 <header class="top"><div class="bar">
   <a class="brand" href="#/"><span class="logo">✦</span><span class="word" data-brand>Procademy</span></a>
-  <nav class="nav"><a href="#/courses" data-nav="courses">Courses</a><a href="#/progress" data-nav="progress">Progress</a></nav>
+  <nav class="nav"><a href="#/courses" data-nav="courses">Courses</a><a href="#/cpm" data-nav="cpm">CPM</a><a href="#/progress" data-nav="progress">Progress</a></nav>
   <div class="search"><form id="search-form"><input id="search-input" type="search"></form></div>
   <div class="stats" id="stats"></div>
 </div></header>
@@ -35,7 +35,16 @@
 <script src="../content/int1.js"></script>
 <script src="../content/int2.js"></script>
 <script src="../content/int3.js"></script>
+<script src="../cpm/cc1.js"></script>
+<script src="../cpm/cc2.js"></script>
+<script src="../cpm/cc3.js"></script>
+<script src="../cpm/int1.js"></script>
+<script src="../cpm/int2.js"></script>
+<script src="../cpm/int3.js"></script>
+<script src="../lib/tutor.js"></script>
+<script src="../lib/tutor-ui.js"></script>
 <script src="../lib/views.js"></script>
+<script src="../lib/cpm-views.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -241,6 +250,101 @@
   await go('#/course/math-7');
   main.querySelector('#enroll').click(); await tick();
   ok(S.get().profile.enrolled.includes('math-7') && text(main.querySelector('#enroll')).includes('On my home page'), 'course: add to home page toggles enrolment');
+
+  /* ---- CPM pages (a small fixture book, so the suite does not depend on the real data) ---- */
+  S.reset();
+  A.cpmBook({ id: 'zz', title: 'Test Book', short: 'Test', band: 'Middle school', grade: 7, icon: '📗', hue: 100, homework: 'https://homework.cpm.org/category/CC/textbook/zz',
+    chapters: [{ n: 1, title: 'Integers', lessons: [
+      { id: '1.1.1', title: 'Adding Integers', topic: 'Adding positive and negative numbers on a number line.', skills: ['math7.add-negatives', 'math7.sub-negatives'] },
+      { id: '1.1.2', title: null, topic: 'Distance between numbers using absolute value.', skills: ['math7.abs-distance', 'no.such-skill'] },
+      { id: '1.2.1', title: 'Investigating Shapes', topic: 'An investigation with no Procademy practice yet.', skills: [] }] },
+      { n: 2, title: 'Circles', lessons: [{ id: '2.1.1', title: 'Circle Measures', topic: 'Area and circumference of circles using 3.14.', skills: ['math7.circles'] }] }] });
+  let m = await go('#/cpm');
+  ok(text(m).includes('Test Book') && m.querySelector('.course-card'), 'cpm: the books page lists a book');
+  const find = m.querySelector('#cpm-find'); find.value = 'circumference'; find.dispatchEvent(new Event('input'));
+  ok([...m.querySelectorAll('#cpm-results li[data-lesson]')].some(li => text(li).includes('Circle Measures')) && m.querySelector('#cpm-books').hidden, 'cpm: searching across books finds the lesson by topic');
+  m = await go('#/cpm/zz');
+  ok(m.querySelectorAll('details.chapter').length === 2 && m.querySelectorAll('li[data-lesson]').length === 4, 'cpm: a book shows its chapters and lessons');
+  ok(text(m.querySelector('li[data-lesson="1.1.2"]')).includes('Lesson 1.1.2') && m.querySelector('li[data-lesson="1.1.2"] .cpm-levels').children.length === 1, 'cpm: an untitled lesson shows its number; unknown skills are ignored');
+  ok(!m.querySelector('li[data-lesson="1.2.1"] a.btn.primary') && m.querySelector('li[data-lesson="1.2.1"] .tutor-ask'), 'cpm: a lesson without practice still offers the tutor');
+  ok(m.querySelector('li[data-lesson="1.1.1"] a[href="https://homework.cpm.org/category/CC/textbook/zz/chapter/1/lesson/1.1.1"]'), 'cpm: each lesson links to its CPM homework help');
+  m.querySelector('#only-practice').checked = true; m.querySelector('#only-practice').dispatchEvent(new Event('change'));
+  ok(m.querySelector('li[data-lesson="1.2.1"]').hidden && !m.querySelector('li[data-lesson="1.1.1"]').hidden, 'cpm: "only lessons with practice" filters live');
+  const lf = m.querySelector('#lesson-find'); lf.value = 'absolute'; lf.dispatchEvent(new Event('input'));
+  ok(!m.querySelector('li[data-lesson="1.1.2"]').hidden && m.querySelector('li[data-lesson="1.1.1"]').hidden, 'cpm: the lesson filter matches topics');
+  m = await go('#/cpm/zz/1.1.1');
+  ok(text(m).includes('Adding Integers') && m.querySelectorAll('.skills li').length === 2, 'cpm: a lesson page lists its skills');
+  m.querySelector('#in-class').click(); await tick();
+  ok(S.get().profile.cpm && S.get().profile.cpm.lesson === '1.1.1' && text(m.querySelector('#in-class')).includes('In class now'), 'cpm: "I’m on this lesson" is saved');
+  m = await go('#/');
+  ok(text(m).includes('In class now') && text(m).includes('Adding Integers'), 'cpm: the home page shows the class lesson');
+  m = await go('#/cpm/zz');
+  ok(m.querySelector('li.here[data-lesson="1.1.1"]') && m.querySelector('#jump'), 'cpm: the book marks the class lesson and offers a jump to it');
+  m = await go('#/cpm-practice/zz/1.1.1');
+  ok(m.__session && m.__session.kind === 'mix' && m.__session.items.every(i => ['math7.add-negatives', 'math7.sub-negatives'].includes(i.skillId)) && m.__session.items.length === 7, 'cpm: lesson practice mixes only that lesson’s skills');
+  for (let i = 0; i < 7; i++) { answerCurrent(m, true); await tick(); m.querySelector('#next').click(); await tick(); }
+  ok(text(m.querySelector('.summary .score')) === '7 / 7' && S.skill('math7.add-negatives').level === 2 && S.skill('math7.sub-negatives').level === 2, 'cpm: a perfect lesson set lifts its skills to Familiar');
+  ok(text(m).includes('Next: Lesson 1.1.2'), 'cpm: the summary offers the next lesson (got: ' + text(m.querySelector('.summary .btn-row')) + ')');
+  m = await go('#/cpm-practice/zz/ch/2');
+  ok(m.__session && m.__session.items.every(i => i.skillId === 'math7.circles'), 'cpm: chapter practice uses the chapter’s skills');
+  location.hash = '#/cpm-practice/zz/1.2.1'; await tick(60);
+  ok(location.hash === '#/cpm/zz/1.2.1', 'cpm: practising a lesson with no skills goes to the lesson page');
+  m = await go('#/search/circumference');
+  ok(text(m).includes('CPM lessons') && text(m).includes('Circle Measures'), 'search: finds CPM lessons too');
+  m = await go('#/cpm/nope');
+  ok(text(m).includes('Not here'), 'cpm: an unknown book is a friendly not-found');
+
+  /* ---- the tutor, with a stand-in model ---- */
+  const TU = TUTOR, UI = TUTORUI;
+  const calls = [];
+  TU.engineFactory = async (id, onProgress) => {
+    onProgress({ text: 'Fetching', progress: 0.5 }); await tick(5); onProgress({ text: 'Done', progress: 1 });
+    return { chat: { completions: { create: async (req) => { calls.push(req); const words = ['**Step 1:** ', 'add <script>x<\/script> ', 'the \\frac{1}{2} ', 'numbers.\n- one\n- two']; return (async function* () { for (const w of words) { await tick(1); yield { choices: [{ delta: { content: w } }] }; } })(); } } } };
+  };
+  S.setProfile({ tutor: null });
+  m = await go('#/skill/math7.circles');
+  const ctx1 = UI.getContext();
+  ok(ctx1 && ctx1.skill === 'Area and circumference of circles' && ctx1.notes.length > 50, 'tutor: a skill page tells the tutor what is on screen');
+  m.querySelector('.tutor-ask').click(); await tick();
+  const panel = document.getElementById('tutor');
+  ok(panel && !panel.hidden && panel.querySelector('#tutor-start') && panel.querySelectorAll('input[name="tutor-model"]').length >= 3, 'tutor: first use shows the free setup with model sizes');
+  ok(text(panel).includes('Free') && text(panel).includes('Private') && /about 1 GB/.test(text(panel)), 'tutor: the setup says it is free, private and how big it is');
+  panel.querySelector('#tutor-start').click();
+  for (let k = 0; k < 50 && !(UI.history().length === 2 && !TU.busy() && UI.history()[1].content); k++) await tick(20);
+  ok(TU.state === 'ready' && S.get().profile.tutor.enabled === true, 'tutor: turning it on loads the model and remembers the choice');
+  const h = UI.history();
+  ok(h.length === 2 && h[0].role === 'user' && /Area and circumference/.test(h[0].content), 'tutor: the "Explain it" question is sent once the tutor is ready');
+  const shown = panel.querySelector('.tmsg.assistant:last-child');
+  ok(shown && shown.querySelector('b') && !shown.querySelector('script') && text(shown).includes('<script>') && text(shown).includes('(1)/(2)') && shown.querySelectorAll('li').length === 2, 'tutor: replies render a little markdown, escape HTML and tidy LaTeX');
+  ok(calls[0].messages[0].role === 'system' && calls[0].messages[0].content.includes('Lesson notes') && calls[0].extra_body.enable_thinking === false, 'tutor: the request carries the lesson as context, with thinking off');
+  UI.close();
+  ok(panel.hidden, 'tutor: the panel closes');
+  // grounding in a practice question: the answer stays hidden until the learner has answered
+  m = await go('#/practice/math7.percent-of');
+  const sess = m.__session, q0 = sess.items[0].q;
+  let c = UI.getContext();
+  ok(c.question && c.answerShown === false && c.steps.length === Math.min(1, q0.hints.length - 1), 'tutor: before answering, only the first step is shared');
+  const leak = TU.guard('First subtract 5 from both sides. Then divide by 3 to get x = ' + c.answer + '. The answer is hidden: do not reveal it.', c);
+  ok(!leak.includes('x = ' + c.answer) && !/hidden/i.test(leak) && leak.includes('subtract 5') && leak.includes('try the last step'), 'tutor: a reply that gives the hidden answer away is cut back to the hint');
+  ok(TU.guard('The answer is x = 7.', Object.assign({}, c, { answerShown: true, answer: '7' })).includes('x = 7'), 'tutor: once answered, the reply may state the answer');
+  const sys1 = TU.messages([{ role: 'user', content: 'hint?' }], c)[0].content;
+  ok(sys1.includes('Do not reveal') && !sys1.includes('Correct answer'), 'tutor: the prompt tells the model the answer is hidden');
+  answerCurrent(m, true); await tick();
+  c = UI.getContext();
+  ok(c.answerShown === true && c.steps.length === q0.hints.length && TU.messages([], c)[0].content.includes('Correct answer (checked): ' + c.answer), 'tutor: after answering, the checked answer and all steps are shared');
+  ok(m.querySelector('#ask-tutor'), 'tutor: the exercise has an "Ask the tutor" button');
+  m.querySelector('#ask-tutor').click();
+  for (let k = 0; k < 50 && TU.busy(); k++) await tick(20);
+  await tick(30);
+  ok(calls.length === 2 && calls[1].messages[0].content.includes('Practice question'), 'tutor: asking from a question sends that question as context');
+  UI.close();
+  // a new question starts a fresh conversation
+  m.querySelector('#next').click(); await tick();
+  ok(UI.history().length === 0, 'tutor: moving to the next question clears the chat');
+  await go('#/settings');
+  ok(UI.getContext() === null || !UI.getContext().question, 'tutor: leaving the exercise clears the question context');
+  TU.engineFactory = null;
+  await TU.unload();
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
 })().catch(e => { console.log('FAIL harness threw: ' + (e.stack || e.message)); console.log('RESULTS 1 failed of 1'); });
