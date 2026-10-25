@@ -294,29 +294,42 @@
   m = await go('#/cpm/nope');
   ok(text(m).includes('Not here'), 'cpm: an unknown book is a friendly not-found');
 
-  /* ---- the tutor, with a stand-in model ---- */
+  /* ---- the tutor: the free cloud tutor with a stand-in network, then the on-device path ---- */
   const TU = TUTOR, UI = TUTORUI;
-  const calls = [];
-  TU.engineFactory = async (id, onProgress) => {
-    onProgress({ text: 'Fetching', progress: 0.5 }); await tick(5); onProgress({ text: 'Done', progress: 1 });
-    return { chat: { completions: { create: async (req) => { calls.push(req); const words = ['**Step 1:** ', 'add <script>x<\/script> ', 'the \\frac{1}{2} ', 'numbers.\n- one\n- two']; return (async function* () { for (const w of words) { await tick(1); yield { choices: [{ delta: { content: w } }] }; } })(); } } } };
+  const sse = words => { const enc = new TextEncoder(); return new ReadableStream({ async start(ctrl) {
+    for (const w of words) { await tick(2); ctrl.enqueue(enc.encode('data: ' + JSON.stringify({ choices: [{ delta: { content: w } }] }) + '\n\n')); }
+    ctrl.enqueue(enc.encode('data: [DONE]\n\n')); ctrl.close(); } }); };
+  const cloudCalls = []; let busyOnce = 0;
+  TU.fetch = async (url, init) => {
+    cloudCalls.push({ url, body: JSON.parse(init.body) });
+    if (busyOnce > 0) { busyOnce--; return new Response(JSON.stringify({ error: { code: 'FREE_LIMIT' } }), { status: 402, headers: { 'Retry-After': '1', 'Content-Type': 'application/json' } }); }
+    return new Response(sse(['**Step 1:** ', 'add <script>x<\/script> ', 'the \\frac{1}{2} ', 'numbers.\n- one\n- two']), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
   };
   S.setProfile({ tutor: null });
+  await TU.unload();
   m = await go('#/skill/math7.circles');
   const ctx1 = UI.getContext();
   ok(ctx1 && ctx1.skill === 'Area and circumference of circles' && ctx1.notes.length > 50, 'tutor: a skill page tells the tutor what is on screen');
-  m.querySelector('.tutor-ask').click(); await tick();
+  m.querySelector('.tutor-ask').click();
   const panel = document.getElementById('tutor');
-  ok(panel && !panel.hidden && panel.querySelector('#tutor-start') && panel.querySelectorAll('input[name="tutor-model"]').length >= 3, 'tutor: first use shows the free setup with model sizes');
-  ok(text(panel).includes('Free') && text(panel).includes('Private') && /about 1 GB/.test(text(panel)), 'tutor: the setup says it is free, private and how big it is');
-  panel.querySelector('#tutor-start').click();
-  for (let k = 0; k < 50 && !(UI.history().length === 2 && !TU.busy() && UI.history()[1].content); k++) await tick(20);
-  ok(TU.state === 'ready' && S.get().profile.tutor.enabled === true, 'tutor: turning it on loads the model and remembers the choice');
+  for (let k = 0; k < 60 && !(UI.history().length === 2 && !TU.busy() && UI.history()[1].content); k++) await tick(20);
+  ok(panel && !panel.hidden && TU.state === 'ready' && TU.isCloud(), 'tutor: it opens ready, on the free cloud tutor, with nothing to download');
+  ok(!panel.querySelector('#tutor-start') && !/GB|MB/.test(text(panel.querySelector('#tutor-body'))), 'tutor: no setup step and no download size in the chat');
   const h = UI.history();
-  ok(h.length === 2 && h[0].role === 'user' && /Area and circumference/.test(h[0].content), 'tutor: the "Explain it" question is sent once the tutor is ready');
+  ok(h.length === 2 && h[0].role === 'user' && /Area and circumference/.test(h[0].content), 'tutor: the "Explain it" question is sent straight away');
   const shown = panel.querySelector('.tmsg.assistant:last-child');
   ok(shown && shown.querySelector('b') && !shown.querySelector('script') && text(shown).includes('<script>') && text(shown).includes('(1)/(2)') && shown.querySelectorAll('li').length === 2, 'tutor: replies render a little markdown, escape HTML and tidy LaTeX');
-  ok(calls[0].messages[0].role === 'system' && calls[0].messages[0].content.includes('Lesson notes') && calls[0].extra_body.enable_thinking === false, 'tutor: the request carries the lesson as context, with thinking off');
+  const req = cloudCalls[0];
+  ok(req && req.url === TU.CLOUD_URL && req.body.stream === true && req.body.messages[0].role === 'system' && req.body.messages[0].content.includes('Lesson notes'), 'tutor: the cloud request streams and carries the lesson as context');
+  ok(!JSON.stringify(req.body).includes('Sam') && !JSON.stringify(req.body).includes('points'), 'tutor: the request carries no name and no progress');
+  ok(/Pollinations/.test(text(panel.querySelector('#tutor-note'))), 'tutor: the panel says where cloud answers come from');
+  // the free limit: a 402 with Retry-After is waited out, then sent again by itself
+  busyOnce = 1; const before = cloudCalls.length;
+  panel.querySelector('#tutor-text').value = 'Show me another example'; panel.querySelector('#tutor-form').dispatchEvent(new Event('submit', { cancelable: true }));
+  await tick(300);
+  ok(/next reply in/.test(text(panel.querySelector('#tutor-status'))) || /coming in/.test(text(panel)), 'tutor: while the free limit applies, the panel counts down');
+  for (let k = 0; k < 120 && TU.busy(); k++) await tick(25);
+  ok(cloudCalls.length === before + 2 && UI.history()[3].content.includes('Step 1'), 'tutor: after the wait it sends again and the answer arrives');
   UI.close();
   ok(panel.hidden, 'tutor: the panel closes');
   // grounding in a practice question: the answer stays hidden until the learner has answered
@@ -329,22 +342,41 @@
   ok(TU.guard('The answer is x = 7.', Object.assign({}, c, { answerShown: true, answer: '7' })).includes('x = 7'), 'tutor: once answered, the reply may state the answer');
   const sys1 = TU.messages([{ role: 'user', content: 'hint?' }], c)[0].content;
   ok(sys1.includes('Do not reveal') && !sys1.includes('Correct answer'), 'tutor: the prompt tells the model the answer is hidden');
+  // a wrong answer offers "Why is that wrong?", which sends the learner's answer
+  answerCurrent(m, false); await tick();
+  const why = m.querySelector('#feedback .tutor-ask');
+  ok(why && /Why is that wrong/.test(text(why)) && UI.getContext().studentAnswer, 'tutor: a wrong answer offers "Why is that wrong?" with the learner’s answer in context');
+  const n0 = cloudCalls.length; why.click();
+  for (let k = 0; k < 60 && (TU.busy() || cloudCalls.length === n0); k++) await tick(20);
+  const wrongReq = cloudCalls[cloudCalls.length - 1].body.messages;
+  ok(cloudCalls.length === n0 + 1 && /The student answered/.test(wrongReq[0].content) && /Why is that wrong/.test(wrongReq[wrongReq.length - 1].content) && !wrongReq[0].content.includes('Correct answer'), 'tutor: it explains the mistake without being handed the answer');
+  UI.close();
   answerCurrent(m, true); await tick();
   c = UI.getContext();
   ok(c.answerShown === true && c.steps.length === q0.hints.length && TU.messages([], c)[0].content.includes('Correct answer (checked): ' + c.answer), 'tutor: after answering, the checked answer and all steps are shared');
   ok(m.querySelector('#ask-tutor'), 'tutor: the exercise has an "Ask the tutor" button');
-  m.querySelector('#ask-tutor').click();
-  for (let k = 0; k < 50 && TU.busy(); k++) await tick(20);
-  await tick(30);
-  ok(calls.length === 2 && calls[1].messages[0].content.includes('Practice question'), 'tutor: asking from a question sends that question as context');
-  UI.close();
-  // a new question starts a fresh conversation
   m.querySelector('#next').click(); await tick();
   ok(UI.history().length === 0, 'tutor: moving to the next question clears the chat');
+  // the on-device tutor is a choice in settings, with its download size, and is remembered
+  const devCalls = [];
+  TU.engineFactory = async (id, onProgress) => {
+    onProgress({ text: 'Fetching', progress: 0.5 }); await tick(5);
+    return { chat: { completions: { create: async (r) => { devCalls.push(r); return (async function* () { yield { choices: [{ delta: { content: 'On-device answer.' } }] }; })(); } } } };
+  };
+  UI.showSettings(); await tick();
+  ok(panel.querySelectorAll('input[name="tutor-engine"]').length >= 4 && /about 350 MB/.test(text(panel)) && panel.querySelector('input[value="cloud"]').checked, 'tutor: settings offer the cloud tutor (chosen) and on-device models with sizes');
+  panel.querySelector('input[value="Qwen3-0.6B-q4f16_1-MLC"]').checked = true;
+  panel.querySelector('#tutor-use').click();
+  for (let k = 0; k < 50 && !(TU.state === 'ready' && !TU.isCloud()); k++) await tick(20);
+  ok(TU.state === 'ready' && !TU.isCloud() && S.get().profile.tutor.engine === 'Qwen3-0.6B-q4f16_1-MLC', 'tutor: choosing a device model loads it and remembers the choice');
+  panel.querySelector('#tutor-text').value = 'Explain'; panel.querySelector('#tutor-form').dispatchEvent(new Event('submit', { cancelable: true }));
+  for (let k = 0; k < 50 && TU.busy(); k++) await tick(20); await tick(20);
+  ok(devCalls.length === 1 && devCalls[0].extra_body.enable_thinking === false && UI.history().some(x => x.content === 'On-device answer.'), 'tutor: the device model answers, with thinking off');
+  UI.close();
   await go('#/settings');
   ok(UI.getContext() === null || !UI.getContext().question, 'tutor: leaving the exercise clears the question context');
-  TU.engineFactory = null;
-  await TU.unload();
+  TU.engineFactory = null; TU.fetch = (...a) => fetch(...a);
+  await TU.unload(); S.setProfile({ tutor: null });
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
 })().catch(e => { console.log('FAIL harness threw: ' + (e.stack || e.message)); console.log('RESULTS 1 failed of 1'); });

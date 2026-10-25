@@ -47,15 +47,18 @@ practise it, to a mixed practice set for the lesson or the whole chapter, to the
 homework help for that lesson. Press *I'm on this lesson in class* and the lesson stays on the home page.
 Nothing from the books is copied; see [CPM.md](CPM.md).
 
-**The tutor** (`lib/tutor.js`, `lib/tutor-ui.js`). Procademy has no videos, so a free AI explains instead.
-It runs a small open model (Qwen3, through WebLLM) on the device's own graphics chip: no account, no key,
-no cost, and nothing typed leaves the device. The first use downloads the model once (Light about 350 MB,
-Standard about 1 GB, Best about 2.3 GB), and after that it starts in seconds, even offline. It needs
-WebGPU: Chrome or Edge on a computer, or Safari on a recent Mac, iPhone or iPad. Where a browser ships its
-own model (Chrome's Prompt API), that is offered too. Every request carries what is on screen, such as the
-skill's lesson or the practice question with its checked steps, so the tutor explains a known-correct
-answer. Before the learner answers, the last step is withheld, so it can hint but not give the answer
-away. The tutor is the only part of the site that uses the network.
+**The tutor** (`lib/tutor.js`, `lib/tutor-ui.js`). Procademy has no videos, so a free AI explains instead:
+the ✦ Ask button on every page, "Explain it" on every skill and lesson, and "Why is that wrong?" after a
+wrong answer. By default it is a **free cloud tutor** that starts at once with nothing to download:
+Pollinations' anonymous API running GPT-OSS 20B. It needs no account and no key. It allows one reply every
+30 seconds per internet connection; when that limit is hit, the panel counts down and sends again by
+itself. It sends the question typed and the problem on screen, never a name or progress. For working
+privately or offline, the tutor's settings offer an **on-device** model instead (Qwen3 through WebLLM: Light
+about 350 MB, Standard about 1 GB, Best about 2.3 GB, downloaded once; needs WebGPU), and Chrome's built-in
+model where it exists. Either way, every request carries what is on screen, such as the skill's lesson or
+the practice question with its checked steps, so the tutor explains a known-correct answer. Before the
+learner answers, only the first step is shared, and a filter removes any sentence that gives the answer
+away. The free service is best effort, with no uptime promise, so if it stops, the on-device tutor still works.
 
 ## How it is built
 
@@ -88,7 +91,7 @@ every route, every skill's article and a question, settings, search); and `tests
 hundreds of questions per skill and checks structure, determinism, variety, that each answer passes the
 real checker, that choice questions have no giveaways, and each skill's own `verify()` re-derivation.
 `tests/cpm.js` checks every CPM book against CPM's lesson list. `SEEDS=1500 ./tests/run.sh` checks more
-seeds, and `./tests/run.sh --live-tutor` also downloads the Light tutor model and asks it two questions.
+seeds, and `./tests/run.sh --live-tutor` also asks the real free cloud tutor two questions.
 
 ## History
 

@@ -2,8 +2,9 @@
 <html lang="en">
 <head><meta charset="utf-8"><title>Tutor live test</title></head>
 <body>
-<p>Live tutor test: downloads the Light model (about 350 MB) once, then asks two questions. Not part of
-<code>run.sh</code>; run it with <code>./tests/run.sh --live-tutor</code>, or open it over http in Chrome.</p>
+<p>Live tutor test. By default it asks the free cloud tutor two questions (about a minute, because the free
+service answers once every 30 seconds). With <code>?model=Qwen3-0.6B-q4f16_1-MLC</code> it downloads that
+on-device model instead. Run it with <code>./tests/run.sh --live-tutor</code>, or open it over http in Chrome.</p>
 <pre id="out"></pre>
 <script src="../lib/rng.js"></script>
 <script src="../lib/math.js"></script>
@@ -17,11 +18,13 @@
   let fail = 0, pass = 0;
   const ok = (c, m) => { if (c) { pass++; log('PASS ' + m); } else { fail++; log('FAIL ' + m); } };
   try {
-    ok(TUTOR.supported(), 'WebGPU is available (navigator.gpu)');
-    if (!TUTOR.supported()) throw new Error('no WebGPU here');
-    const adapter = await navigator.gpu.requestAdapter();
-    ok(!!adapter, 'a WebGPU adapter was found');
-    const model = new URLSearchParams(location.search).get('model') || 'Qwen3-0.6B-q4f16_1-MLC';
+    const model = new URLSearchParams(location.search).get('model') || 'cloud';
+    if (model !== 'cloud') {
+      ok(TUTOR.supported(), 'WebGPU is available (navigator.gpu)');
+      if (!TUTOR.supported()) throw new Error('no WebGPU here');
+      const adapter = await navigator.gpu.requestAdapter();
+      ok(!!adapter, 'a WebGPU adapter was found');
+    }
     const t0 = performance.now();
     let last = -1;
     TUTOR.on(t => { const p = Math.round((t.progress.fraction || 0) * 10); if (t.state === 'loading' && p !== last) { last = p; log('progress ' + p * 10 + '% ' + (t.progress.text || '').slice(0, 80)); } });
@@ -37,7 +40,7 @@
     ok(/5/.test(a1) && !/<think>/.test(a1), 'it uses the checked answer and shows no thinking block');
     // hidden answer: should guide, not give it
     const ctx2 = Object.assign({}, ctx, { steps: ctx.steps.slice(0, 2), answerShown: false });
-    const a2 = await TUTOR.ask([{ role: 'user', content: 'Give me a hint, without telling me the answer.' }], ctx2);
+    const a2 = await TUTOR.ask([{ role: 'user', content: 'Give me a hint, without telling me the answer.' }], ctx2, null, w => { if (w && w.seconds % 10 === 0) log('waiting for the free slot: ' + w.seconds + ' s'); });
     log('--- answer 2 ---\n' + a2 + '\n---');
     ok(a2.length > 20, 'it gives a hint');
     ok(!/x\s*=\s*5\b/.test(a2), 'the hint does not state x = 5');

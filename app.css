@@ -312,6 +312,10 @@ body.tutor-open .tutor-fab { display: none; }
 .tutor-input { display: flex; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--line); align-items: flex-end; }
 .tutor-input textarea { flex: 1; resize: none; padding: .55rem .7rem; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; min-height: 44px; max-height: 140px; }
 .tutor-input textarea:disabled { opacity: .6; }
+.tutor-input[hidden] { display: none; }
+.tutor-note { padding: 0 14px 10px; }
+.tutor-note:empty { display: none; }
+.tutor-model.off { opacity: .55; cursor: not-allowed; }
 @media (max-width: 700px) {
   .tutor { right: 0; left: 0; bottom: 0; top: 18vh; width: auto; border-radius: var(--radius) var(--radius) 0 0; }
   .tutor-fab { right: 12px; bottom: 12px; }
