@@ -31,6 +31,13 @@ if [ -n "$bad" ]; then fail=1; echo "  ${summary:-no summary}"; echo "$bad" | se
 elif [ -z "$summary" ]; then fail=1; echo "  ✗ the suite did not finish"; tail -5 "$TMP/suite.out" | sed 's/^/    /'
 else echo "  ✓ ${summary#RESULTS 0 failed of } checks passed"; fi
 
+echo "▶ every page at phone width (tests/sweep.html)"
+WINDOW=390,844 CHROME="$CHROME" node tests/cdp.js "file://$ROOT/tests/sweep.html" 600000 "RESULTS" >"$TMP/sweep.out" 2>&1
+sw=$(grep -oE "RESULTS [0-9]+ failed of [0-9]+" "$TMP/sweep.out" | tail -1)
+if [ -z "$sw" ]; then fail=1; echo "  ✗ the sweep did not finish"; tail -5 "$TMP/sweep.out" | sed 's/^/    /'
+elif [ "$(echo "$sw" | awk '{print $2}')" != "0" ]; then fail=1; echo "  ✗ ${sw#RESULTS }"; grep -E "^  (error|text|wide):" "$TMP/sweep.out" | head -12 | sed 's/^/  /'
+else echo "  ✓ $(echo "$sw" | awk '{print $5}') pages: no script errors, no leaked text, nothing wider than the screen"; fi
+
 echo "▶ content (node tests/content.js)"
 if out=$(node tests/content.js 2>&1); then echo "  ✓ $(echo "$out" | tail -1)"; else fail=1; echo "$out" | tail -25 | sed 's/^/    /'; fi
 

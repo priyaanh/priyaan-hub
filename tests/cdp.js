@@ -2,6 +2,7 @@
 /* Runs a page in headless Chrome over the DevTools protocol and prints its console output in REAL time.
    (--virtual-time-budget fast-forwards timers, so suites that wait on real work end early under it.)
    Usage: node tests/cdp.js <url> [maxMs] [stopWhenLineContains] [--dark]
+   WINDOW=390,844 emulates a phone of that size.
    NB: never pass --user-data-dir to Chrome here; it makes headless Chrome hang on macOS. */
 'use strict';
 const { spawn } = require('child_process');
@@ -47,6 +48,7 @@ let sawError = false;
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
   await send('Runtime.enable', {}, sessionId);
   await send('Page.enable', {}, sessionId);
+  if (process.env.WINDOW) { const [w, h] = process.env.WINDOW.split(',').map(Number); await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: true }, sessionId); }
   if (dark) await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] }, sessionId);
   await send('Page.navigate', { url }, sessionId);
   const timer = setTimeout(done, maxMs);

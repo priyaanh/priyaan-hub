@@ -299,11 +299,23 @@
   const sse = words => { const enc = new TextEncoder(); return new ReadableStream({ async start(ctrl) {
     for (const w of words) { await tick(2); ctrl.enqueue(enc.encode('data: ' + JSON.stringify({ choices: [{ delta: { content: w } }] }) + '\n\n')); }
     ctrl.enqueue(enc.encode('data: [DONE]\n\n')); ctrl.close(); } }); };
-  const cloudCalls = []; let busyOnce = 0;
+  const cloudCalls = [];
+  // per-service behaviour for the next calls: a queue of { status, retry } (empty = answer normally)
+  const plan = { llm7: [], pollinations: [] };
+  const who = url => url.includes('llm7') ? 'llm7' : 'pollinations';
   TU.fetch = async (url, init) => {
-    cloudCalls.push({ url, body: JSON.parse(init.body) });
-    if (busyOnce > 0) { busyOnce--; return new Response(JSON.stringify({ error: { code: 'FREE_LIMIT' } }), { status: 402, headers: { 'Retry-After': '1', 'Content-Type': 'application/json' } }); }
+    const svc = who(url);
+    cloudCalls.push({ url, svc, body: JSON.parse(init.body), auth: (init.headers || {}).Authorization || '', t: performance.now() });
+    const next = plan[svc].shift();
+    if (next) return new Response(JSON.stringify({ error: { code: 'busy', retry_after: next.retry } }), { status: next.status, headers: Object.assign({ 'Content-Type': 'application/json' }, next.header === false ? {} : { 'Retry-After': String(next.retry || 1) }) });
     return new Response(sse(['**Step 1:** ', 'add <script>x<\/script> ', 'the \\frac{1}{2} ', 'numbers.\n- one\n- two']), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+  };
+  const askAndWait = async (q, limit) => {
+    const n = cloudCalls.length;
+    panel.querySelector('#tutor-text').value = q; panel.querySelector('#tutor-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await tick(30);
+    for (let k = 0; k < (limit || 200) && TU.busy(); k++) await tick(25);
+    return cloudCalls.slice(n);
   };
   S.setProfile({ tutor: null });
   await TU.unload();
@@ -320,16 +332,50 @@
   const shown = panel.querySelector('.tmsg.assistant:last-child');
   ok(shown && shown.querySelector('b') && !shown.querySelector('script') && text(shown).includes('<script>') && text(shown).includes('(1)/(2)') && shown.querySelectorAll('li').length === 2, 'tutor: replies render a little markdown, escape HTML and tidy LaTeX');
   const req = cloudCalls[0];
-  ok(req && req.url === TU.CLOUD_URL && req.body.stream === true && req.body.messages[0].role === 'system' && req.body.messages[0].content.includes('Lesson notes'), 'tutor: the cloud request streams and carries the lesson as context');
+  ok(req && req.url === TU.PROVIDERS[0].url && req.body.model === 'gpt-oss:20b' && req.body.stream === true && req.body.messages[0].role === 'system' && req.body.messages[0].content.includes('Lesson notes'), 'tutor: the first cloud request goes to LLM7, streams, and carries the lesson as context');
   ok(!JSON.stringify(req.body).includes('Sam') && !JSON.stringify(req.body).includes('points'), 'tutor: the request carries no name and no progress');
-  ok(/Pollinations/.test(text(panel.querySelector('#tutor-note'))), 'tutor: the panel says where cloud answers come from');
-  // the free limit: a 402 with Retry-After is waited out, then sent again by itself
-  busyOnce = 1; const before = cloudCalls.length;
-  panel.querySelector('#tutor-text').value = 'Show me another example'; panel.querySelector('#tutor-form').dispatchEvent(new Event('submit', { cancelable: true }));
-  await tick(300);
-  ok(/next reply in/.test(text(panel.querySelector('#tutor-status'))) || /coming in/.test(text(panel)), 'tutor: while the free limit applies, the panel counts down');
-  for (let k = 0; k < 120 && TU.busy(); k++) await tick(25);
-  ok(cloudCalls.length === before + 2 && UI.history()[3].content.includes('Step 1'), 'tutor: after the wait it sends again and the answer arrives');
+  ok(/LLM7/.test(text(panel.querySelector('#tutor-note'))) && /Pollinations/.test(text(panel.querySelector('#tutor-note'))), 'tutor: the panel says where cloud answers come from');
+  const free = () => { Object.keys(TU._nextFree).forEach(k => delete TU._nextFree[k]); };
+  // LLM7 busy for a moment while Pollinations is free: Pollinations answers at once
+  free(); plan.llm7.push({ status: 429, retry: 1, header: false });
+  let calls = await askAndWait('Show me another example');
+  ok(calls.length === 2 && calls[0].svc === 'llm7' && calls[1].svc === 'pollinations' && calls[1].t - calls[0].t < 500 && TU.lastProvider === 'pollinations', 'tutor: when LLM7 is busy, Pollinations answers straight away');
+  ok(!('reasoning_effort' in calls[0].body) && calls[1].body.reasoning_effort === 'low', 'tutor: each service gets only the settings it accepts (LLM7 rejects reasoning_effort)');
+  // straight after, Pollinations is on its 30-second rest, so LLM7 is asked, not a 30-second wait
+  calls = await askAndWait('And another');
+  ok(calls.length === 1 && calls[0].svc === 'llm7', 'tutor: the next question goes to LLM7 while Pollinations rests');
+  // LLM7 busy for two seconds while Pollinations rests: wait the two seconds for LLM7
+  plan.llm7.push({ status: 429, retry: 2 });
+  calls = await askAndWait('Two-second wait');
+  ok(calls.length === 2 && calls.every(c => c.svc === 'llm7') && calls[1].t - calls[0].t >= 1800 && calls[1].t - calls[0].t < 4000, 'tutor: it waits for whichever service is free sooner (2 s, not 30 s)');
+  // LLM7 wants a key: Pollinations answers (once free), and no error is shown
+  free(); plan.llm7.push({ status: 401 });
+  calls = await askAndWait('Once more');
+  ok(calls.length === 2 && calls[1].svc === 'pollinations' && UI.history().slice(-1)[0].content.includes('Step 1'), 'tutor: if LLM7 starts asking for a key, Pollinations answers');
+  // both busy: the panel counts down, shows Procademy's own step if there is one, then the reply comes
+  free(); TU._nextFree.pollinations = Date.now() + 4000; plan.llm7.push({ status: 429, retry: 3 });
+  const pending4 = askAndWait('Both busy');
+  await tick(700);
+  ok(/next reply in/.test(text(panel.querySelector('#tutor-status'))) || /coming in/.test(text(panel)), 'tutor: when every service is busy, the panel counts down');
+  calls = await pending4;
+  ok(calls.length === 2 && UI.history().slice(-1)[0].content.includes('Step 1'), 'tutor: after the countdown it sends again and the answer arrives');
+  free();
+  // a service that never answers: after the first-reply limit the other service answers
+  TU.limits = { firstByte: 0.4, idle: 0.4 };
+  const realFetch = TU.fetch;
+  TU.fetch = (url, init) => who(url) === 'llm7'
+    ? new Promise((res, rej) => { cloudCalls.push({ url, svc: 'llm7', body: JSON.parse(init.body), t: performance.now() }); init.signal.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError'))); })
+    : realFetch(url, init);
+  calls = await askAndWait('Hanging service');
+  ok(calls.length === 2 && calls[0].svc === 'llm7' && calls[1].svc === 'pollinations' && calls[1].t - calls[0].t < 1500 && UI.history().slice(-1)[0].content.includes('Step 1'), 'tutor: a service that never answers is given up on, and the other answers');
+  // a stream that starts and then goes quiet: what arrived is kept, and the tutor is not stuck
+  free();
+  TU.fetch = async (url, init) => { cloudCalls.push({ url, svc: who(url), body: JSON.parse(init.body), t: performance.now() });
+    const enc = new TextEncoder();
+    return new Response(new ReadableStream({ start(c) { c.enqueue(enc.encode('data: ' + JSON.stringify({ choices: [{ delta: { content: 'Partial answer.' } }] }) + '\n\n')); init.signal.addEventListener('abort', () => c.error(new DOMException('aborted', 'AbortError'))); } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } }); };
+  calls = await askAndWait('Quiet stream');
+  ok(!TU.busy() && UI.history().slice(-1)[0].content === 'Partial answer.', 'tutor: a stream that goes quiet ends with what arrived');
+  TU.fetch = realFetch; TU.limits = { firstByte: 25, idle: 30 }; free();
   UI.close();
   ok(panel.hidden, 'tutor: the panel closes');
   // grounding in a practice question: the answer stays hidden until the learner has answered
@@ -365,6 +411,21 @@
   };
   UI.showSettings(); await tick();
   ok(panel.querySelectorAll('input[name="tutor-engine"]').length >= 4 && /about 350 MB/.test(text(panel)) && panel.querySelector('input[value="cloud"]').checked, 'tutor: settings offer the cloud tutor (chosen) and on-device models with sizes');
+  ok(/under 13/.test(text(panel)), 'tutor: settings say what LLM7’s policy says about children');
+  try { localStorage.removeItem('procademy.secret.v1'); } catch (e) {}
+  panel.querySelector('#tutor-llm7-key').value = 'test-key-123'; panel.querySelector('#tutor-key-save').click(); await tick();
+  ok(TU.cloud.tokens.llm7 === 'test-key-123' && !S.exportJSON().includes('test-key-123'), 'tutor: a pasted key is used, and never put in a backup');
+  const llm7Box = panel.querySelector('.tutor-provider[value="llm7"]'); llm7Box.checked = false; llm7Box.dispatchEvent(new Event('change'));
+  ok(TU.cloud.use.join() === 'pollinations', 'tutor: unticking LLM7 leaves only Pollinations');
+  llm7Box.checked = true; llm7Box.dispatchEvent(new Event('change'));
+  panel.querySelector('input[value="cloud"]').checked = true; panel.querySelector('#tutor-use').click(); await tick(30);
+  free(); calls = await askAndWait('With a key');
+  ok(calls.length === 1 && calls[0].svc === 'llm7' && calls[0].auth === 'Bearer test-key-123', 'tutor: the key is sent to LLM7 only');
+  free(); plan.llm7.push({ status: 429, retry: 30 });
+  calls = await askAndWait('Key not for Pollinations');
+  ok(calls.length === 2 && calls[1].svc === 'pollinations' && calls[1].auth === '', 'tutor: the key is never sent to Pollinations');
+  try { localStorage.removeItem('procademy.secret.v1'); } catch (e) {}
+  UI.showSettings(); await tick();
   panel.querySelector('input[value="Qwen3-0.6B-q4f16_1-MLC"]').checked = true;
   panel.querySelector('#tutor-use').click();
   for (let k = 0; k < 50 && !(TU.state === 'ready' && !TU.isCloud()); k++) await tick(20);

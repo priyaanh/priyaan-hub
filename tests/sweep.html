@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procademy page sweep</title>
+<link rel="stylesheet" href="../app.css">
+</head>
+<body>
+<header class="top"><div class="bar">
+  <a class="brand" href="#/"><span class="logo">✦</span><span class="word" data-brand>Procademy</span></a>
+  <nav class="nav"><a href="#/courses" data-nav="courses">Courses</a><a href="#/cpm" data-nav="cpm">CPM</a><a href="#/progress" data-nav="progress">Progress</a></nav>
+  <div class="search"><form id="search-form"><input id="search-input" type="search"></form></div>
+  <div class="stats" id="stats"></div>
+</div></header>
+<main id="main"></main>
+<div id="root" style="padding:16px"></div>
+<script src="../lib/rng.js"></script>
+<script src="../lib/math.js"></script>
+<script src="../lib/content.js"></script>
+<script src="../lib/store.js"></script>
+<script src="../lib/engine.js"></script>
+<script src="../content/k.js"></script>
+<script src="../content/g1.js"></script>
+<script src="../content/g2.js"></script>
+<script src="../content/g3.js"></script>
+<script src="../content/g4.js"></script>
+<script src="../content/g5.js"></script>
+<script src="../content/g6.js"></script>
+<script src="../content/math7.js"></script>
+<script src="../content/math8.js"></script>
+<script src="../content/alg1.js"></script>
+<script src="../content/geo.js"></script>
+<script src="../content/alg2.js"></script>
+<script src="../content/precalc.js"></script>
+<script src="../content/int1.js"></script>
+<script src="../content/int2.js"></script>
+<script src="../content/int3.js"></script>
+<script src="../cpm/cc1.js"></script>
+<script src="../cpm/cc2.js"></script>
+<script src="../cpm/cc3.js"></script>
+<script src="../cpm/int1.js"></script>
+<script src="../cpm/int2.js"></script>
+<script src="../cpm/int3.js"></script>
+<script src="../lib/tutor.js"></script>
+<script src="../lib/tutor-ui.js"></script>
+<script src="../lib/views.js"></script>
+<script src="../lib/cpm-views.js"></script>
+<script>STORE.useMemory(true); /* the suite never touches real data */</script>
+<script src="../lib/app.js"></script>
+<script>
+/* Visits every page (home, courses, units, skills, CPM books and lessons) and reports script errors,
+   leaked "undefined"/"NaN" text, and anything wider than the screen. run.sh opens it at phone width. */
+(async function () {
+  const A = ACADEMY, main = document.getElementById('main');
+  const tick = ms => new Promise(r => setTimeout(r, ms || 0));
+  let errors = [];
+  window.addEventListener('error', e => errors.push(String(e.message)));
+  const routes = ['#/', '#/courses', '#/progress', '#/settings', '#/search/fraction', '#/review', '#/cpm'];
+  A.courses.forEach(c => { routes.push('#/course/' + c.id); c.units.forEach(u => routes.push('#/unit/' + c.id + '/' + u.id)); });
+  Object.keys(A.skills).forEach(id => routes.push('#/skill/' + encodeURIComponent(id)));
+  A.cpm.forEach(b => { routes.push('#/cpm/' + b.id); b.chapters.forEach(ch => ch.lessons.forEach(l => routes.push('#/cpm/' + b.id + '/' + l.id))); });
+  const problems = { error: [], text: [], wide: [] };
+  for (const r of routes) {
+    errors = [];
+    location.hash = r; await tick(5);
+    const t = main.innerText || '';
+    if (errors.length) problems.error.push(r + ' :: ' + errors[0]);
+    const bad = t.match(/\bundefined\b|\bNaN\b|\[object Object\]|Something went wrong/);
+    if (bad) problems.text.push(r + ' :: ' + bad[0] + ' :: ' + t.slice(Math.max(0, t.indexOf(bad[0]) - 60), t.indexOf(bad[0]) + 40).replace(/\s+/g, ' '));
+    const vw = document.documentElement.clientWidth;
+    if (document.documentElement.scrollWidth > vw + 1) {
+      let worst = null;
+      main.querySelectorAll('*').forEach(el => { const b = el.getBoundingClientRect(); if (b.right > vw + 1 && (!worst || b.right > worst.r)) worst = { r: b.right, el }; });
+      problems.wide.push(r + ' :: ' + document.documentElement.scrollWidth + 'px :: ' + (worst ? worst.el.tagName + '.' + worst.el.className + ' "' + (worst.el.innerText || '').slice(0, 40).replace(/\s+/g, ' ') + '"' : '?'));
+    }
+  }
+  console.log('ROUTES ' + routes.length + ' at ' + document.documentElement.clientWidth + 'px wide');
+  for (const k of Object.keys(problems)) { console.log('PROBLEM ' + k + ' ' + problems[k].length); problems[k].slice(0, 12).forEach(p => console.log('  ' + k + ': ' + p)); }
+  const failed = Object.values(problems).reduce((a, l) => a + l.length, 0);
+  console.log(`RESULTS ${failed} failed of ${routes.length}`);
+})();
+</script></body></html>

@@ -49,16 +49,27 @@ Nothing from the books is copied; see [CPM.md](CPM.md).
 
 **The tutor** (`lib/tutor.js`, `lib/tutor-ui.js`). Procademy has no videos, so a free AI explains instead:
 the ✦ Ask button on every page, "Explain it" on every skill and lesson, and "Why is that wrong?" after a
-wrong answer. By default it is a **free cloud tutor** that starts at once with nothing to download:
-Pollinations' anonymous API running GPT-OSS 20B. It needs no account and no key. It allows one reply every
-30 seconds per internet connection; when that limit is hit, the panel counts down and sends again by
-itself. It sends the question typed and the problem on screen, never a name or progress. For working
-privately or offline, the tutor's settings offer an **on-device** model instead (Qwen3 through WebLLM: Light
-about 350 MB, Standard about 1 GB, Best about 2.3 GB, downloaded once; needs WebGPU), and Chrome's built-in
-model where it exists. Either way, every request carries what is on screen, such as the skill's lesson or
-the practice question with its checked steps, so the tutor explains a known-correct answer. Before the
-learner answers, only the first step is shared, and a filter removes any sentence that gives the answer
-away. The free service is best effort, with no uptime promise, so if it stops, the on-device tutor still works.
+wrong answer. By default it is a **free cloud tutor** that starts at once with nothing to download. It
+uses two free services that run the same model (GPT-OSS 20B), taking whichever is free soonest:
+
+| Service | Without a key | With a free key |
+| --- | --- | --- |
+| LLM7 | about one reply a second, fewer when used heavily | 1 a second, 60 a minute, 250 an hour |
+| Pollinations | one reply every 30 seconds | (not used) |
+
+Both are free, best-effort services with no uptime promise. When both are busy, the panel counts down and
+shows Procademy's own first step for the question meanwhile. A free LLM7 key (from dash.llm7.io), pasted
+into the tutor's ⚙ settings, secures LLM7's published free limits; it is stored on that device only and
+never in a backup. LLM7's privacy policy says it is not meant for children under 13, so the settings let
+you switch it off and use Pollinations alone. The cloud tutor sends the question typed and the problem on
+screen, never a name or progress.
+
+For working privately, offline, or with no limits at all, the settings also offer an **on-device** model
+(Qwen3 through WebLLM: Light about 350 MB, Standard about 1 GB, Best about 2.3 GB, downloaded once; needs
+WebGPU), and Chrome's built-in model where it exists. Every request, cloud or device, carries what is on
+screen, such as the skill's lesson or the practice question with its checked steps, so the tutor explains
+a known-correct answer. Before the learner answers, only the first step is shared, and a filter removes
+any sentence that gives the answer away.
 
 ## How it is built
 
@@ -85,7 +96,9 @@ any page.
 ./tests/run.sh
 ```
 
-runs three things in headless Chrome and node: the page loads without console errors on several routes;
+runs these in headless Chrome and node: the page loads without console errors on several routes;
+`tests/sweep.html` visits every page (1,163 of them) at phone width for script errors, leaked text and
+anything wider than the screen;
 `tests/suite.html` drives the real app (mastery rules, the exercise player as a learner would use it,
 every route, every skill's article and a question, settings, search); and `tests/content.js` builds
 hundreds of questions per skill and checks structure, determinism, variety, that each answer passes the

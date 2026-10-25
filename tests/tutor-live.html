@@ -19,6 +19,7 @@ on-device model instead. Run it with <code>./tests/run.sh --live-tutor</code>, o
   const ok = (c, m) => { if (c) { pass++; log('PASS ' + m); } else { fail++; log('FAIL ' + m); } };
   try {
     const model = new URLSearchParams(location.search).get('model') || 'cloud';
+    TUTOR.debug = true;
     if (model !== 'cloud') {
       ok(TUTOR.supported(), 'WebGPU is available (navigator.gpu)');
       if (!TUTOR.supported()) throw new Error('no WebGPU here');
@@ -44,6 +45,20 @@ on-device model instead. Run it with <code>./tests/run.sh --live-tutor</code>, o
     log('--- answer 2 ---\n' + a2 + '\n---');
     ok(a2.length > 20, 'it gives a hint');
     ok(!/x\s*=\s*5\b/.test(a2), 'the hint does not state x = 5');
+    if (model === 'cloud') {
+      // back-to-back questions: with the services taken in turn, none should wait 30 seconds
+      const times = [];
+      for (let k = 1; k <= 4; k++) {
+        const t2 = performance.now();
+        const n = Math.floor(Math.random() * 900) + 100;          // a fresh question each run, so no cached answer
+        const a = await TUTOR.ask([{ role: 'user', content: `In one sentence, what is ${n} + ${k}?` }], null, null, w => { if (w) log('  waiting ' + w.seconds + ' s'); });
+        times.push(Math.round((performance.now() - t2) / 100) / 10);
+        log(`  question ${k}: ${times[k - 1]} s via ${TUTOR.lastProvider}: ${a.slice(0, 60)}`);
+      }
+      // the free services slow down after heavy use (LLM7 asks for longer waits, Pollinations keeps 30 s),
+      // so the honest bar is "never stuck": every answer arrives, none waits past one Pollinations slot
+      ok(times.every(t => t < 40), 'four questions in a row each answered within 40 s (' + times.join(', ') + ' s)');
+    }
   } catch (e) { fail++; log('FAIL threw: ' + (e && e.stack || e)); }
   log(`RESULTS ${fail} failed of ${pass + fail}`);
 })();
