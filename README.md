@@ -47,29 +47,33 @@ practise it, to a mixed practice set for the lesson or the whole chapter, to the
 homework help for that lesson. Press *I'm on this lesson in class* and the lesson stays on the home page.
 Nothing from the books is copied; see [CPM.md](CPM.md).
 
-**The tutor** (`lib/tutor.js`, `lib/tutor-ui.js`). Procademy has no videos, so a free AI explains instead:
-the ✦ Ask button on every page, "Explain it" on every skill and lesson, and "Why is that wrong?" after a
-wrong answer. By default it is a **free cloud tutor** that starts at once with nothing to download. It
-uses two free services that run the same model (GPT-OSS 20B), taking whichever is free soonest:
+**Home and Courses.** *Home* is the learner's own page: their saved courses and CPM books, each with a
+Continue button, then the lesson they are on in class, what they practised last, what is up next and
+this week's activity. *Courses* is where everything is browsed: every grade and every CPM book, with tabs
+(All, Elementary, Middle school, High school, CPM books, Saved) and a search box. **☆ Save** on any card,
+course page or book page puts it on Home; pressing it again takes it off.
 
-| Service | Without a key | With a free key |
-| --- | --- | --- |
-| LLM7 | about one reply a second, fewer when used heavily | 1 a second, 60 a minute, 250 an hour |
-| Pollinations | one reply every 30 seconds | (not used) |
+**The tutor** (`lib/tutor.js`, `lib/tutor-ui.js`, `lib/tutor-worker.js`). Procademy has no videos, so a free
+AI explains instead: the ✦ Ask button on every page, "Explain it" on every skill and lesson, and "Why is
+that wrong?" after a wrong answer. It needs no account, no key and no sign-up anywhere.
 
-Both are free, best-effort services with no uptime promise. When both are busy, the panel counts down and
-shows Procademy's own first step for the question meanwhile. A free LLM7 key (from dash.llm7.io), pasted
-into the tutor's ⚙ settings, secures LLM7's published free limits; it is stored on that device only and
-never in a backup. LLM7's privacy policy says it is not meant for children under 13, so the settings let
-you switch it off and use Pollinations alone. The cloud tutor sends the question typed and the problem on
-screen, never a name or progress.
-
-For working privately, offline, or with no limits at all, the settings also offer an **on-device** model
-(Qwen3 through WebLLM: Light about 350 MB, Standard about 1 GB, Best about 2.3 GB, downloaded once; needs
-WebGPU), and Chrome's built-in model where it exists. Every request, cloud or device, carries what is on
-screen, such as the skill's lesson or the practice question with its checked steps, so the tutor explains
-a known-correct answer. Before the learner answers, only the first step is shared, and a filter removes
-any sentence that gives the answer away.
+- **Cloud first.** Two free cloud services that run the same model (GPT-OSS 20B), LLM7 and Pollinations,
+  answer at once while either is free. The cloud tutor sends the question typed and the problem on
+  screen, never a name or progress.
+- **Unlimited mode, so there is never a wait.** The first time the tutor is opened, the same kind of free
+  AI also sets itself up on the device in the background (Qwen3 through WebLLM, in a worker: about 350 MB
+  on a phone, 1 GB on a computer, once; or the browser's own model in Chrome, with nothing to download).
+  From then on, whenever the cloud is busy, the device answers straight away, with no limit and offline
+  too; its answers never leave the device. It is on by default, except on mobile data or Data Saver,
+  and it can be switched off in the tutor's ⚙ settings. It needs WebGPU (Chrome or Edge on a computer,
+  Safari on a recent Mac, iPhone or iPad); elsewhere the cloud services carry on alone, counting down
+  when both are busy and showing Procademy's own first step meanwhile.
+- **Grounded and honest.** Every request carries what is on screen, such as the skill's lesson or the
+  practice question with its checked steps, so the tutor explains a known-correct answer. Before the
+  learner answers, only the first step is shared, and a filter removes any sentence that gives the answer
+  away. Cloud requests give up after 25 s with no reply, so a stuck service never stalls the tutor.
+- LLM7's privacy policy says it is not meant for children under 13; the settings' Advanced section can
+  switch it off (and holds an optional free LLM7 key, kept on the device only).
 
 ## How it is built
 

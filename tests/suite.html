@@ -8,7 +8,7 @@
 <body>
 <header class="top"><div class="bar">
   <a class="brand" href="#/"><span class="logo">✦</span><span class="word" data-brand>Procademy</span></a>
-  <nav class="nav"><a href="#/courses" data-nav="courses">Courses</a><a href="#/cpm" data-nav="cpm">CPM</a><a href="#/progress" data-nav="progress">Progress</a></nav>
+  <nav class="nav"><a href="#/" data-nav="home">Home</a><a href="#/courses" data-nav="courses">Courses</a><a href="#/cpm" data-nav="cpm">CPM</a><a href="#/progress" data-nav="progress">Progress</a></nav>
   <div class="search"><form id="search-form"><input id="search-input" type="search"></form></div>
   <div class="stats" id="stats"></div>
 </div></header>
@@ -249,7 +249,37 @@
   // course enrol button
   await go('#/course/math-7');
   main.querySelector('#enroll').click(); await tick();
-  ok(S.get().profile.enrolled.includes('math-7') && text(main.querySelector('#enroll')).includes('On my home page'), 'course: add to home page toggles enrolment');
+  ok(S.get().profile.enrolled.includes('math-7') && text(main.querySelector('#enroll')).includes('Saved'), 'course: ☆ Save puts the course on the home page');
+  main.querySelector('#enroll').click(); await tick();
+  ok(!S.get().profile.enrolled.includes('math-7') && text(main.querySelector('#enroll')).includes('Save'), 'course: pressing it again takes it off');
+
+  /* ---- home and courses are separate pages; saved courses go home ---- */
+  S.get().profile.enrolled = []; S.save();
+  await go('#/');
+  ok(main.querySelector('.empty-saved') && /No saved courses yet/.test(text(main)) && !main.querySelector('.course-card'), 'home: with nothing saved, it says how to save courses');
+  ok(document.querySelector('[data-nav="home"]').classList.contains('active') && !document.querySelector('[data-nav="courses"]').classList.contains('active'), 'nav: Home is its own page');
+  await go('#/courses');
+  ok(document.querySelector('[data-nav="courses"]').classList.contains('active') && main.querySelectorAll('.course-card').length === A.courses.length + A.cpm.length, 'courses: the Courses page lists every course and CPM book');
+  const card7 = [...main.querySelectorAll('.course-card')].find(cd => text(cd).includes('7th grade math'));
+  card7.querySelector('.save-btn').click(); await tick();
+  ok(S.get().profile.enrolled.includes('math-7') && card7.querySelector('.save-btn').classList.contains('on') && location.hash === '#/courses', 'courses: ☆ Save on a card saves it without opening the course');
+  const bookCard = [...main.querySelectorAll('.course-card')].find(cd => cd.querySelector('[data-save="cpm:cc2"]'));
+  bookCard.querySelector('.save-btn').click(); await tick();
+  ok(S.get().profile.enrolled.includes('cpm:cc2'), 'courses: a CPM book can be saved too');
+  const find2 = main.querySelector('#course-find'); find2.value = 'algebra'; find2.dispatchEvent(new Event('input'));
+  const vis = [...main.querySelectorAll('.course-card')].filter(cd => !cd.hidden).map(cd => text(cd.querySelector('h3')));
+  ok(vis.length >= 2 && vis.every(t => /algebra/i.test(t)), 'courses: the search box filters as you type (' + vis.join(', ') + ')');
+  await go('#/courses/Elementary');
+  ok([...main.querySelectorAll('.course-card')].filter(cd => !cd.hidden).every(cd => cd.dataset.band === 'Elementary') && main.querySelector('.tab.on').textContent === 'Elementary', 'courses: the Elementary tab shows only elementary courses');
+  await go('#/courses/saved');
+  const savedVis = [...main.querySelectorAll('.course-card')].filter(cd => !cd.hidden);
+  ok(savedVis.length === 2, 'courses: the Saved tab shows the saved course and book');
+  await go('#/');
+  const homeCards = [...main.querySelectorAll('.course-card')];
+  ok(homeCards.length === 2 && homeCards.some(cd => text(cd).includes('7th grade math')) && homeCards.some(cd => text(cd).includes('Core Connections, Course 2')) && homeCards.every(cd => cd.querySelector('.continue')), 'home: saved courses and books show under My courses, each with Continue');
+  homeCards.find(cd => text(cd).includes('Core Connections, Course 2')).querySelector('.save-btn').click(); await tick(40);
+  ok(main.querySelectorAll('.course-card').length === 1 && !S.get().profile.enrolled.includes('cpm:cc2'), 'home: un-saving takes it off the home page');
+  S.get().profile.enrolled = []; S.save();
 
   /* ---- CPM pages (a small fixture book, so the suite does not depend on the real data) ---- */
   S.reset();
@@ -403,6 +433,38 @@
   ok(m.querySelector('#ask-tutor'), 'tutor: the exercise has an "Ask the tutor" button');
   m.querySelector('#next').click(); await tick();
   ok(UI.history().length === 0, 'tutor: moving to the next question clears the chat');
+  // unlimited mode: an on-device helper starts in the background and answers whenever the cloud is busy
+  const localCalls = [];
+  TU.engineFactory = async (id, onProgress) => {
+    onProgress({ text: 'Fetching', progress: 0.5 }); await tick(30); onProgress({ text: 'Done', progress: 1 });
+    return { chat: { completions: { create: async (r) => { localCalls.push(r); return (async function* () { yield { choices: [{ delta: { content: 'Answer from this device.' } }] }; })(); } } } };
+  };
+  S.setProfile({ tutor: null }); free();
+  TU.local = { state: 'off', progress: { text: '', fraction: 0 }, modelId: null, error: '' };
+  m = await go('#/skill/math7.circles');
+  UI.open(); await tick(10);
+  ok(TU.local.state === 'loading' || TU.local.state === 'ready', 'unlimited: opening the tutor starts the on-device helper in the background');
+  for (let k = 0; k < 40 && TU.local.state !== 'ready'; k++) await tick(20);
+  ok(TU.local.state === 'ready' && /never a wait/i.test(text(panel.querySelector('#tutor-status'))), 'unlimited: once ready, the panel says there is never a wait');
+  calls = await askAndWait('Cloud is free');
+  ok(calls.length === 1 && TU.lastProvider !== 'device' && localCalls.length === 0, 'unlimited: while a cloud service is free, the cloud answers');
+  TU._nextFree.llm7 = Date.now() + 60000; TU._nextFree.pollinations = Date.now() + 30000;
+  const t0 = performance.now(); calls = await askAndWait('Cloud is busy');
+  ok(calls.length === 0 && localCalls.length === 1 && performance.now() - t0 < 1000 && UI.history().slice(-1)[0].content === 'Answer from this device.', 'unlimited: when the cloud is busy, this device answers straight away, with no countdown');
+  ok(/answered on this device/.test(text(panel.querySelector('.tmsg.assistant:last-child'))), 'unlimited: a device answer says where it came from');
+  free(); plan.llm7.push({ status: 429, retry: 40 }); plan.pollinations.push({ status: 402, retry: 30 });
+  calls = await askAndWait('Busy only once asked');
+  ok(localCalls.length === 2 && UI.history().slice(-1)[0].content === 'Answer from this device.', 'unlimited: if the cloud turns out to be busy, this device answers instead of waiting');
+  UI.showSettings(); await tick();
+  const ub = panel.querySelector('#tutor-unlimited');
+  ok(ub && ub.checked && /On · no waiting/.test(text(panel)), 'unlimited: settings show it on, and ready');
+  ub.checked = false; ub.dispatchEvent(new Event('change')); await tick();
+  ok(S.get().profile.tutor.unlimited === false, 'unlimited: it can be switched off');
+  ub.checked = true; ub.dispatchEvent(new Event('change')); await tick();
+  UI.close(); free();
+  await TU.unload(); TU.local = { state: 'off', progress: { text: '', fraction: 0 }, modelId: null, error: '' };
+  TU.engineFactory = null;
+
   // the on-device tutor is a choice in settings, with its download size, and is remembered
   const devCalls = [];
   TU.engineFactory = async (id, onProgress) => {
@@ -411,6 +473,7 @@
   };
   UI.showSettings(); await tick();
   ok(panel.querySelectorAll('input[name="tutor-engine"]').length >= 4 && /about 350 MB/.test(text(panel)) && panel.querySelector('input[value="cloud"]').checked, 'tutor: settings offer the cloud tutor (chosen) and on-device models with sizes');
+  panel.querySelector('.tutor-advanced').open = true;
   ok(/under 13/.test(text(panel)), 'tutor: settings say what LLM7’s policy says about children');
   try { localStorage.removeItem('procademy.secret.v1'); } catch (e) {}
   panel.querySelector('#tutor-llm7-key').value = 'test-key-123'; panel.querySelector('#tutor-key-save').click(); await tick();
@@ -430,6 +493,14 @@
   panel.querySelector('#tutor-use').click();
   for (let k = 0; k < 50 && !(TU.state === 'ready' && !TU.isCloud()); k++) await tick(20);
   ok(TU.state === 'ready' && !TU.isCloud() && S.get().profile.tutor.engine === 'Qwen3-0.6B-q4f16_1-MLC', 'tutor: choosing a device model loads it and remembers the choice');
+  // switching the tutor off and on again really starts it again (a stale start-up once froze the page here)
+  await TU.unload();
+  const restarted = await Promise.race([TU.start('cloud').then(() => TU.state), tick(1500).then(() => 'timed out')]);
+  ok(restarted === 'ready' && TU.isCloud(), 'tutor: after being switched off, it starts again');
+  await TU.unload();
+  const again = await Promise.race([TU.start('cloud').then(() => TU.state), tick(1500).then(() => 'timed out')]);
+  ok(again === 'ready', 'tutor: and again, every time');
+  await TU.start('Qwen3-0.6B-q4f16_1-MLC');
   panel.querySelector('#tutor-text').value = 'Explain'; panel.querySelector('#tutor-form').dispatchEvent(new Event('submit', { cancelable: true }));
   for (let k = 0; k < 50 && TU.busy(); k++) await tick(20); await tick(20);
   ok(devCalls.length === 1 && devCalls[0].extra_body.enable_thinking === false && UI.history().some(x => x.content === 'On-device answer.'), 'tutor: the device model answers, with thinking off');

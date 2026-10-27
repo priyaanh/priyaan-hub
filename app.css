@@ -85,6 +85,8 @@ pre.code { font-family: var(--mono); font-size: .92em; background: var(--surface
   .stat-pill { padding: .2rem .45rem; }
   .nav { gap: 0; }
   .nav a { padding: .35rem .4rem; font-size: .95rem; }
+  .stats { display: none; }                                  /* the streak and points are on the home page; keep the nav on one line */
+  .tab { padding: .35rem .6rem; font-size: .85rem; }
   .iconbtn { width: 32px; height: 32px; }
   main { padding-bottom: 96px; }                             /* room for the Ask button */
   main .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -268,6 +270,26 @@ footer { border-top: 1px solid var(--line); color: var(--muted); font-size: .9re
 .figure .fill { fill: var(--primary-soft); stroke: var(--primary); stroke-width: 2; }
 .figure .light { stroke: var(--line-strong); }
 
+/* ---------- saving courses, the courses page ---------- */
+.course-card { position: relative; }
+.course-card .card-link { color: var(--ink); }
+.course-card .card-link::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }   /* the whole card opens the course */
+.course-card .save-btn, .course-card .continue { position: relative; z-index: 1; }
+.course-card .continue { align-self: flex-start; margin-top: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; line-height: 36px; padding-top: 0; padding-bottom: 0; }
+.course-card[hidden], .band-section[hidden] { display: none; }
+.save-btn { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 999px; padding: .3rem .75rem; font-weight: 700; font-size: .85rem; min-height: 34px; white-space: nowrap; }
+.save-btn:hover { border-color: var(--primary); }
+.save-btn.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-ink); }
+.save-btn.big { font-size: .95rem; padding: .5rem 1rem; min-height: 44px; }
+.course-tools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 16px 0 4px; }
+.course-tools input[type="search"] { flex: 1 1 240px; padding: .55rem .9rem; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tab { padding: .4rem .8rem; border-radius: 999px; color: var(--ink); font-weight: 600; font-size: .92rem; border: 1px solid transparent; }
+.tab:hover { background: var(--surface-2); text-decoration: none; }
+.tab.on { background: var(--primary-soft); color: var(--primary-ink); border-color: var(--primary); }
+.empty-saved p { margin-bottom: 8px; }
+.grade-chip .save-btn { margin-left: 4px; min-height: 28px; padding: .15rem .55rem; font-size: .78rem; }
+
 /* ---------- grade picker ---------- */
 .band + .band { margin-top: 16px; }
 .band-name { font-weight: 700; font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
@@ -339,6 +361,8 @@ body.tutor-open .tutor-fab { display: none; }
 .tutor-note { padding: 0 14px 10px; }
 .tutor-note:empty { display: none; }
 .tutor-model.off { opacity: .55; cursor: not-allowed; }
+.tmsg-via { margin-top: 6px; font-size: .72rem; color: var(--muted); }
+.tutor-advanced > summary { cursor: pointer; }
 .tutor-wait-step { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--lvl2); background: var(--surface); border-radius: 0 8px 8px 0; }
 .tutor-check { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: .92rem; }
 .tutor-check input { margin-top: 4px; }

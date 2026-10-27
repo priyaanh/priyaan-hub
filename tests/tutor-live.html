@@ -4,7 +4,8 @@
 <body>
 <p>Live tutor test. By default it asks the free cloud tutor two questions (about a minute, because the free
 service answers once every 30 seconds). With <code>?model=Qwen3-0.6B-q4f16_1-MLC</code> it downloads that
-on-device model instead. Run it with <code>./tests/run.sh --live-tutor</code>, or open it over http in Chrome.</p>
+on-device model instead. With <code>?unlimited</code> it also checks unlimited mode: the Light model in a worker answering
+while the cloud is busy. Run it with <code>./tests/run.sh --live-tutor</code>, or open it over http in Chrome.</p>
 <pre id="out"></pre>
 <script src="../lib/rng.js"></script>
 <script src="../lib/math.js"></script>
@@ -45,7 +46,23 @@ on-device model instead. Run it with <code>./tests/run.sh --live-tutor</code>, o
     log('--- answer 2 ---\n' + a2 + '\n---');
     ok(a2.length > 20, 'it gives a hint');
     ok(!/x\s*=\s*5\b/.test(a2), 'the hint does not state x = 5');
-    if (model === 'cloud') {
+    if (new URLSearchParams(location.search).has('unlimited')) {
+      // unlimited mode: the on-device helper in a worker answers whenever the cloud is busy
+      const t3 = performance.now();
+      let lastPct = -1;
+      TUTOR.on(t => { const p = Math.round((t.local.progress.fraction || 0) * 10); if (t.local.state === 'loading' && p !== lastPct) { lastPct = p; log('local ' + p * 10 + '% ' + (t.local.progress.text || '').slice(0, 90)); } if (t.local.state === 'error') log('local error: ' + t.local.error); });
+      await TUTOR.prepareLocal('Qwen3-0.6B-q4f16_1-MLC');
+      ok(TUTOR.localReady(), `unlimited mode ready in ${Math.round((performance.now() - t3) / 1000)} s`);
+      const fast = [];
+      for (let k = 1; k <= 5; k++) {
+        TUTOR._nextFree.llm7 = Date.now() + 60000; TUTOR._nextFree.pollinations = Date.now() + 30000;   // the cloud is busy
+        const t4 = performance.now();
+        const a = await TUTOR.ask([{ role: 'user', content: `In one sentence, what is ${Math.floor(Math.random() * 90) + 10} + ${k}?` }], null);
+        fast.push(Math.round((performance.now() - t4) / 100) / 10);
+        log(`  question ${k}: ${fast[k - 1]} s via ${TUTOR.lastProvider}: ${a.slice(0, 60)}`);
+      }
+      ok(fast.every(t => t < 15) && TUTOR.lastProvider === 'device', 'five questions in a row with the cloud busy, each answered on this device with no waiting (' + fast.join(', ') + ' s)');
+    } else if (model === 'cloud') {
       // back-to-back questions: with the services taken in turn, none should wait 30 seconds
       const times = [];
       for (let k = 1; k <= 4; k++) {
