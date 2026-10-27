@@ -45,6 +45,7 @@
 <script src="../lib/tutor-ui.js"></script>
 <script src="../lib/views.js"></script>
 <script src="../lib/cpm-views.js"></script>
+<script src="../lib/tutor-page.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -55,7 +56,7 @@
   const tick = ms => new Promise(r => setTimeout(r, ms || 0));
   let errors = [];
   window.addEventListener('error', e => errors.push(String(e.message)));
-  const routes = ['#/', '#/courses', '#/courses/Elementary', '#/courses/Middle%20school', '#/courses/High%20school', '#/courses/cpm', '#/courses/saved', '#/progress', '#/settings', '#/search/fraction', '#/review', '#/cpm'];
+  const routes = ['#/', '#/courses', '#/courses/Elementary', '#/courses/Middle%20school', '#/courses/High%20school', '#/courses/cpm', '#/courses/saved', '#/progress', '#/settings', '#/search/fraction', '#/review', '#/cpm', '#/tutor', '#/tutor/new'];
   A.courses.forEach(c => { routes.push('#/course/' + c.id); c.units.forEach(u => routes.push('#/unit/' + c.id + '/' + u.id)); });
   Object.keys(A.skills).forEach(id => routes.push('#/skill/' + encodeURIComponent(id)));
   A.cpm.forEach(b => { routes.push('#/cpm/' + b.id); b.chapters.forEach(ch => ch.lessons.forEach(l => routes.push('#/cpm/' + b.id + '/' + l.id))); });

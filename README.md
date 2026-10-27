@@ -72,6 +72,14 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
   practice question with its checked steps, so the tutor explains a known-correct answer. Before the
   learner answers, only the first step is shared, and a filter removes any sentence that gives the answer
   away. Cloud requests give up after 25 s with no reply, so a stuck service never stalls the tutor.
+- **Panel or page.** The ✦ Ask panel can be resized by dragging its left edge (or its top grip on a
+  phone; arrow keys work too, and a double-click resets it); the size is remembered, and the page lays
+  itself out to fit beside it, or the panel floats over a page too narrow to share. ⤢ opens the same
+  conversation on the tutor's own page (**✦ Tutor** in the top bar): saved chats (kept on the device,
+  never in a backup), *Ask about* (any question, the class lesson, or a skill being practised),
+  *Explain for* (a grade level), a style (step by step, short, with an example, new to this, check my
+  work), and under every answer Copy, follow-ups (simpler, another example, a practice question, why?),
+  where it came from and how long it took, and links to the Procademy skills that match.
 - LLM7's privacy policy says it is not meant for children under 13; the settings' Advanced section can
   switch it off (and holds an optional free LLM7 key, kept on the device only).
 
@@ -88,7 +96,7 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 | `lib/views.js` | every screen, including the exercise player |
 | `lib/app.js` | hash routing (`#/course/math-7`, `#/cpm/int2/3.1.1`), theme, search |
 | `lib/cpm-views.js` | the CPM book, chapter and lesson pages |
-| `lib/tutor.js`, `lib/tutor-ui.js` | the in-browser AI tutor and its panel |
+| `lib/tutor.js`, `lib/tutor-ui.js`, `lib/tutor-page.js` | the AI tutor's engine, its resizable panel, and its own page |
 | `sw.js` | offline support when served over http(s) |
 
 The name you give in Settings is used in the greeting and stays on the device. No name is written into

@@ -8,7 +8,7 @@
 <body>
 <header class="top"><div class="bar">
   <a class="brand" href="#/"><span class="logo">✦</span><span class="word" data-brand>Procademy</span></a>
-  <nav class="nav"><a href="#/" data-nav="home">Home</a><a href="#/courses" data-nav="courses">Courses</a><a href="#/cpm" data-nav="cpm">CPM</a><a href="#/progress" data-nav="progress">Progress</a></nav>
+  <nav class="nav"><a href="#/" data-nav="home">Home</a><a href="#/courses" data-nav="courses">Courses</a><a href="#/cpm" data-nav="cpm">CPM</a><a href="#/tutor" data-nav="tutor">✦ Tutor</a><a href="#/progress" data-nav="progress">Progress</a></nav>
   <div class="search"><form id="search-form"><input id="search-input" type="search"></form></div>
   <div class="stats" id="stats"></div>
 </div></header>
@@ -45,6 +45,7 @@
 <script src="../lib/tutor-ui.js"></script>
 <script src="../lib/views.js"></script>
 <script src="../lib/cpm-views.js"></script>
+<script src="../lib/tutor-page.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -509,6 +510,79 @@
   ok(UI.getContext() === null || !UI.getContext().question, 'tutor: leaving the exercise clears the question context');
   TU.engineFactory = null; TU.fetch = (...a) => fetch(...a);
   await TU.unload(); S.setProfile({ tutor: null });
+
+  /* ---- resizing the tutor, and pages that fit beside it ---- */
+  try { localStorage.removeItem('procademy.ui.v1'); } catch (e) {}
+  const rootEl = document.documentElement, panel2 = () => document.getElementById('tutor');
+  const tw = () => parseFloat(getComputedStyle(rootEl).getPropertyValue('--tutor-w'));
+  TU.fetch = async (url, init) => new Response(sse(['A clear answer about ', 'slope and lines.']), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+  m = await go('#/unit/math-7/fractions');
+  UI.open(); await tick(30);
+  ok(Math.round(tw()) === 420, 'resize: the tutor opens at its standard width');
+  const edge = panel2().querySelector('#tutor-resize');
+  const pe = (type, x) => edge.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: 300, pointerId: 7, bubbles: true }));
+  pe('pointerdown', window.innerWidth - 438); pe('pointermove', window.innerWidth - 600); pe('pointerup', window.innerWidth - 600);
+  ok(Math.abs(tw() - 582) < 3 && JSON.parse(localStorage.getItem('procademy.ui.v1')).w > 570, 'resize: dragging the edge widens the tutor, and the width is remembered (' + tw() + 'px)');
+  edge.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  ok(Math.abs(tw() - 558) < 3, 'resize: the arrow keys resize it too');
+  edge.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  ok(Math.round(tw()) === 420, 'resize: a double-click resets it');
+  const mainEl = document.getElementById('main');
+  ok(Math.abs(parseFloat(getComputedStyle(mainEl).marginRight) - 450) < 2 && !document.body.classList.contains('tutor-overlay'), 'resize: the page moves aside by the tutor’s width');
+  const twoCol = mainEl.querySelector('.two-col');
+  ok(twoCol && getComputedStyle(twoCol).gridTemplateColumns.split(' ').length === 1, 'layout: beside the tutor, the unit page stacks instead of squeezing its columns');
+  ok(document.querySelector('.search').getBoundingClientRect().width > 240, 'layout: the header search keeps its size while the tutor is open');
+  UI.applySize(window.innerWidth - 300, null);
+  ok(document.body.classList.contains('tutor-overlay') && parseFloat(getComputedStyle(mainEl).marginRight) < tw(), 'resize: when the page would be too narrow, the tutor floats over it instead');
+  UI.applySize(420, null);
+  UI.close();
+  try { localStorage.removeItem('procademy.ui.v1'); } catch (e) {}
+
+  /* ---- the tutor's own page ---- */
+  try { localStorage.removeItem('procademy.chats.v1'); } catch (e) {}
+  const tReqs = [];
+  TU.fetch = async (url, init) => { tReqs.push(JSON.parse(init.body)); return new Response(sse(['A clear answer about ', 'slope and lines.']), { status: 200, headers: { 'Content-Type': 'text/event-stream' } }); };
+  free(); S.setProfile({ tutor: null, cpm: { book: 'cc2', lesson: '7.1.5' } });
+  m = await go('#/tutor');
+  ok(document.querySelector('[data-nav="tutor"]').classList.contains('active') && getComputedStyle(document.getElementById('tutor-fab')).display === 'none', 'tutor page: it has its own page, and the floating button hides there');
+  ok(m.querySelectorAll('.ai-starter').length >= 6 && /Explain my class lesson/.test(text(m)), 'tutor page: it opens with starters, including the class lesson');
+  const slope = [...m.querySelectorAll('.ai-starter')].find(b => /Slope/.test(text(b)));
+  slope.click();
+  for (let k = 0; k < 80 && !m.querySelector('.ai-actions'); k++) await tick(25);
+  ok(m.querySelectorAll('.ai-msg.user').length === 1 && /slope and lines/.test(text(m.querySelector('.ai-msg.bot'))), 'tutor page: a starter asks its question and the answer streams in');
+  ok(m.querySelector('[data-act="copy"]') && m.querySelector('[data-follow*="simply"]') && m.querySelector('[data-follow*="practice question"]'), 'tutor page: each answer has Copy and follow-ups');
+  const rel = [...m.querySelectorAll('.ai-related a')].map(a => decodeURIComponent(a.getAttribute('href')));
+  ok(rel.length >= 1 && rel.some(h => /slope/.test(h)), 'tutor page: it links to Procademy practice that matches (' + rel.join(', ') + ')');
+  ok(/Cloud/.test(text(m.querySelector('.ai-meta'))) && /\d\.\d s/.test(text(m.querySelector('.ai-meta'))), 'tutor page: each answer says where it came from and how long it took');
+  const saved1 = TUTORPAGE.load().chats;
+  ok(saved1.length === 1 && /slope/i.test(saved1[0].title) && saved1[0].messages.length === 2 && location.hash === '#/tutor/' + saved1[0].id, 'tutor page: the chat is saved with a title, and the address names it');
+  ok(/Tutor details/.test(text(m.querySelector('#ai-status'))) && /How it runs/.test(text(m)), 'tutor page: a details card shows how the tutor is running');
+  // style and subject reach the model
+  m.querySelector('[data-style="short"]').click();
+  const aboutSel = m.querySelector('#ai-about'); aboutSel.value = 'lesson'; aboutSel.dispatchEvent(new Event('change'));
+  m.querySelector('[data-follow*="simply"]').click();
+  for (let k = 0; k < 80 && TU.busy(); k++) await tick(25); await tick(40);
+  const sys = tReqs[tReqs.length - 1].messages[0].content;
+  ok(/How to explain: Short/.test(sys) && /CPM lesson: 7\.1\.5/.test(sys) && /Explain at a level for: 7th grade/.test(sys), 'tutor page: the style, the class lesson and the level go with the question');
+  ok(tReqs[tReqs.length - 1].messages.filter(x => x.role === 'user').length === 2 && TUTORPAGE.load().chats[0].messages.length === 4, 'tutor page: a follow-up continues the same chat');
+  // a second chat, then back to the first
+  m.querySelector('#ai-new').click(); await tick(40);
+  ok(m.querySelectorAll('.ai-msg').length === 0 && m.querySelectorAll('.ai-chat').length === 1, 'tutor page: New chat starts empty, and the old chat stays in the list');
+  m.querySelector('.ai-chat a').click(); await tick(40);
+  ok(m.querySelectorAll('.ai-msg').length === 4, 'tutor page: opening a saved chat brings it back');
+  const realConfirm = window.confirm; window.confirm = () => true;
+  m.querySelector('.ai-del').click(); await tick(40);
+  window.confirm = realConfirm;
+  ok(TUTORPAGE.load().chats.length === 0, 'tutor page: a chat can be deleted');
+  // the panel's ⤢ carries its conversation to the page
+  m = await go('#/skill/math7.circles');
+  UI.open(); UI.reset(); await tick(20);
+  calls = await askAndWait('What is a radius?');
+  document.getElementById('tutor-expand').click(); await tick(60);
+  const carried = TUTORPAGE.load().chats[0];
+  ok(/^#\/tutor\//.test(location.hash) && carried && carried.messages.length === 2 && carried.messages[0].content === 'What is a radius?' && carried.about === 'carried' && /circumference/i.test(JSON.stringify(carried.carried)), 'tutor page: ⤢ in the panel opens the conversation, and what it was about, as a full page');
+  try { localStorage.removeItem('procademy.chats.v1'); } catch (e) {}
+  TU.fetch = (...a) => fetch(...a); S.setProfile({ tutor: null, cpm: null });
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
 })().catch(e => { console.log('FAIL harness threw: ' + (e.stack || e.message)); console.log('RESULTS 1 failed of 1'); });
