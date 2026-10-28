@@ -598,8 +598,8 @@
   ok(kp.some(k => /intersection/.test(k.name) && k.x === 1 && k.y === 3) && kp.some(k => /y-intercept/.test(k.name) && k.x === 0 && k.y === 1), 'draw: key points are found: where lines meet, and the intercepts');
   root.innerHTML = TU.render('Here:\n```graph\ny = 2x + 1\ny = -x + 4\n```\n| x | y |\n|---|---|\n| 0 | 1 |\n```python\nprint(1)\n```');
   ok(root.querySelector('figure.viz-graph svg path') && root.querySelectorAll('.viz-key').length === 2 && root.querySelector('.md-table table td') && /print/.test(text(root.querySelector('pre.code'))), 'draw: a graph block becomes a graph with a key; tables and other code show as such');
-  root.innerHTML = TU.render('```graph\nbar\nspider: 8\ndog: 4\nbird: 2\n```');
-  ok(root.querySelector('.viz-chart svg rect') && !root.querySelector('pre'), 'draw: a chart written in a graph block is still drawn as a chart');
+  root.innerHTML = TU.render('```graph\nbar\nSpider: 8 legs\nDog: 4 legs\nBird: 2 legs\n```');
+  ok(root.querySelector('.viz-chart svg rect') && !root.querySelector('pre'), 'draw: a chart written in a graph block, with units, is still drawn as a chart');
   root.innerHTML = TU.render('Drawing:\n```graph\ny = 2x');
   ok(root.querySelector('.viz-wait') && !/y = 2x/.test(text(root)), 'draw: a block still arriving shows "Drawing…", not raw lines');
   root.innerHTML = TU.render('```graph\ny = 2x + 1\ny = -x + 4\n```');
