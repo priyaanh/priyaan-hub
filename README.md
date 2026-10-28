@@ -46,6 +46,22 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   shape per line, drawn as you type; a letter set to a number (`m = 2`) becomes a slider, so
   `y = m x + b` can be explored by dragging. Sliders work in the tutor's graphs too, and any graph the
   tutor draws opens in the calculator. Copy link shares a graph.
+- **Check my steps** (`lib/steps.js`, `#/steps`, and under every "Solve…" practice question): write the
+  working one line at a time and each line is checked exactly, by calculation: an equation line must keep
+  the same solutions, an inequality the same true numbers, an expression the same value for every
+  value of its letters. A wrong line names the slip (the inequality not flipped after dividing by a
+  negative, a sign lost moving a term, a solution lost by square-rooting, the x terms combined wrongly,
+  or "right from the line above, but that line had a slip"), and a solved line is checked in the first
+  line ("2(4) + 3 = 11 → 11 = 11 ✓"). In practice, checking a finished line counts as a hint.
+- **Speed sprints** (`lib/sprint.js`, `#/sprint`): one-minute rounds of facts (times tables, division,
+  negatives, squares and roots, fractions ↔ decimals ↔ percents, percent of a number, or all mixed),
+  checked as they are typed. Missed and slow facts come back more often; the best score per deck is
+  kept; phones get an on-screen keypad with a minus key.
+- **CPM chapter test prep** (`lib/prep.js`, `#/prep/<book>/<chapter>`, from every chapter and the class
+  lesson): give the test date and get a plan — a prep set each day weighted to the weakest lessons, a
+  practice test the day before (a question from every lesson, no hints, scored lesson by lesson with
+  practice for the misses), a warm-up on the day — with a readiness meter, a countdown on Home, and
+  the plan as calendar reminders (.ics).
 - **Read aloud.** 🔊 reads a question (and its choices) or a tutor answer with the browser's own voice,
   math as words ("3 over 4", "x squared"). Questions also reach the tutor as readable math now (3/4,
   not "34").
@@ -162,6 +178,7 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 | `lib/tutor.js`, `lib/tutor-ui.js`, `lib/tutor-page.js` | the AI tutor's engine, its resizable panel, and its own page |
 | `lib/draw.js`, `lib/pictures.js`, `lib/files.js` | the tutor's exact drawings, pictures from the picture AI, and attached files |
 | `lib/coach.js`, `lib/worksheet.js`, `lib/calc.js` | the mistake coach and reading aloud, printable worksheets, the graphing calculator |
+| `lib/steps.js`, `lib/sprint.js`, `lib/prep.js` | the step checker, speed sprints, CPM chapter test prep |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |

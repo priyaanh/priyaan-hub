@@ -52,6 +52,9 @@
 <script src="../lib/tutor-page.js"></script>
 <script src="../lib/worksheet.js"></script>
 <script src="../lib/calc.js"></script>
+<script src="../lib/steps.js"></script>
+<script src="../lib/sprint.js"></script>
+<script src="../lib/prep.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -826,6 +829,70 @@
   // the tutor sees fractions properly now
   ok(V._h.plain(`Add ${M.frac(2, 3)} and ${M.mixed(5, 4)}.`) === 'Add 2/3 and 1 1/4.', 'tutor: questions reach it as readable text (fractions used to arrive as "23")');
   S.reset(); S.setProfile({ enrolled: [] });
+  }
+
+  { // more: the step checker, speed sprints, and CPM test prep
+  const St = STEPS;
+  const sts = ls => St.check(ls).map(x => x.status).join();
+  ok(sts(['2x + 3 = 11', '2x = 8', 'x = 4']) === 'start,ok,solved' && /2\(4\) \+ 3 = 11 → 11 = 11/.test(St.check(['2x + 3 = 11', '2x = 8', 'x = 4'])[2].msg), 'steps: a right solution is checked line by line, and the answer is checked in the first line');
+  ok(/flip/.test(St.check(['-2x + 5 > 11', '-2x > 6', 'x > -3'])[2].msg) && sts(['-2x + 5 > 11', '-2x > 6', 'x < -3']) === 'start,ok,solved', 'steps: dividing an inequality by a negative without flipping it is caught');
+  ok(/\+ becomes −/.test(St.check(['2x + 3 = 11', '2x = 14'])[1].msg) && /line above has a slip/.test(St.check(['2x + 3 = 11', '2x = 14', 'x = 7'])[2].msg), 'steps: a sign lost moving a term is named, and later lines say where the slip was');
+  ok(/went missing/.test(St.check(['x^2 = 9', 'x = 3'])[1].msg) && /Try x = 2/.test(St.check(['4(x + 2) - 3x', '4x + 2 - 3x'])[1].msg) && sts(['4(x + 2) - 3x', '4x + 8 - 3x', 'x + 8']) === 'start,ok,ok', 'steps: a lost solution, and expressions checked for every value');
+  m = await go('#/steps');
+  const ex0 = m.querySelector('#steps-ex'); ex0.value = '0'; ex0.dispatchEvent(new Event('change'));
+  const stepIn = async (i, v) => { const ins = m.querySelectorAll('.step-in'); ins[i].value = v; ins[i].dispatchEvent(new Event('input', { bubbles: true })); await tick(450); };
+  await stepIn(1, '2x = 8'); await stepIn(2, 'x = 4');
+  ok(m.querySelector('.step.is-solved') && m.querySelectorAll('.step.is-ok').length === 1 && m.querySelectorAll('.step').length === 4, 'steps page: an example, checked as it is typed, with a box for the next line');
+  // under a "Solve…" practice question
+  const solveSid = Object.keys(A.skills).filter(id => /^(math7|math8|alg1)\./.test(id)).find(id => { for (let k = 0; k < 4; k++) { const q = A.question(id, 'st' + k); if (q.type === 'number' && St.fromQuestion(q)) return true; } return false; });
+  ok(!!solveSid, 'steps: some practice questions ask to solve an equation (' + solveSid + ')');
+  if (solveSid) {
+    let found = null;
+    for (let k = 0; k < 30 && !found; k++) { location.hash = '#/settings'; await tick(10); m = await go('#/practice/' + encodeURIComponent(solveSid)); const it = m.__session.items[0]; if (it.q.type === 'number' && St.fromQuestion(it.q)) found = it; }
+    if (found) {
+      const work = m.querySelector('#work');
+      ok(work && m.querySelector('#work-box .step-in[readonly]').value === St.fromQuestion(found.q), 'steps: a "Solve…" question offers a box to work it out, starting from its equation');
+      work.open = true;
+      const v = found.q.answer, line = St.parse(St.fromQuestion(found.q)).vars[0] + ' = ' + v;
+      const ins = m.querySelectorAll('#work-box .step-in'); ins[1].value = line; ins[1].dispatchEvent(new Event('input', { bubbles: true })); await tick(450);
+      ok(m.querySelector('#work-box .step.is-solved') && m.__session.results[0] && m.__session.results[0].hinted, 'steps: checking a finished line counts as a hint, so mastery stays honest');
+    } else ok(false, 'steps: no "Solve…" question came up in 30 fresh practice sets');
+  }
+  // speed sprints
+  try { localStorage.removeItem('procademy.sprints.v1'); } catch (e) {}
+  m = await go('#/sprint');
+  ok(m.querySelectorAll('.sprint-deck').length === SPRINT.DECKS.length && SPRINT.DECKS.length >= 8, 'sprints: a page of decks');
+  for (const d of SPRINT.DECKS) for (let k = 0; k < 200; k++) { const it = d.make(); if (!(it.q && isFinite(it.a) && it.key) || A.parseNumber(String(it.a)) !== it.a) { ok(false, 'sprints: deck ' + d.id + ' made ' + JSON.stringify(it)); break; } }
+  ok(true, 'sprints: every deck makes 200 sound facts');
+  m = await go('#/sprint/times');
+  m.querySelector('#sp-go').click(); await tick(20);
+  const round = m.__sprint, spIn = m.querySelector('#sp-in');
+  spIn.value = String(round.cur.a); spIn.dispatchEvent(new Event('input')); await tick(200);
+  ok(round.score === 1 && m.querySelector('#sp-score').textContent === '1', 'sprints: a right answer counts the moment it is typed');
+  const missedQ = round.cur.q;
+  spIn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await tick(30);
+  ok(round.score === 1 && round.log.length === 2 && !round.log[1].right && /=/.test(text(m.querySelector('#sp-q'))), 'sprints: Enter skips, showing the answer');
+  round.finish();
+  ok(/Facts to work on/.test(text(m)) && text(m).includes(missedQ) && SPRINT.deckState('times').best === 1 && SPRINT.deckState('times').weak.some(w => w.q === missedQ), 'sprints: the summary lists facts to work on, keeps the best score, and remembers the missed fact');
+  // CPM chapter test prep
+  S.reset(); S.setProfile({ prep: null });
+  const prepCh = A.cpmById('cc2').chapters.find(ch => A.cpmSkills(ch.lessons).length >= 3);
+  m = await go(`#/prep/cc2/${prepCh.n}`);
+  m.querySelector('#prep-date').value = S.dayShift(S.today(), 3); m.querySelector('#prep-make').click(); await tick(20);
+  const pp = S.get().profile.prep;
+  ok(pp && pp.ch === prepCh.n && m.querySelectorAll('.prep-days li').length === 4 && /Today: Prep set/.test(text(m)) && /in 3 days/.test(text(m)), 'test prep: a date makes a plan: prep sets, a practice test the day before, a warm-up on the day');
+  ok(/Practice test/.test(text(m.querySelectorAll('.prep-days li')[2])) && /Warm-up/.test(text(m.querySelectorAll('.prep-days li')[3])) && m.querySelectorAll('.prep-lessons li').length >= 3 && /\d+%/.test(text(m.querySelector('.prep-pct'))), 'test prep: the plan, a readiness meter, and every lesson with how ready it is');
+  m.querySelector('#prep-ics').click();
+  ok((PREP._lastIcs.match(/BEGIN:VEVENT/g) || []).length === 4 && PREP._lastIcs.includes('DTSTART;VALUE=DATE:' + S.dayShift(S.today(), 3).replace(/-/g, '')), 'test prep: the plan goes into a calendar file, one reminder a day');
+  m = await go(`#/prep/cc2/${prepCh.n}/test`);
+  const tses = m.__session;
+  ok(tses.kind === 'chapter-test' && tses.items.length >= 8 && tses.items.every(it => it.lesson) && !m.querySelector('#hint'), 'test prep: the practice test asks a question from each lesson, with no hints');
+  for (let k = 0; k < 25 && !E.isDone(m.__session); k++) { const it = m.__session.items[m.__session.i]; const good = k !== 0; if (it.q.type === 'choice') m.querySelector(`#choices button[data-k="${good ? it.q.answerIndex : (it.q.answerIndex + 1) % it.q.choices.length}"]`).click(); else { const i2 = m.querySelector('#ans'); i2.value = good ? String(it.q.answer) : String(it.q.answer + 1); i2.dispatchEvent(new Event('input', { bubbles: true })); } m.querySelector('#check').click(); m.querySelector('#next').click(); await tick(); }
+  const pt = S.get().profile.prep.tests[0];
+  ok(m.querySelector('.prep-result li.miss') && m.querySelectorAll('.prep-result li.ok').length >= 1 && pt && pt.right === tses.items.length - 1 && S.get().profile.prep.done[S.today()], 'test prep: the result goes lesson by lesson, with practice for the lessons missed, and the day is marked done');
+  m = await go('#/');
+  ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 4, 'test prep: Home shows the countdown; Home has the tools');
+  S.reset(); S.setProfile({ prep: null, enrolled: [] });
   }
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
