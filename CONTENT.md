@@ -2,7 +2,8 @@
 
 One file per course in `content/`, loaded by a `<script>` tag in `index.html`. Plain script, no modules:
 wrap the file in `(function () { 'use strict'; … })();`. Three globals are available: `ACADEMY` (the
-registry), `M` (HTML helpers for maths) and `RNG`.
+registry), `M` (HTML helpers for maths) and `RNG`. The offline file (`procademy-offline.html`) picks up every
+script `index.html` loads by itself; `./tests/run.sh` rebuilds it.
 
 Check a file while writing it with `node tests/content.js content/<file>.js`; it must print `PASS`.
 

@@ -110,6 +110,18 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 - LLM7's privacy policy says it is not meant for children under 13; the settings' Advanced section can
   switch it off (and holds an optional free LLM7 key, kept on the device only).
 
+## Without the internet
+
+- **One file** (`procademy-offline.html`, Settings → *Download the offline file*): the whole site in a single
+  2.3 MB page that opens with a double-click, from a laptop or a USB stick, with no internet and no
+  server. Courses, practice, tests, CPM books, progress and drawings all work; the AI tutor, pictures and
+  reading attached photos and PDFs work whenever there is a connection. Its progress is kept apart from
+  the website's; *Save a copy* and *Load a copy* move it across. `tools/build-offline.js` makes it from the
+  files `index.html` loads (each script inline, allowed by the security policy by its SHA-256 hash, so
+  nothing else inline can run), and `tests/run.sh` rebuilds and checks it before every push.
+- **Phones and tablets:** open the website once while online and add it to the home screen; `sw.js`
+  keeps a copy, so it then opens and works offline.
+
 ## How it is built
 
 | File | What it does |
@@ -127,6 +139,7 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 | `lib/draw.js`, `lib/pictures.js`, `lib/files.js` | the tutor's exact drawings, pictures from the picture AI, and attached files |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
+| `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |
 
 The name you give in Settings is used in the greeting and stays on the device. No name is written into
 any page.
@@ -146,7 +159,9 @@ every route, every skill's article and a question, settings, search, the tutor w
 drawings, pictures, attached files including ones built to attack the page, resizing and reordering); and `tests/content.js` builds
 hundreds of questions per skill and checks structure, determinism, variety, that each answer passes the
 real checker, that choice questions have no giveaways, and each skill's own `verify()` re-derivation.
-`tests/cpm.js` checks every CPM book against CPM's lesson list. `SEEDS=1500 ./tests/run.sh` checks more
+`tests/cpm.js` checks every CPM book against CPM's lesson list. `tests/offline.js` opens the one-file build
+from disk with every network lookup blocked (pages, practice, drawings, saved progress, no network
+requests, no policy violations), and checks the website still opens after its server is stopped. `SEEDS=1500 ./tests/run.sh` checks more
 seeds, and `./tests/run.sh --live-tutor` also asks the real free cloud tutor, starts unlimited mode, and runs
 `tests/live-extras.html`: the real site with its security policy on reads a photo and a PDF, gets a
 picture from the picture AI, and has the cloud tutor draw.

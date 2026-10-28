@@ -1,5 +1,6 @@
 #!/bin/bash
-# Runs every check: the page loads without console errors, the browser suite passes, the content passes.
+# Runs every check: the page loads without console errors, the browser suite passes, the content passes,
+# and it rebuilds procademy-offline.html (the one-file build) and checks it with no internet.
 #   ./tests/run.sh            everything
 #   SEEDS=1500 ./tests/run.sh more seeds per skill in the content check
 #   ./tests/run.sh --live-tutor  also ask the real cloud tutor, then check unlimited mode on this device (downloads ~350 MB once)
@@ -51,6 +52,11 @@ if out=$(node tests/content.js 2>&1); then echo "  ✓ $(echo "$out" | tail -1)"
 
 echo "▶ CPM books (node tests/cpm.js)"
 if out=$(node tests/cpm.js 2>&1); then echo "$out" | grep -E "^[a-z0-9]+: " | sed 's/^/  /'; echo "  ✓ $(echo "$out" | tail -1)"; else fail=1; echo "$out" | tail -25 | sed 's/^/    /'; fi
+
+echo "▶ offline (tools/build-offline.js, then tests/offline.js)"
+if out=$(node tools/build-offline.js 2>&1); then echo "  ✓ built $out"; else fail=1; echo "$out" | sed 's/^/    /'; fi
+if out=$(CHROME="$CHROME" node tests/offline.js 2>&1); then echo "  ✓ $(echo "$out" | grep -oE 'RESULTS .*' | sed 's/RESULTS 0 failed of //') checks: the one-file build works from disk with the network cut off, and the website still opens once its server is gone"
+else fail=1; echo "$out" | grep -E "FAIL|RESULTS" | sed 's/^/    /' | head -12; fi
 
 if [ "${1:-}" = "--live-tutor" ]; then
   echo "▶ live tutor (the free cloud tutor and unlimited mode; needs the internet and WebGPU)"
