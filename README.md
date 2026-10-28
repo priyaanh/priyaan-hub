@@ -26,6 +26,30 @@ days in a row with practice.
 **Review.** Every question missed anywhere is rebuilt from its seed and collected under Progress → Review.
 Get it right and it comes off the list. Nothing is stored but (skill, seed).
 
+**Learning that sticks** (what a video-and-practice site usually doesn't do):
+
+- **Today's practice** (`#/daily`, on Home). Spaced review: every skill gets a next date after each try
+  (all right → 3, 7, 16, 37 … days later; mostly right → a little later; a miss → tomorrow), and skills
+  practised before dates existed are due three days after they were last practised. Today's practice
+  mixes the skills due, up to three missed questions and new skills from the class lesson and saved
+  courses, interleaved; each question says why it is there. It never lowers a level. Progress lists what
+  is due under *Keep fresh*.
+- **The mistake coach** (`lib/coach.js`). A wrong answer gets a note on the likely slip, without giving
+  the answer away: a sign, a flipped fraction, the decimal point, a percent read as a decimal, adding
+  where it needed multiplying (from the numbers in the question), stopping a step early (a number from
+  the working), giving back a number from the question, swapped digits, rounding, off by one. Slips are
+  counted, and Progress shows *Your mistake patterns* with a tip for each and where it happens most.
+- **Printable worksheets** (`lib/worksheet.js`): 🖨 on every skill, unit and CPM lesson makes a fresh
+  sheet (6–30 questions, name and score lines, two columns) with an answer key on its own page,
+  optionally with the worked steps. A set's code rebuilds the same sheet.
+- **A graphing calculator** (`lib/calc.js`, **Graph** in the top bar): one equation, inequality, point or
+  shape per line, drawn as you type; a letter set to a number (`m = 2`) becomes a slider, so
+  `y = m x + b` can be explored by dragging. Sliders work in the tutor's graphs too, and any graph the
+  tutor draws opens in the calculator. Copy link shares a graph.
+- **Read aloud.** 🔊 reads a question (and its choices) or a tutor answer with the browser's own voice,
+  math as words ("3 over 4", "x squared"). Questions also reach the tutor as readable math now (3/4,
+  not "34").
+
 **Courses** (`content/`, one file each, in grade order):
 
 | Elementary | Middle school | High school |
@@ -137,6 +161,7 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 | `lib/cpm-views.js` | the CPM book, chapter and lesson pages |
 | `lib/tutor.js`, `lib/tutor-ui.js`, `lib/tutor-page.js` | the AI tutor's engine, its resizable panel, and its own page |
 | `lib/draw.js`, `lib/pictures.js`, `lib/files.js` | the tutor's exact drawings, pictures from the picture AI, and attached files |
+| `lib/coach.js`, `lib/worksheet.js`, `lib/calc.js` | the mistake coach and reading aloud, printable worksheets, the graphing calculator |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |
