@@ -51,7 +51,8 @@ Nothing from the books is copied; see [CPM.md](CPM.md).
 Continue button, then the lesson they are on in class, what they practised last, what is up next and
 this week's activity. *Courses* is where everything is browsed: every grade and every CPM book, with tabs
 (All, Elementary, Middle school, High school, CPM books, Saved) and a search box. **☆ Save** on any card,
-course page or book page puts it on Home; pressing it again takes it off.
+course page or book page puts it on Home; pressing it again takes it off. My courses can be put in any
+order: drag a card (on a phone, press and hold it, or drag its ⠿), or focus ⠿ and use the arrow keys.
 
 **The tutor** (`lib/tutor.js`, `lib/tutor-ui.js`, `lib/tutor-worker.js`). Procademy has no videos, so a free
 AI explains instead: the ✦ Ask button on every page, "Explain it" on every skill and lesson, and "Why is
@@ -72,14 +73,40 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
   practice question with its checked steps, so the tutor explains a known-correct answer. Before the
   learner answers, only the first step is shared, and a filter removes any sentence that gives the answer
   away. Cloud requests give up after 25 s with no reply, so a stuck service never stalls the tutor.
-- **Panel or page.** The ✦ Ask panel can be resized by dragging its left edge (or its top grip on a
-  phone; arrow keys work too, and a double-click resets it); the size is remembered, and the page lays
-  itself out to fit beside it, or the panel floats over a page too narrow to share. ⤢ opens the same
+- **It draws** (`lib/draw.js`). Ask for a graph ("graph y = 2x + 1 and y = -x + 4") and Procademy draws
+  it itself, exactly and at once, before the AI answers, so a graph never depends on the AI getting it
+  right; the AI is told what was drawn and the key points, and explains it. The AI can also draw: it
+  writes a short block (```` ```graph ````, ```` ```numberline ````, ```` ```chart ````, ```` ```fraction ````) that
+  Procademy turns into a picture, and an answer that only describes a graph in words is drawn too.
+  Graphs: functions, inequalities (shaded), lines in any form, circles and other curves, points,
+  segments, shapes; they zoom and drag, a tap on a curve reads off a point, and intercepts, turning points
+  and where curves meet are marked. Also number lines (inequalities, jumps for adding integers), bar,
+  line, dot, box (with the same quartiles as the lessons), histogram and pie charts, and fraction bars,
+  circles and 10×10 grids. Expressions are parsed, never run. Save turns any drawing into a PNG.
+- **Pictures** (`lib/pictures.js`). "Draw me a picture of a castle" goes to a free picture AI
+  (Pollinations; no key; one picture at a time, about one every 45 seconds, and sometimes full, so
+  Procademy waits and retries by itself). Safe mode is always on, and requests not right for school are
+  refused before anything is sent. Math drawings always stay with the exact drawings above.
+- **Attach a file** (`lib/files.js`): 📎, paste or drop a photo of homework, a PDF or a text or CSV file.
+  The words in a photo are read on the device (Tesseract.js, fetched the first time), a PDF's text with
+  PDF.js; the learner can check and correct what was read, and only that text goes with the question.
+  A CSV table can be drawn as a chart. Files are judged by their bytes (PNG, JPEG, GIF, WebP, PDF, plain
+  text only; web pages, SVGs and programs are refused whatever they are called), size-limited, and a
+  photo is redrawn as a clean copy, which drops anything hidden in it and the camera's location. Nothing
+  read from a file is ever run or shown as a page, and the AI is told it is the student's material, not
+  instructions.
+- **Panel or page.** The ✦ Ask panel resizes by dragging its left edge (the handle lights up), by ⇔
+  (narrow, medium, wide), by the arrow keys, or on a phone by pulling its top (it rests short, half or
+  tall, and pulled right down it closes). Only the panel moves while dragging, so it stays smooth; the
+  page lays itself out beside it when let go, or the panel floats over a page too narrow to share. ⤢ opens the same
   conversation on the tutor's own page (**✦ Tutor** in the top bar): saved chats (kept on the device,
   never in a backup), *Ask about* (any question, the class lesson, or a skill being practised),
   *Explain for* (a grade level), a style (step by step, short, with an example, new to this, check my
   work), and under every answer Copy, follow-ups (simpler, another example, a practice question, why?),
   where it came from and how long it took, and links to the Procademy skills that match.
+- **Security.** The site sends a Content-Security-Policy: scripts only from the site itself and the pinned
+  libraries on jsDelivr (WebLLM, Tesseract.js, PDF.js), never inline scripts, inline event handlers or
+  `eval`; no plug-ins or frames. Everything the AI or a file supplies is escaped before it is shown.
 - LLM7's privacy policy says it is not meant for children under 13; the settings' Advanced section can
   switch it off (and holds an optional free LLM7 key, kept on the device only).
 
@@ -97,6 +124,8 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 | `lib/app.js` | hash routing (`#/course/math-7`, `#/cpm/int2/3.1.1`), theme, search |
 | `lib/cpm-views.js` | the CPM book, chapter and lesson pages |
 | `lib/tutor.js`, `lib/tutor-ui.js`, `lib/tutor-page.js` | the AI tutor's engine, its resizable panel, and its own page |
+| `lib/draw.js`, `lib/pictures.js`, `lib/files.js` | the tutor's exact drawings, pictures from the picture AI, and attached files |
+| `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 
 The name you give in Settings is used in the greeting and stays on the device. No name is written into
@@ -109,14 +138,18 @@ any page.
 ```
 
 runs these in headless Chrome and node: the page loads without console errors on several routes;
-`tests/sweep.html` visits every page (1,163 of them) at phone width for script errors, leaked text and
+`index.html`'s security policy is checked (no inline scripts, no `unsafe-inline` or `unsafe-eval`);
+`tests/sweep.html` visits every page (1,170 of them) at phone width for script errors, leaked text and
 anything wider than the screen;
 `tests/suite.html` drives the real app (mastery rules, the exercise player as a learner would use it,
-every route, every skill's article and a question, settings, search); and `tests/content.js` builds
+every route, every skill's article and a question, settings, search, the tutor with a stand-in network,
+drawings, pictures, attached files including ones built to attack the page, resizing and reordering); and `tests/content.js` builds
 hundreds of questions per skill and checks structure, determinism, variety, that each answer passes the
 real checker, that choice questions have no giveaways, and each skill's own `verify()` re-derivation.
 `tests/cpm.js` checks every CPM book against CPM's lesson list. `SEEDS=1500 ./tests/run.sh` checks more
-seeds, and `./tests/run.sh --live-tutor` also asks the real free cloud tutor two questions.
+seeds, and `./tests/run.sh --live-tutor` also asks the real free cloud tutor, starts unlimited mode, and runs
+`tests/live-extras.html`: the real site with its security policy on reads a photo and a PDF, gets a
+picture from the picture AI, and has the cloud tutor draw.
 
 ## History
 

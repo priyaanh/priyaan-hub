@@ -17,11 +17,19 @@ fail=0
 echo "▶ index.html loads without console errors"
 for route in "" "#/courses" "#/course/math-7" "#/progress" "#/settings"; do
   "$CHROME" "${FLAGS[@]}" --virtual-time-budget=4000 --dump-dom "file://$ROOT/index.html$route" >"$TMP/dom.html" 2>"$TMP/page.err"
-  errs=$(grep "CONSOLE" "$TMP/page.err" | grep -iE "error|uncaught|not defined|undefined|failed" | grep -v favicon)
+  errs=$(grep "CONSOLE" "$TMP/page.err" | grep -iE "error|uncaught|not defined|undefined|failed|refused|content security policy" | grep -v favicon)
   if [ -n "$errs" ]; then fail=1; echo "  ✗ index.html$route"; echo "$errs" | sed 's/^\[[^]]*\] /    /' | head -5
   elif ! grep -q 'class="card' "$TMP/dom.html"; then fail=1; echo "  ✗ index.html$route rendered nothing"
   else echo "  ✓ index.html$route"; fi
 done
+
+echo "▶ security policy (index.html)"
+csp=$(grep -o 'http-equiv="Content-Security-Policy" content="[^"]*"' index.html)
+if [ -z "$csp" ]; then fail=1; echo "  ✗ index.html has no Content-Security-Policy"
+elif echo "$csp" | grep -qE "script-src[^;]*'(unsafe-inline|unsafe-eval)'"; then fail=1; echo "  ✗ the policy lets inline scripts or eval run"
+elif grep -qE "<script>|<script [^>]*>[^<]" index.html; then fail=1; echo "  ✗ index.html has an inline script"
+elif grep -qE " on[a-z]+=\"" index.html; then fail=1; echo "  ✗ index.html has an inline event handler"
+else echo "  ✓ scripts only from this site and pinned libraries; no inline scripts, eval, plug-ins or frames"; fi
 
 echo "▶ browser suite (tests/suite.html)"
 CHROME="$CHROME" node tests/cdp.js "file://$ROOT/tests/suite.html" 180000 "RESULTS" >"$TMP/suite.out" 2>&1
@@ -50,8 +58,11 @@ if [ "${1:-}" = "--live-tutor" ]; then
   python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 & SERVER_PID=$!
   for _ in $(seq 1 50); do curl -sf "http://127.0.0.1:$PORT/lib/tutor.js" >/dev/null && break; done
   EXTRA_FLAGS="--enable-unsafe-webgpu" CHROME="$CHROME" node tests/cdp.js "http://127.0.0.1:$PORT/tests/tutor-live.html?unlimited" 900000 "RESULTS" >"$TMP/tutor.out" 2>&1
-  kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null
   if grep -q "RESULTS 0 failed" "$TMP/tutor.out"; then echo "  ✓ $(grep -oE 'RESULTS .*' "$TMP/tutor.out" | sed 's/RESULTS 0 failed of //') checks passed"; else fail=1; grep -E "FAIL|RESULTS" "$TMP/tutor.out" | sed 's/^/    /' | head -10; fi
+  echo "▶ live extras (the real site with its security policy: reading a photo and a PDF, a picture, the tutor drawing)"
+  EXTRA_FLAGS="--enable-unsafe-webgpu" CHROME="$CHROME" node tests/cdp.js "http://127.0.0.1:$PORT/tests/live-extras.html" 600000 "RESULTS" >"$TMP/extras.out" 2>&1
+  kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null
+  if grep -q "RESULTS 0 failed" "$TMP/extras.out"; then echo "  ✓ $(grep -oE 'RESULTS .*' "$TMP/extras.out" | sed 's/RESULTS 0 failed of //') checks passed"; grep -E "^PASS (files|pictures|tutor)" "$TMP/extras.out" | sed 's/^PASS /    /' | cut -c1-150; else fail=1; grep -E "FAIL|RESULTS|CSP" "$TMP/extras.out" | sed 's/^/    /' | head -12; fi
 fi
 
 [ $fail -eq 0 ] && echo "✅ everything passed" || echo "❌ something failed"

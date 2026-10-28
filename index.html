@@ -3,25 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Security: scripts only from this site and the pinned libraries on jsDelivr, never inline; no plug-ins, no frames.
+     The AI services, the picture service and the model downloads are reached with fetch (connect-src). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Procademy</title>
 <meta name="description" content="Math for every grade, one skill at a time: Kindergarten to Precalculus, with hints and mastery levels. Works offline, saves on this device, with a free AI tutor.">
 <meta name="theme-color" content="#1865f2">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script>
-/* set the theme and text size before the first paint so pages never flash the wrong colours */
-(function () {
-  try {
-    var s = JSON.parse(localStorage.getItem('procademy.v1') || 'null');
-    var p = (s && s.profile) || {};
-    var forced = new URLSearchParams(location.search).get('theme');      // ?theme=dark, for screenshots and tests
-    if (forced) p = { theme: forced, textSize: p.textSize };
-    if (p.theme && p.theme !== 'system') document.documentElement.setAttribute('data-theme', p.theme);
-    if (p.textSize && p.textSize !== 'normal') document.documentElement.setAttribute('data-size', p.textSize);
-  } catch (e) {}
-})();
-</script>
+<script src="lib/boot.js"></script>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -81,6 +73,9 @@
 <script src="cpm/int2.js"></script>
 <script src="cpm/int3.js"></script>
 <script src="lib/tutor.js"></script>
+<script src="lib/draw.js"></script>
+<script src="lib/pictures.js"></script>
+<script src="lib/files.js"></script>
 <script src="lib/tutor-ui.js"></script>
 <script src="lib/views.js"></script>
 <script src="lib/cpm-views.js"></script>
