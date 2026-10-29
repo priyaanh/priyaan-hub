@@ -163,6 +163,26 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 - LLM7's privacy policy says it is not meant for children under 13; the settings' Advanced section can
   switch it off (and holds an optional free LLM7 key, kept on the device only).
 
+## Profiles and accounts
+
+**Profile** (the avatar at the top right, `#/profile`, `lib/account.js`): a name, a grade (the tutor
+explains at that level) and an avatar. With an account — a username and a password, no email needed —
+progress is saved online and comes back on any computer: log in and it is there, no files to move.
+
+- It runs on Firebase (Google's free plan): Firebase Authentication holds the passwords, hashed, with
+  lockouts after repeated wrong guesses; Cloud Firestore holds one document per learner, which only that
+  learner can read or write ([`firestore.rules`](firestore.rules)). The site's owner turns it on once:
+  see [SETUP-ACCOUNTS.md](SETUP-ACCOUNTS.md). Until then the Profile page works on each device only.
+- A username becomes a sign-in address inside the owner's own Firebase project, which never receives
+  mail. An optional email (a parent's is fine) is used instead and allows "forgot my password".
+- Changes are saved online a few seconds after they happen and whenever the page is hidden; on opening,
+  or coming back to the page, the account's copy is merged in (the higher level of every skill, both
+  histories, the earliest badges; settings from whichever copy changed last; an empty copy never wins).
+  Logging in on a computer that already has someone's progress asks first: add it, or use only the
+  account's. Logging out clears the computer unless a copy is kept.
+- What goes online: levels, practice history, settings, badges and sprint bests. Tutor chats and attached
+  files never do. A learner can delete the account, and everything saved online, from the Profile page.
+
 ## Without the internet
 
 - **One file** (`procademy-offline.html`, Settings → *Download the offline file*): the whole site in a single
@@ -193,6 +213,7 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 | `lib/coach.js`, `lib/worksheet.js`, `lib/calc.js` | the mistake coach and reading aloud, printable worksheets, the graphing calculator |
 | `lib/steps.js`, `lib/sprint.js`, `lib/prep.js` | the step checker, speed sprints, CPM chapter test prep |
 | `lib/badges.js`, `lib/challenge.js`, `lib/report.js` | goals and badges, challenge a friend, the progress report |
+| `lib/account.js`, `lib/firebase-config.js`, `firestore.rules` | profiles, online accounts and sync (see SETUP-ACCOUNTS.md) |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |

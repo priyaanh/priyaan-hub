@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Security: scripts only from this site and the pinned libraries on jsDelivr, never inline; no plug-ins, no frames.
      The AI services, the picture service and the model downloads are reached with fetch (connect-src). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Procademy</title>
 <meta name="description" content="Math for every grade, one skill at a time: Kindergarten to Precalculus, with hints and mastery levels. Works offline, saves on this device, with a free AI tutor.">
@@ -36,11 +36,12 @@
       </form>
     </div>
     <div class="stats" id="stats"></div>
+    <a class="avatar-btn" id="avatar-btn" href="#/profile" aria-label="Your profile" title="Your profile"></a>
     <a class="iconbtn" href="#/settings" aria-label="Settings" title="Settings">⚙︎</a>
   </div>
 </header>
 <main id="main" tabindex="-1"></main>
-<footer><span data-brand>Procademy</span> keeps your progress on this device. Only what you ask the tutor is sent, to a free AI service. <a href="#/settings">Back up or move your progress</a>.</footer>
+<footer><span data-brand>Procademy</span> keeps your progress on this device, and online too if you <a href="#/profile">make an account</a>. Only what you ask the tutor is sent, to a free AI service.</footer>
 <noscript><p style="padding:20px">This site needs JavaScript to run.</p></noscript>
 
 <script src="lib/rng.js"></script>
@@ -73,6 +74,7 @@
 <script src="cpm/int1.js"></script>
 <script src="cpm/int2.js"></script>
 <script src="cpm/int3.js"></script>
+<script src="lib/firebase-config.js"></script>
 <script src="lib/tutor.js"></script>
 <script src="lib/draw.js"></script>
 <script src="lib/pictures.js"></script>
@@ -90,6 +92,7 @@
 <script src="lib/badges.js"></script>
 <script src="lib/challenge.js"></script>
 <script src="lib/report.js"></script>
+<script src="lib/account.js"></script>
 <script src="lib/app.js"></script>
 </body>
 </html>

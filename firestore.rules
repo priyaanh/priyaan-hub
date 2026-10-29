@@ -1,0 +1,21 @@
+rules_version = '2';
+// Procademy accounts: one document per learner, at users/{uid}. Only the signed-in learner can read,
+// write or delete their own document; nobody can list documents, and every write is checked for shape
+// and size. Paste this into Firebase console → Firestore Database → Rules, then Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow get, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['v', 'username', 'created', 'updated', 'state', 'sprints'])
+        && request.resource.data.username is string && request.resource.data.username.size() <= 64
+        && request.resource.data.state is string && request.resource.data.state.size() < 900000
+        && request.resource.data.sprints is string && request.resource.data.sprints.size() < 100000
+        && request.resource.data.created is number && request.resource.data.updated is number;
+      allow list: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

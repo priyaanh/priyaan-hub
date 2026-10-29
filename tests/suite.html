@@ -11,6 +11,7 @@
   <nav class="nav"><a href="#/" data-nav="home">Home</a><a href="#/courses" data-nav="courses">Courses</a><a href="#/cpm" data-nav="cpm">CPM</a><a href="#/tutor" data-nav="tutor">✦ Tutor</a><a href="#/progress" data-nav="progress">Progress</a></nav>
   <div class="search"><form id="search-form"><input id="search-input" type="search"></form></div>
   <div class="stats" id="stats"></div>
+  <a class="avatar-btn" id="avatar-btn" href="#/profile"></a>
 </div></header>
 <main id="main"></main>
 <div id="root" style="padding:16px"></div>
@@ -41,6 +42,7 @@
 <script src="../cpm/int1.js"></script>
 <script src="../cpm/int2.js"></script>
 <script src="../cpm/int3.js"></script>
+<script src="../lib/firebase-config.js"></script>
 <script src="../lib/tutor.js"></script>
 <script src="../lib/draw.js"></script>
 <script src="../lib/pictures.js"></script>
@@ -58,6 +60,7 @@
 <script src="../lib/badges.js"></script>
 <script src="../lib/challenge.js"></script>
 <script src="../lib/report.js"></script>
+<script src="../lib/account.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -955,6 +958,101 @@
   m.querySelector('#rp-days').value = '30'; m.querySelector('#rp-days').dispatchEvent(new Event('change'));
   ok(m.querySelectorAll('.rp-bars > div').length === 30, 'report: or the last 30 days');
   S.reset(); S.setProfile({ enrolled: [] });
+  }
+
+  { // profiles and accounts, with a stand-in for Firebase that behaves like it (two "computers" share it)
+  const go3 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  const server = { users: {}, docs: {}, n: 0 };
+  const device = () => { let cur = null; const err = c => Object.assign(new Error(c), { code: c });
+    return { ready: Promise.resolve(), onChange() {}, current: () => cur && { uid: cur.uid, email: cur.email },
+      async signUp(email, pw) { if (server.users[email]) throw err('auth/email-already-in-use'); const uid = 'u' + (++server.n); server.users[email] = { uid, pw, email }; cur = server.users[email]; return { uid, email }; },
+      async signIn(email, pw) { const u = server.users[email]; if (!u || u.pw !== pw) throw err('auth/invalid-credential'); cur = u; return { uid: u.uid, email }; },
+      async signOut() { cur = null; },
+      async load(uid) { if (!cur || cur.uid !== uid) throw err('permission-denied'); return server.docs[uid] ? JSON.parse(JSON.stringify(server.docs[uid])) : null; },
+      async save(uid, data) { if (!cur || cur.uid !== uid) throw err('permission-denied'); server.docs[uid] = JSON.parse(JSON.stringify(data)); },
+      async changePassword(o, n) { if (cur.pw !== o) throw err('auth/invalid-credential'); cur.pw = n; },
+      async remove(pw) { if (cur.pw !== pw) throw err('auth/invalid-credential'); delete server.docs[cur.uid]; delete server.users[cur.email]; cur = null; },
+      async resetPassword() {} }; };
+  // merging two copies of progress keeps the most of both
+  const ma = { saved: 1, profile: { name: 'Old' }, skills: { a: { level: 3, tries: 7, right: 7, sets: 1, last: 5 } }, days: { '2026-10-01': { q: 5, right: 4, pts: 50 } }, log: [{ t: 1, kind: 'practice' }], badges: { first: 100 }, points: 300 };
+  const mb = { saved: 2, profile: { name: 'New' }, skills: { a: { level: 2, tries: 9, right: 6, sets: 2, last: 9 }, b: { level: 1, tries: 2, right: 1, sets: 1, last: 8 } }, days: { '2026-10-01': { q: 3, right: 3, pts: 30 }, '2026-10-02': { q: 7, right: 6, pts: 70 } }, log: [{ t: 2, kind: 'review' }, { t: 1, kind: 'practice' }], badges: { first: 50, perfect: 60 }, points: 250 };
+  const mm = ACCOUNT.merge(ma, mb);
+  const mBlank = ACCOUNT.merge({ saved: Date.now() }, mb);
+  ok(mBlank.profile.name === 'New' && mBlank.skills.b, 'accounts: an empty copy (a new computer) never overwrites the account’s profile');
+  ok(mm.skills.a.level === 3 && mm.skills.a.tries === 9 && mm.skills.b && mm.days['2026-10-01'].q === 5 && mm.days['2026-10-02'].q === 7 && mm.log.length === 2 && mm.badges.first === 50 && mm.badges.perfect === 60 && mm.points === 300 && mm.profile.name === 'New', 'accounts: merging keeps the higher level, both histories, the earliest badges; settings from the newer copy');
+  // without accounts switched on, the profile still works on this device
+  ACCOUNT.useBackend(null); S.reset();
+  m = await go3('#/profile');
+  ok(/aren’t switched on/.test(text(m.querySelector('#account'))) && m.querySelectorAll('.av-opt').length >= 20, 'profile: with accounts off it explains, and the profile still works on this device');
+  m.querySelector('#pf-name').value = 'Priyaan'; m.querySelector('#pf-name').dispatchEvent(new Event('input'));
+  m.querySelector('[data-emoji="🦉"]').click(); await tick(10);
+  m = document.getElementById('main');
+  m.querySelector('#pf-grade').value = '7'; m.querySelector('#pf-grade').dispatchEvent(new Event('change'));
+  ok(S.get().profile.name === 'Priyaan' && S.get().profile.avatar.emoji === '🦉' && S.get().profile.grade === 7 && /🦉/.test(document.getElementById('avatar-btn').textContent), 'profile: name, grade and avatar are saved, and the avatar shows in the header');
+  ok(TUTORPAGE.contextFor({ about: 'general', level: 'auto', style: 'steps', messages: [] }).level === '7th grade', 'profile: the tutor explains at the grade set here');
+  // computer 1: some progress, then an account
+  S.setSkill('math7.add-negatives', { level: 3, tries: 7, right: 7, sets: 1, last: Date.now() });
+  ACCOUNT.useBackend(device());
+  m = await go3('#/profile');
+  const fill = (sel, v) => { const el = m.querySelector(sel); el.value = v; };
+  fill('#ac-user', 'Bad Name'); fill('#ac-pass', 'mathrocks1'); fill('#ac-pass2', 'mathrocks1');
+  m.querySelector('#ac-new').dispatchEvent(new Event('submit', { cancelable: true })); await tick(20);
+  ok(/3 to 20 letters/.test(text(m.querySelector('#ac-new .ac-msg'))), 'accounts: a username with spaces is refused before anything is sent');
+  fill('#ac-user', 'priyaan'); fill('#ac-pass', 'short'); fill('#ac-pass2', 'short');
+  m.querySelector('#ac-new').dispatchEvent(new Event('submit', { cancelable: true })); await tick(20);
+  ok(/at least 8/.test(text(m.querySelector('#ac-new .ac-msg'))), 'accounts: a short password is refused');
+  fill('#ac-pass', 'mathrocks1'); fill('#ac-pass2', 'mathrocks1');
+  m.querySelector('#ac-new').dispatchEvent(new Event('submit', { cancelable: true })); await tick(80);
+  m = document.getElementById('main');
+  const uid1 = server.users['priyaan@learners.procademy.invalid'] && server.users['priyaan@learners.procademy.invalid'].uid;
+  ok(uid1 && server.docs[uid1] && JSON.parse(server.docs[uid1].state).skills['math7.add-negatives'].level === 3 && /Signed in as @priyaan/.test(text(m)) && document.querySelector('#avatar-btn .av-dot'), 'accounts: making an account saves this device’s progress online, and the header shows you are signed in');
+  // a change is saved online by itself, a few seconds later
+  S.setSkill('math7.circles', { level: 2, tries: 7, right: 5, sets: 1, last: Date.now() });
+  await tick(3400);
+  ok(JSON.parse(server.docs[uid1].state).skills['math7.circles'] && /Saved online/.test(text(m.querySelector('#sync-line'))), 'accounts: practice is saved online automatically');
+  // log out, clearing this computer
+  m.querySelector('#ac-out').click(); m.querySelector('#ac-out-yes').click(); await tick(60);
+  ok(!ACCOUNT.user() && !Object.keys(S.get().skills).length && /Create an account/.test(text(m)), 'accounts: logging out clears this computer (unless a copy is kept)');
+  // computer 2: a different device logs in and gets everything
+  ACCOUNT.useBackend(device()); S.reset();
+  m = await go3('#/profile');
+  m.querySelector('[data-tab="in"]').click();
+  fill('#ac-id', 'priyaan'); fill('#ac-pw-in', 'wrongpass1');
+  m.querySelector('#ac-in').dispatchEvent(new Event('submit', { cancelable: true })); await tick(40);
+  ok(/don’t match/.test(text(m.querySelector('#ac-in .ac-msg'))) && !ACCOUNT.user(), 'accounts: a wrong password is refused');
+  fill('#ac-pw-in', 'mathrocks1');
+  m.querySelector('#ac-in').dispatchEvent(new Event('submit', { cancelable: true })); await tick(80);
+  ok(ACCOUNT.user() && S.skill('math7.add-negatives').level === 3 && S.skill('math7.circles').level === 2 && S.get().profile.name === 'Priyaan', 'accounts: logging in on another computer brings all the progress and the profile');
+  await ACCOUNT.logOut(true);
+  // a shared computer with someone else's progress: ask first
+  S.reset(); S.setSkill('math8.slope', { level: 1, tries: 3, right: 1, sets: 1, last: Date.now() });
+  ACCOUNT.useBackend(device());
+  m = await go3('#/profile');
+  m.querySelector('[data-tab="in"]').click(); fill('#ac-id', 'priyaan'); fill('#ac-pw-in', 'mathrocks1');
+  m.querySelector('#ac-in').dispatchEvent(new Event('submit', { cancelable: true })); await tick(80);
+  m = document.getElementById('main');
+  ok(/Two sets of progress/.test(text(m)) && m.querySelector('#mg-add') && m.querySelector('#mg-replace'), 'accounts: when this computer already has other progress, it asks before mixing them');
+  m.querySelector('#mg-replace').click(); await tick(80);
+  ok(!S.get().skills['math8.slope'] && S.skill('math7.add-negatives').level === 3 && !JSON.parse(server.docs[uid1].state).skills['math8.slope'], 'accounts: "use only my account’s progress" leaves the other progress out of the account');
+  // username taken; delete the account
+  await ACCOUNT.logOut(true);
+  ACCOUNT.useBackend(device());
+  m = await go3('#/profile');
+  fill('#ac-user', 'priyaan'); fill('#ac-pass', 'another123'); fill('#ac-pass2', 'another123');
+  m.querySelector('#ac-new').dispatchEvent(new Event('submit', { cancelable: true })); await tick(40);
+  ok(/already taken/.test(text(m.querySelector('#ac-new .ac-msg'))), 'accounts: a taken username says so');
+  m.querySelector('[data-tab="in"]').click(); fill('#ac-id', 'priyaan'); fill('#ac-pw-in', 'mathrocks1');
+  m.querySelector('#ac-in').dispatchEvent(new Event('submit', { cancelable: true })); await tick(80);
+  m = document.getElementById('main');
+  const realConfirm2 = window.confirm; window.confirm = () => true;
+  m.querySelector('#ac-del-pw').value = 'mathrocks1'; m.querySelector('#ac-del').click(); await tick(60);
+  window.confirm = realConfirm2;
+  ok(!server.docs[uid1] && !server.users['priyaan@learners.procademy.invalid'] && !ACCOUNT.user(), 'accounts: deleting the account removes everything saved online');
+  window.PROCADEMY_OFFLINE = { build: 'test' };
+  m = await go3('#/profile');
+  ok(/not in the offline file/.test(text(m.querySelector('#account'))), 'accounts: the offline file explains that accounts are on the website');
+  delete window.PROCADEMY_OFFLINE;
+  ACCOUNT.useBackend(null); S.reset();
   }
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
