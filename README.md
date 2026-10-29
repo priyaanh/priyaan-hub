@@ -62,6 +62,19 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   practice test the day before (a question from every lesson, no hints, scored lesson by lesson with
   practice for the misses), a warm-up on the day — with a readiness meter, a countdown on Home, and
   the plan as calendar reminders (.ics).
+- **Goals and badges** (`lib/badges.js`): a daily goal (10–50 questions, every kind of practice and
+  sprints count) shown as a ring on Home, and 23 badges for real milestones — streaks, goals met, a
+  perfect set, Proficient and Mastered skills, a unit test ace, a mistake put right, sprint scores, an
+  equation solved in the step checker, a CPM practice test passed. They are worked out from what is
+  already saved, kept with the day earned, and shown on Progress.
+- **Challenge a friend** (`lib/challenge.js`, `#/vs/<code>`): after a practice set, a CPM lesson set or a
+  sprint, a link gives a friend exactly the same questions (the same seed) with your score — and your
+  name only if ticked — and says who won, with a challenge back. Nothing but the link; every field of a
+  link is checked before it is used.
+- **A progress report** (`lib/report.js`, `#/report`, from Progress): the last 7 or 30 days on one
+  printable page for a parent or teacher — days practised, questions and first-try accuracy, a bar a day,
+  skills levelled up, what kinds of practice, usual slips with tips, what is due, a coming CPM test,
+  new badges and three suggestions — to print, save as PDF or copy as text.
 - **Read aloud.** 🔊 reads a question (and its choices) or a tutor answer with the browser's own voice,
   math as words ("3 over 4", "x squared"). Questions also reach the tutor as readable math now (3/4,
   not "34").
@@ -179,6 +192,7 @@ that wrong?" after a wrong answer. It needs no account, no key and no sign-up an
 | `lib/draw.js`, `lib/pictures.js`, `lib/files.js` | the tutor's exact drawings, pictures from the picture AI, and attached files |
 | `lib/coach.js`, `lib/worksheet.js`, `lib/calc.js` | the mistake coach and reading aloud, printable worksheets, the graphing calculator |
 | `lib/steps.js`, `lib/sprint.js`, `lib/prep.js` | the step checker, speed sprints, CPM chapter test prep |
+| `lib/badges.js`, `lib/challenge.js`, `lib/report.js` | goals and badges, challenge a friend, the progress report |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |

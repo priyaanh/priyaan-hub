@@ -55,6 +55,9 @@
 <script src="../lib/steps.js"></script>
 <script src="../lib/sprint.js"></script>
 <script src="../lib/prep.js"></script>
+<script src="../lib/badges.js"></script>
+<script src="../lib/challenge.js"></script>
+<script src="../lib/report.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -893,6 +896,65 @@
   m = await go('#/');
   ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 4, 'test prep: Home shows the countdown; Home has the tools');
   S.reset(); S.setProfile({ prep: null, enrolled: [] });
+  }
+
+  { // goals and badges, challenging a friend, the progress report
+  const go2 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  const playAll = async (mm, wrong) => { for (let k = 0; k < 40 && !E.isDone(mm.__session); k++) { const it = mm.__session.items[mm.__session.i]; const good = !(wrong || []).includes(k); if (it.q.type === 'choice') mm.querySelector(`#choices button[data-k="${good ? it.q.answerIndex : (it.q.answerIndex + 1) % it.q.choices.length}"]`).click(); else { const i2 = mm.querySelector('#ans'); i2.value = good ? String(it.q.answer) : String(it.q.answer + 1); i2.dispatchEvent(new Event('input', { bubbles: true })); } mm.querySelector('#check').click(); if (!good && mm.querySelector('#giveup')) mm.querySelector('#giveup').click(); mm.querySelector('#next').click(); await tick(); } };
+  S.reset(); S.setProfile({ name: 'Sam', enrolled: ['math-7'] });
+  try { localStorage.removeItem('procademy.sprints.v1'); } catch (e) {}
+  BADGES.check(true);
+  ok(!Object.keys(S.get().badges).length, 'badges: none before anything is done');
+  m = await go2('#/practice/math7.add-negatives');
+  const seedP = m.__session.seed, promptsP = m.__session.items.map(it => it.q.prompt).join('|');
+  await playAll(m);
+  const got = S.get().badges;
+  ok(got.first && got.perfect && got.proficient && /badge/i.test(text(document.querySelector('.toast'))), 'badges: a perfect first set earns First steps, Perfect set and Proficient, announced once');
+  m = await go2('#/');
+  ok(/7 \/ 20/.test(text(m.querySelector('#goal-tile'))) && /🏅 3/.test(text(m.querySelector('.badge-tile'))), 'goals: Home shows today against the daily goal, and the badges');
+  m.querySelector('#goal-tile').click(); m.querySelector('[data-goal="10"]').click(); await tick(10);
+  m = document.getElementById('main');
+  ok(S.get().profile.goal === 10 && /7 \/ 10/.test(text(m.querySelector('#goal-tile'))), 'goals: the goal can be changed from the ring');
+  for (let k = 0; k < 3; k++) S.countAnswer(true);
+  m = await go2('#/');
+  ok(/Goal met/.test(text(m.querySelector('#goal-tile'))) && S.get().badges.goal, 'goals: meeting it fills the ring and earns Goal!');
+  m = await go2('#/progress');
+  ok(m.querySelectorAll('.badges .badge').length === BADGES.LIST.length && m.querySelectorAll('.badges .badge.got').length >= 4 && m.querySelector('a[href="#/report"]'), 'badges: Progress shows every badge, earned ones first, and how to earn the rest');
+  // challenge a friend with the same questions
+  m = await go2('#/practice/math7.add-negatives');
+  await playAll(m);
+  const vsBtn = m.querySelector('[data-vs]');
+  ok(vsBtn && JSON.parse(vsBtn.dataset.vs).seed === m.__session.seed, 'challenge: a finished set offers a challenge with its own seed');
+  vsBtn.click(); m.querySelector('#vs-copy').click(); await tick(20);
+  const link = CHALLENGE._last, code = link.split('#/vs/')[1], c = CHALLENGE.read(code);
+  ok(c && c.k === 'p' && c.id === 'math7.add-negatives' && c.score === 7 && c.name === 'Sam' && S.get().flags.challenge, 'challenge: the link holds the skill, the seed, the score and (if ticked) the name');
+  const code2 = DRAW.encode(JSON.stringify({ k: 'p', id: 'math7.add-negatives', seed: seedP, score: 6, total: 7, name: 'Sam' }));
+  m = await go2('#/vs/' + code2);
+  ok(/Sam challenges you/.test(text(m)) && /6 \/ 7/.test(text(m)), 'challenge: a friend opening it sees who, what and the score to beat');
+  m.querySelector('#vs-go').click(); await tick(20);
+  ok(m.__session.items.map(it => it.q.prompt).join('|') === promptsP, 'challenge: the friend gets exactly the same questions');
+  await playAll(m, [0, 1]);
+  ok(/Sam wins/.test(text(m.querySelector('.vs-result'))) && /Challenge Sam back/.test(text(m)), 'challenge: the result says who won, and offers a challenge back');
+  m = await go2('#/vs/' + DRAW.encode(JSON.stringify({ k: 'p', id: '<img src=x onerror=alert(1)>', seed: 'x', score: 1, total: 7 })));
+  ok(/doesn’t work/.test(text(m)) && !m.querySelector('img'), 'challenge: a link with a made-up skill is refused');
+  m = await go2('#/vs/' + DRAW.encode(JSON.stringify({ k: 'p', id: 'math7.add-negatives', seed: 'ab1', score: 3, total: 7, name: '<b>Hi</b><script>x<\/script>' })));
+  ok(!m.querySelector('.vs-card b b') && !m.querySelector('script') && /Hi/.test(text(m.querySelector('h1'))), 'challenge: a name in a link is shown as plain text');
+  m = await go2('#/vs/not-a-real-code');
+  ok(/doesn’t work/.test(text(m)), 'challenge: a broken link says so');
+  // a sprint challenge is the same round for both
+  const sCode = DRAW.encode(JSON.stringify({ k: 's', id: 'times', secs: 30, seed: 'test7', score: 12, name: 'Ana' }));
+  const firstFour = async () => { m = await go2('#/vs/' + sCode); m.querySelector('#vs-go').click(); await tick(20); const rd = m.__sprint, seen = []; for (let k = 0; k < 4; k++) { seen.push(rd.cur.q); const i = m.querySelector('#sp-in'); i.value = String(rd.cur.a); i.dispatchEvent(new Event('input')); await tick(170); } rd.finish(); return seen.join('|'); };
+  const r1 = await firstFour(), r2 = await firstFour();
+  ok(r1 === r2 && /Ana/.test(text(m.querySelector('.vs-result'))) && /You 4/.test(text(m.querySelector('.vs-result'))), 'challenge: a sprint challenge gives the same facts in the same order, and compares scores (' + r1 + ')');
+  // the progress report
+  m = await go2('#/report');
+  const rp = m.__report;
+  ok(rp && rp.q >= 14 && rp.ups.some(u => u.id === 'math7.add-negatives' && u.to === 3) && /Sam/.test(text(m.querySelector('.report h1'))) && m.querySelectorAll('.rp-bars > div').length === 7, 'report: the week on one page: questions, skills levelled up, a bar a day');
+  m.querySelector('#rp-copy').click(); await tick(10);
+  ok(/Procademy progress report for Sam/.test(REPORT._lastText) && /Levelled up/.test(REPORT._lastText) && /right first try/.test(REPORT._lastText), 'report: it copies as text for a message');
+  m.querySelector('#rp-days').value = '30'; m.querySelector('#rp-days').dispatchEvent(new Event('change'));
+  ok(m.querySelectorAll('.rp-bars > div').length === 30, 'report: or the last 30 days');
+  S.reset(); S.setProfile({ enrolled: [] });
   }
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
