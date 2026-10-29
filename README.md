@@ -182,6 +182,12 @@ progress is saved online and comes back on any computer: log in and it is there,
   account's. Logging out clears the computer unless a copy is kept.
 - What goes online: levels, practice history, settings, badges and sprint bests. Tutor chats and attached
   files never do. A learner can delete the account, and everything saved online, from the Profile page.
+- **Without an account: a move link** (`lib/move.js`, on Profile and in Settings). It carries the progress
+  itself — compressed, after the `#` of the address, so no website ever receives it (a few hundred
+  characters to about 10 KB) — and opening it on another computer copies the progress there, added to
+  what is there or instead of it. A link is untrusted on arrival: size-limited (a link that would unpack
+  past 3 MB is stopped), and rebuilt field by field with the right types. Links made in the offline file
+  open on the website.
 
 ## Without the internet
 
@@ -214,6 +220,7 @@ progress is saved online and comes back on any computer: log in and it is there,
 | `lib/steps.js`, `lib/sprint.js`, `lib/prep.js` | the step checker, speed sprints, CPM chapter test prep |
 | `lib/badges.js`, `lib/challenge.js`, `lib/report.js` | goals and badges, challenge a friend, the progress report |
 | `lib/account.js`, `lib/firebase-config.js`, `firestore.rules` | profiles, online accounts and sync (see SETUP-ACCOUNTS.md) |
+| `lib/move.js` | moving progress to another computer with a link (no account, no file) |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |

@@ -61,6 +61,7 @@
 <script src="../lib/challenge.js"></script>
 <script src="../lib/report.js"></script>
 <script src="../lib/account.js"></script>
+<script src="../lib/move.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -1053,6 +1054,49 @@
   ok(/not in the offline file/.test(text(m.querySelector('#account'))), 'accounts: the offline file explains that accounts are on the website');
   delete window.PROCADEMY_OFFLINE;
   ACCOUNT.useBackend(null); S.reset();
+  }
+
+  { // moving progress to another computer with a link: no account, no file
+  const go4 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  const until = async (f, ms) => { for (let k = 0; k < (ms || 3000) / 25 && !f(); k++) await tick(25); return f(); };
+  ACCOUNT.useBackend(null);
+  S.reset(); S.setProfile({ name: 'Mover', avatar: { emoji: '🦉', hue: 265 } });
+  S.setSkill('math7.add-negatives', { level: 3, tries: 7, right: 7, sets: 1, last: Date.now() });
+  for (let k = 0; k < 5; k++) S.countAnswer(true);
+  S.earnBadges(['first']);
+  localStorage.setItem('procademy.sprints.v1', JSON.stringify({ times: { best: 22, plays: 2, weak: [{ key: '-3x4', q: '−3 × 4', a: -12 }] } }));
+  m = await go4('#/profile');
+  MOVE._last = null; m.querySelector('#mv-make').click();
+  await until(() => MOVE._last);
+  ok(MOVE._last && /#\/move\/z/.test(MOVE._last) && MOVE._last.length < 20000 && m.querySelector('.mv-url'), 'move: Profile makes a link that carries the progress, compressed (' + (MOVE._last || '').length + ' characters)');
+  const code = MOVE._last.split('#/move/')[1];
+  S.reset(); localStorage.removeItem('procademy.sprints.v1');
+  m = await go4('#/move/' + code);
+  await until(() => m.querySelector('#mv-replace'));
+  ok(/Mover/.test(text(m)) && /5 questions/.test(text(m)) && m.querySelector('#mv-replace') && !m.querySelector('#mv-add'), 'move: on the other computer it shows whose progress, and how much');
+  m.querySelector('#mv-replace').click(); await tick(60);
+  ok(S.skill('math7.add-negatives').level === 3 && S.get().profile.name === 'Mover' && S.get().badges.first && JSON.parse(localStorage.getItem('procademy.sprints.v1')).times.weak[0].a === -12 && location.hash === '#/', 'move: the progress, profile, badges and sprint bests arrive, and the address no longer holds them');
+  S.reset(); S.setSkill('math8.slope', { level: 2, tries: 7, right: 5, sets: 1, last: Date.now() }); S.countAnswer(true);
+  m = await go4('#/move/' + code);
+  await until(() => m.querySelector('#mv-add'));
+  m.querySelector('#mv-add').click(); await tick(60);
+  ok(S.skill('math8.slope').level === 2 && S.skill('math7.add-negatives').level === 3, 'move: on a computer with its own progress, adding keeps both');
+  // links are untrusted
+  const evil = await MOVE.pack({ app: 'procademy-move', state: { profile: { name: '<img src=x onerror="window.__moved=1">', enrolled: ['math-7', '<b>x</b>'] }, skills: { 'math7.circles': { level: '9', tries: 'lots' }, '<script>': { level: 4 } }, days: { 'not-a-day': { q: 5 }, '2026-10-01': { q: '7' } } } });
+  const cl = MOVE.clean(await MOVE.unpack(evil));
+  ok(cl.state.skills['math7.circles'].level === 4 && cl.state.skills['math7.circles'].tries === 0 && !cl.state.skills['<script>'] && !cl.state.days['not-a-day'] && cl.state.days['2026-10-01'].q === 7 && cl.state.profile.enrolled.join() === 'math-7', 'move: a link is rebuilt field by field: wrong types fixed, anything unknown dropped');
+  m = await go4('#/move/' + evil);
+  await until(() => m.querySelector('#mv-replace, #mv-add'));
+  ok(!m.querySelector('.move-card img') && !window.__moved && /<img/.test(text(m.querySelector('.move-card'))), 'move: a name in a link is shown as plain text, never run');
+  const bomb = await MOVE.pack({ app: 'procademy-move', pad: 'a'.repeat(4 * 1024 * 1024), state: {} });
+  let refused = false; try { await MOVE.unpack(bomb); } catch (e) { refused = /too big/.test(e.message); }
+  ok(refused && bomb.length < 30000, 'move: a short link built to unpack into something huge is refused');
+  m = await go4('#/move/zAAAA');
+  await until(() => /doesn’t work/.test(text(m)));
+  ok(/doesn’t work/.test(text(m)), 'move: a broken or cut-short link says so');
+  m = await go4('#/settings');
+  ok(m.querySelector('#mv-make'), 'move: Settings offers it too');
+  S.reset(); localStorage.removeItem('procademy.sprints.v1');
   }
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
