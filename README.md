@@ -75,6 +75,12 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   printable page for a parent or teacher — days practised, questions and first-try accuracy, a bar a day,
   skills levelled up, what kinds of practice, usual slips with tips, what is due, a coming CPM test,
   new badges and three suggestions — to print, save as PDF or copy as text.
+- **Math words** (`lib/words.js`, `lib/vocab.js`, `#/words`): 174 words of school math, Kindergarten to
+  Algebra, each with a plain definition and an example, searchable and filtered by grade, with the
+  Procademy practice that uses it. Lessons underline the first use of each word (never everyday words
+  like *mean* or *range*, and never inside pictures or math layout); tapping one shows the definition.
+  **Flashcards** (`#/words/cards`) from your grade, your starred words or every word, with spaced review
+  (3, 7, 16, 37 days for a word you know; tomorrow, and again later in the set, for one you don't).
 - **Read aloud.** 🔊 reads a question (and its choices) or a tutor answer with the browser's own voice,
   math as words ("3 over 4", "x squared"). Questions also reach the tutor as readable math now (3/4,
   not "34").
@@ -229,6 +235,7 @@ progress is saved online and comes back on any computer: log in and it is there,
 | `lib/account.js`, `lib/firebase-config.js`, `firestore.rules` | profiles, online accounts and sync (see SETUP-ACCOUNTS.md) |
 | `lib/move.js` | moving progress to another computer with a link (no account, no file) |
 | `lib/learners.js` | several learners on one computer |
+| `lib/words.js`, `lib/vocab.js` | math words: the glossary, tap-to-define in lessons, flashcards |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |

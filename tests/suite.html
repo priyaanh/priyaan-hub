@@ -63,6 +63,8 @@
 <script src="../lib/account.js"></script>
 <script src="../lib/move.js"></script>
 <script src="../lib/learners.js"></script>
+<script src="../lib/words.js"></script>
+<script src="../lib/vocab.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -899,7 +901,7 @@
   const pt = S.get().profile.prep.tests[0];
   ok(m.querySelector('.prep-result li.miss') && m.querySelectorAll('.prep-result li.ok').length >= 1 && pt && pt.right === tses.items.length - 1 && S.get().profile.prep.done[S.today()], 'test prep: the result goes lesson by lesson, with practice for the lessons missed, and the day is marked done');
   m = await go('#/');
-  ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 4, 'test prep: Home shows the countdown; Home has the tools');
+  ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 5, 'test prep: Home shows the countdown; Home has the tools');
   S.reset(); S.setProfile({ prep: null, enrolled: [] });
   }
 
@@ -1152,6 +1154,54 @@
   m.querySelector('#news-x').click(); m = await go5('#/');
   ok(!m.querySelector('#news'), 'what’s new: Got it puts it away for good');
   try { Object.keys(localStorage).filter(k => /^procademy\.(learners|learner\.|chats)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  S.reset();
+  }
+
+  { // math words: the glossary, tap-to-define in lessons, flashcards
+  const go6 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  S.reset(); S.setProfile({ grade: 7 });
+  const WL = WORDS.LIST;
+  ok(WL.length >= 150 && new Set(WL.map(w => w.id)).size === WL.length && WL.every(w => w.def.length > 15), `words: ${WL.length} words, each with its own id and a definition`);
+  m = await go6('#/words');
+  ok(m.querySelector('[data-band="7"]').classList.contains('on') && m.querySelectorAll('.word').length === WL.filter(w => w.grade === 7).length, 'words: the glossary opens on the learner’s grade');
+  const wq = m.querySelector('#wd-q'); wq.value = 'slope'; wq.dispatchEvent(new Event('input')); m.querySelector('[data-band="all"]').click();
+  ok([...m.querySelectorAll('.word h3')].some(h => text(h) === 'slope') && m.querySelector('.word a[href^="#/practice/"]'), 'words: search finds a word, with practice that uses it');
+  m.querySelector('[data-star="slope"]').click();
+  ok((S.get().profile.starredWords || []).includes('slope'), 'words: a star adds a word to your flashcards');
+  m = await go6('#/words/absolute-value');
+  ok(m.querySelector('#w-absolute-value.focus'), 'words: a word has its own address');
+  // tap-to-define in a lesson
+  const sid = Object.keys(A.skills).find(id => /absolute value/i.test(H_plain(A.skills[id].learn || '')) && A.whereIs(id));
+  function H_plain(h) { return String(h).replace(/<[^>]+>/g, ' '); }
+  m = await go6('#/skill/' + encodeURIComponent(sid));
+  const tb = m.querySelector('.learn .term[data-word="absolute-value"]');
+  ok(tb && m.querySelectorAll('.learn .term[data-word="absolute-value"]').length === 1 && !m.querySelector('.learn .term[data-word="mean"]') && !m.querySelector('.learn svg .term, .learn .frac .term'), 'words: a lesson underlines each word once (' + sid + '), never everyday words or math layout');
+  tb.click(); await tick(10);
+  ok(document.querySelector('.term-pop') && /distance from zero/.test(text(document.querySelector('.term-pop'))), 'words: tapping it shows what it means');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await tick(5);
+  ok(!document.querySelector('.term-pop'), 'words: Escape closes it');
+  const dl = document.createElement('div'); dl.innerHTML = A.skills[sid].learn; const before = dl.textContent; const nLinked = VOCAB.linkify(dl);
+  ok(nLinked >= 1 && dl.textContent === before && dl.querySelectorAll('.term').length === nLinked, 'words: underlining changes nothing in the lesson’s text');
+  // flashcards
+  m = await go6('#/words/cards');
+  ok(m.querySelector('input[value="starred"]') && !m.querySelector('input[value="starred"]').disabled, 'cards: your starred words are a deck');
+  m.querySelector('input[value="grade"]').click(); m.querySelector('#cd-go').click(); await tick(10);
+  const firstTerm = text(m.querySelector('.fc-term'));
+  m.querySelector('#fc-flip').click(); await tick(5);
+  ok(m.querySelector('.fc-def') && m.querySelector('#fc-yes'), 'cards: flipping shows the definition and two honest buttons');
+  m.querySelector('#fc-yes').click(); await tick(5);
+  const w1 = WL.find(w => w.term === firstTerm);
+  ok(S.get().words[w1.id].ivl === 3 && S.get().words[w1.id].due === S.dayShift(S.today(), 3), 'cards: a word you knew comes back in 3 days');
+  const secondTerm = text(m.querySelector('.fc-term'));
+  m.querySelector('#fc-flip').click(); await tick(5); m.querySelector('#fc-no').click(); await tick(5);
+  const w2 = WL.find(w => w.term === secondTerm);
+  ok(S.get().words[w2.id].ivl === 1 && S.get().words[w2.id].due === S.dayShift(S.today(), 1), 'cards: a word you didn’t know comes back tomorrow');
+  let seenAgain = false;
+  for (let k = 0; k < 30 && m.querySelector('.flashcard'); k++) { if (text(m.querySelector('.fc-term')) === secondTerm) seenAgain = true; m.querySelector('#fc-flip').click(); await tick(2); m.querySelector('#fc-yes').click(); await tick(2); }
+  ok(seenAgain && m.querySelector('.summary') && /words known/.test(text(m)), 'cards: a missed word comes back later in the same set, then a summary');
+  WL.slice(0, 25).forEach(w => S.setWord(w.id, { ivl: 3, due: S.today() }));
+  BADGES.check(true);
+  ok(S.get().badges.words25, 'cards: knowing 25 words earns Word wise');
   S.reset();
   }
 
