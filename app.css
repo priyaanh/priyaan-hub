@@ -853,3 +853,32 @@ body.sorting-cards { user-select: none; -webkit-user-select: none; cursor: grabb
 .mv-ready { margin-top: 10px; background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
 .mv-url { width: 100%; font: inherit; font-family: var(--mono); font-size: .8rem; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); }
 .move-card { max-width: 600px; margin: 0 auto; text-align: center; }
+
+/* several learners on one computer (lib/learners.js), QR codes, reminders, what's new */
+.learners { margin-top: 16px; }
+.learner-list { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 6px; }
+.learner { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 96px; padding: 10px 8px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.learner:hover { border-color: var(--line-strong); }
+.learner.on { border-color: var(--primary); background: var(--primary-soft); }
+.learner .avatar { width: 46px; height: 46px; font-size: 1.5rem; }
+.learner.add .avatar { background: var(--surface-2); color: var(--muted); }
+.learner .ln { font-weight: 700; font-size: .9rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ln-form { margin-top: 10px; max-width: 520px; }
+.ln-form input { font: inherit; padding: .45rem .6rem; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+.ln-pin { margin-top: 10px; }
+.ln-pin summary { cursor: pointer; }
+.ln-pin input { font: inherit; width: 7em; padding: .4rem .55rem; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+.linklike { border: 0; background: none; padding: 0; font: inherit; color: var(--primary-ink); cursor: pointer; text-decoration: underline; }
+.switch-learner { font-size: .9rem; font-weight: 600; margin-left: 8px; vertical-align: middle; }
+.qr-box { margin-top: 10px; text-align: center; }
+.qr { display: inline-block; width: min(260px, 70vw); padding: 8px; background: #fff; border-radius: 10px; }
+.qr svg { display: block; width: 100%; height: auto; }
+.reminder { margin-top: 16px; }
+.reminder select { font: inherit; padding: .3rem .5rem; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+.news { margin-top: 18px; }
+.news-items { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.news-items a { text-decoration: none; }
+/* dark mode: some emoji icons (➗ ✖️) are drawn in black, so they sit on a light chip */
+:root[data-theme="dark"] .course-card .icon, :root[data-theme="dark"] .sprint-icon, :root[data-theme="dark"] .icon-big { background: rgba(255, 255, 255, .88); border-radius: 10px; padding: 3px 6px; align-self: flex-start; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .course-card .icon, :root:not([data-theme="light"]) .sprint-icon, :root:not([data-theme="light"]) .icon-big { background: rgba(255, 255, 255, .88); border-radius: 10px; padding: 3px 6px; align-self: flex-start; } }
+.calc > .card { margin: 0; }

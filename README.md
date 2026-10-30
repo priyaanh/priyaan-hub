@@ -182,12 +182,19 @@ progress is saved online and comes back on any computer: log in and it is there,
   account's. Logging out clears the computer unless a copy is kept.
 - What goes online: levels, practice history, settings, badges and sprint bests. Tutor chats and attached
   files never do. A learner can delete the account, and everything saved online, from the Profile page.
+- **Several learners on one computer** (`lib/learners.js`, "Who's practising?" on Profile): a brother, a
+  sister or a parent each get their own progress, badges, sprint bests, tutor chats and graphs, with an
+  optional 4-digit PIN (a lock against mistakes, not a strong one). The learner on screen uses the usual
+  storage; the others are kept aside under their own keys and swapped in when chosen.
+- **A daily reminder**: Profile makes a calendar file with a daily reminder at a chosen time that opens
+  today's practice.
 - **Without an account: a move link** (`lib/move.js`, on Profile and in Settings). It carries the progress
   itself — compressed, after the `#` of the address, so no website ever receives it (a few hundred
   characters to about 10 KB) — and opening it on another computer copies the progress there, added to
   what is there or instead of it. A link is untrusted on arrival: size-limited (a link that would unpack
   past 3 MB is stopped), and rebuilt field by field with the right types. Links made in the offline file
-  open on the website.
+  open on the website. A short link (and every challenge link) can be shown as a QR code for a phone
+  (qrcode-generator 2.0.4, loaded only when asked).
 
 ## Without the internet
 
@@ -221,6 +228,7 @@ progress is saved online and comes back on any computer: log in and it is there,
 | `lib/badges.js`, `lib/challenge.js`, `lib/report.js` | goals and badges, challenge a friend, the progress report |
 | `lib/account.js`, `lib/firebase-config.js`, `firestore.rules` | profiles, online accounts and sync (see SETUP-ACCOUNTS.md) |
 | `lib/move.js` | moving progress to another computer with a link (no account, no file) |
+| `lib/learners.js` | several learners on one computer |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |

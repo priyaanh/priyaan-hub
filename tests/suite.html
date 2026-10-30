@@ -62,6 +62,7 @@
 <script src="../lib/report.js"></script>
 <script src="../lib/account.js"></script>
 <script src="../lib/move.js"></script>
+<script src="../lib/learners.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -1097,6 +1098,61 @@
   m = await go4('#/settings');
   ok(m.querySelector('#mv-make'), 'move: Settings offers it too');
   S.reset(); localStorage.removeItem('procademy.sprints.v1');
+  }
+
+  { // several learners on one computer, a daily reminder, QR codes, what's new
+  const go5 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  const until = async (f, ms) => { for (let k = 0; k < (ms || 3000) / 25 && !f(); k++) await tick(25); return f(); };
+  try { Object.keys(localStorage).filter(k => /^procademy\.(learners|learner\.)/.test(k)).forEach(k => localStorage.removeItem(k)); localStorage.setItem('procademy.chats.v1', JSON.stringify({ chats: [{ id: 'c1', title: 'Big brother chat', messages: [] }] })); } catch (e) {}
+  ACCOUNT.useBackend(null);
+  S.reset(); S.setProfile({ name: 'Priyaan', avatar: { emoji: '🦉', hue: 265 } });
+  S.setSkill('math7.add-negatives', { level: 3, tries: 7, right: 7, sets: 1, last: Date.now() });
+  m = await go5('#/profile');
+  ok(LEARNERS.count() === 1 && m.querySelectorAll('.learner').length === 2 && /Priyaan/.test(text(m.querySelector('.learner.on'))), 'learners: Profile shows who is practising, with a button to add another');
+  m.querySelector('#ln-add').click();
+  m.querySelector('#ln-name').value = 'Asha'; m.querySelector('#ln-new-pin').value = '12';
+  m.querySelector('#ln-new').dispatchEvent(new Event('submit', { cancelable: true })); await tick(30);
+  ok(/4 digits/.test(text(m.querySelector('#ln-more .ac-msg'))) && LEARNERS.count() === 1, 'learners: a PIN must be 4 digits');
+  m.querySelector('#ln-new-pin').value = '1234';
+  m.querySelector('#ln-new').dispatchEvent(new Event('submit', { cancelable: true })); await until(() => LEARNERS.count() === 2); await tick(30);
+  m = document.getElementById('main');
+  ok(LEARNERS.count() === 2 && S.get().profile.name === 'Asha' && !Object.keys(S.get().skills).length && !localStorage.getItem('procademy.chats.v1') && /Asha/.test(text(m.querySelector('.learner.on'))), 'learners: a new learner starts fresh, with their own tutor chats');
+  S.setSkill('math7.circles', { level: 2, tries: 7, right: 5, sets: 1, last: Date.now() });
+  m = await go5('#/');
+  ok(/Not you\? Switch/.test(text(m.querySelector('h1'))), 'learners: Home offers a switch when there is more than one');
+  m = await go5('#/profile');
+  [...m.querySelectorAll('[data-learner]')].find(b => /Priyaan/.test(text(b))).click(); await until(() => S.get().profile.name === 'Priyaan'); await tick(20);
+  ok(S.get().profile.name === 'Priyaan' && S.skill('math7.add-negatives').level === 3 && !S.get().skills['math7.circles'] && /Big brother chat/.test(localStorage.getItem('procademy.chats.v1') || ''), 'learners: switching back brings back that learner’s own progress and chats');
+  m = document.getElementById('main');
+  [...m.querySelectorAll('[data-learner]')].find(b => /Asha/.test(text(b))).click(); await tick(20);
+  m.querySelector('#ln-unlock-pin').value = '9999'; m.querySelector('#ln-unlock').dispatchEvent(new Event('submit', { cancelable: true })); await tick(60);
+  ok(S.get().profile.name === 'Priyaan' && /isn’t right/.test(text(m.querySelector('#ln-more .ac-msg'))), 'learners: a wrong PIN does not switch');
+  m.querySelector('#ln-unlock-pin').value = '1234'; m.querySelector('#ln-unlock').dispatchEvent(new Event('submit', { cancelable: true })); await until(() => S.get().profile.name === 'Asha');
+  ok(S.get().profile.name === 'Asha' && S.skill('math7.circles').level === 2, 'learners: the right PIN switches');
+  const ashaId = LEARNERS.active();
+  await LEARNERS.switchTo('l1');
+  ok(LEARNERS.remove(ashaId) && LEARNERS.count() === 1 && !localStorage.getItem('procademy.learner.' + ashaId), 'learners: a learner can be removed, with everything of theirs');
+  // a daily reminder
+  m = await go5('#/profile');
+  m.querySelector('#rm-time').value = '17'; m.querySelector('#rm-ics').click();
+  ok(/RRULE:FREQ=DAILY/.test(ACCOUNT._lastIcs) && /DTSTART:\d{8}T170000/.test(ACCOUNT._lastIcs) && /#\/daily/.test(ACCOUNT._lastIcs), 'reminder: a calendar file with a daily 5 pm reminder that opens today’s practice');
+  // QR codes (with a stand-in maker, so the suite needs no internet)
+  let qrText = null;
+  MOVE.qrLib = () => ({ addData(t) { qrText = t; }, make() {}, createSvgTag() { return '<svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg>'; } });
+  MOVE._last = null; m.querySelector('#mv-make').click(); await until(() => MOVE._last);
+  const qb = [...m.querySelectorAll('#mv-out .btn')].find(b => /QR/.test(b.textContent));
+  qb.click(); await until(() => m.querySelector('#mv-out .qr svg'));
+  ok(m.querySelector('#mv-out .qr svg') && qrText === MOVE._last, 'QR: a move link can be shown as a QR code for a phone');
+  ok(MOVE.qrButton(document.createElement('div'), 'x'.repeat(3000)).disabled, 'QR: a link too long for a QR code says to email it instead');
+  MOVE.qrLib = null;
+  // what's new
+  S.setProfile({ seenNews: null });
+  m = await go5('#/');
+  ok(m.querySelector('#news') && m.querySelectorAll('#news .chip-btn').length >= 8, 'what’s new: Home lists the new things, with links');
+  m.querySelector('#news-x').click(); m = await go5('#/');
+  ok(!m.querySelector('#news'), 'what’s new: Got it puts it away for good');
+  try { Object.keys(localStorage).filter(k => /^procademy\.(learners|learner\.|chats)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  S.reset();
   }
 
   console.log(`RESULTS ${fail} failed of ${pass + fail}`);
