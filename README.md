@@ -53,6 +53,14 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   negative, a sign lost moving a term, a solution lost by square-rooting, the x terms combined wrongly,
   or "right from the line above, but that line had a slip"), and a solved line is checked in the first
   line ("2(4) + 3 = 11 → 11 = 11 ✓"). In practice, checking a finished line counts as a hint.
+- **Word problems → equations** (`lib/setup.js`, `#/setup`, a Home tool): a set of five stories (a gym
+  membership, savings, a taxi ride, ages, tickets, consecutive integers, supplementary angles, a
+  perimeter, "at least" and "at most" budgets…) worked the CPM way: the variable is defined, you write the
+  equation or inequality, solve it in the step checker, and answer the question. An equation is accepted
+  when it has exactly the same solutions as the story's (any correct form, any letter) and uses the
+  story's numbers; the answer on its own is turned away. A wrong one has its own solution checked in the
+  story ("your equation says m = 7; $50 + $30 × 7 = $260, but Maya paid $290"), and > for "at least"
+  gets its own note. Hint and Show me are there; only equations right on the first try count as right.
 - **Speed sprints** (`lib/sprint.js`, `#/sprint`): one-minute rounds of facts (times tables, division,
   negatives, squares and roots, fractions ↔ decimals ↔ percents, percent of a number, or all mixed),
   checked as they are typed. Missed and slow facts come back more often; the best score per deck is
@@ -63,9 +71,9 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   practice for the misses), a warm-up on the day — with a readiness meter, a countdown on Home, and
   the plan as calendar reminders (.ics).
 - **Goals and badges** (`lib/badges.js`): a daily goal (10–50 questions, every kind of practice and
-  sprints count) shown as a ring on Home, and 23 badges for real milestones — streaks, goals met, a
+  sprints count) shown as a ring on Home, and 25 badges for real milestones — streaks, goals met, a
   perfect set, Proficient and Mastered skills, a unit test ace, a mistake put right, sprint scores, an
-  equation solved in the step checker, a CPM practice test passed. They are worked out from what is
+  equation solved in the step checker, a CPM practice test passed, equations written from word problems. They are worked out from what is
   already saved, kept with the day earned, and shown on Progress.
 - **Challenge a friend** (`lib/challenge.js`, `#/vs/<code>`): after a practice set, a CPM lesson set or a
   sprint, a link gives a friend exactly the same questions (the same seed) with your score — and your
@@ -83,7 +91,12 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   (3, 7, 16, 37 days for a word you know; tomorrow, and again later in the set, for one you don't).
 - **Read aloud.** 🔊 reads a question (and its choices) or a tutor answer with the browser's own voice,
   math as words ("3 over 4", "x squared"). Questions also reach the tutor as readable math now (3/4,
-  not "34").
+  not "34"). In Settings, **Read each practice question aloud** does it automatically, once per question.
+- **Worked examples** (every skill page): a fresh question of that skill solved one step at a time
+  ("Show the first step", "Show the next step", or "Show it all"), the answer at the end, then "Now try
+  some yourself". Another example gives a new one.
+- **Easier to read.** A Settings switch for a clearer typeface with more space between letters, words and
+  lines (with the text sizes and dark mode). Right/wrong feedback is announced to screen readers.
 
 **Courses** (`content/`, one file each, in grade order):
 
@@ -236,6 +249,7 @@ progress is saved online and comes back on any computer: log in and it is there,
 | `lib/move.js` | moving progress to another computer with a link (no account, no file) |
 | `lib/learners.js` | several learners on one computer |
 | `lib/words.js`, `lib/vocab.js` | math words: the glossary, tap-to-define in lessons, flashcards |
+| `lib/setup.js` | word problems → equations |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |

@@ -65,6 +65,7 @@
 <script src="../lib/learners.js"></script>
 <script src="../lib/words.js"></script>
 <script src="../lib/vocab.js"></script>
+<script src="../lib/setup.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -901,7 +902,7 @@
   const pt = S.get().profile.prep.tests[0];
   ok(m.querySelector('.prep-result li.miss') && m.querySelectorAll('.prep-result li.ok').length >= 1 && pt && pt.right === tses.items.length - 1 && S.get().profile.prep.done[S.today()], 'test prep: the result goes lesson by lesson, with practice for the lessons missed, and the day is marked done');
   m = await go('#/');
-  ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 5, 'test prep: Home shows the countdown; Home has the tools');
+  ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 6, 'test prep: Home shows the countdown; Home has the tools');
   S.reset(); S.setProfile({ prep: null, enrolled: [] });
   }
 
@@ -1202,6 +1203,96 @@
   WL.slice(0, 25).forEach(w => S.setWord(w.id, { ivl: 3, due: S.today() }));
   BADGES.check(true);
   ok(S.get().badges.words25, 'cards: knowing 25 words earns Word wise');
+  S.reset();
+  }
+
+  { // worked examples, easier reading, read-aloud
+  const go7 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  S.reset();
+  const wsid = Object.keys(A.skills).find(id => A.whereIs(id) && A.question(id, 'probe').hints.length >= 3);
+  m = await go7('#/skill/' + encodeURIComponent(wsid));
+  const wb = m.querySelector('#worked');
+  ok(wb && wb.__worked && wb.__worked.shown === 0 && !wb.querySelector('.we-steps li') && !wb.querySelector('#we-body .feedback') && wb.querySelector('#we-body .question'), 'worked example: a skill page shows a question with its steps hidden');
+  wb.querySelector('#we-next').click();
+  ok(wb.querySelectorAll('.we-steps li').length === 1 && !wb.querySelector('#we-body .feedback'), 'worked example: the steps come one at a time');
+  const wn = wb.__worked.q.hints.length;
+  for (let k = 1; k < wn; k++) wb.querySelector('#we-next').click();
+  ok(wb.querySelectorAll('.we-steps li').length === wn && wb.querySelector('#we-body .feedback.good') && wb.querySelector(`#we-body a[href="#/practice/${encodeURIComponent(wsid)}"]`), 'worked example: the answer comes after the last step, then “Now try some yourself”');
+  const wq1 = wb.__worked.q.prompt; let wchanged = false;
+  for (let k = 0; k < 6 && !wchanged; k++) { wb.querySelector('#we-new').click(); wchanged = wb.__worked.q.prompt !== wq1; }
+  ok(wchanged && wb.__worked.shown === 0 && !wb.querySelector('.we-steps li'), 'worked example: Another example gives a new question, steps hidden again');
+  wb.querySelector('#we-all').click();
+  ok(wb.__worked.shown === wb.__worked.q.hints.length && wb.querySelector('#we-body .feedback.good'), 'worked example: Show it all shows every step and the answer');
+  // easier-to-read text
+  m = await go7('#/settings');
+  const er = m.querySelector('#easy-read'); er.checked = true; er.dispatchEvent(new Event('change'));
+  ok(document.documentElement.getAttribute('data-read') === 'easy' && S.get().profile.easyRead === true, 'easier reading: the setting changes the text everywhere');
+  const ff = getComputedStyle(document.body).fontFamily;
+  er.checked = false; er.dispatchEvent(new Event('change'));
+  ok(!document.documentElement.hasAttribute('data-read') && getComputedStyle(document.body).fontFamily !== ff && /verdana/i.test(ff), 'easier reading: a clearer typeface, and it turns off again');
+  // read each question aloud, once
+  const said = [], oldSay = COACH.say; COACH.say = t => { said.push(t); };
+  S.setProfile({ autoRead: true });
+  m = await go7('#/practice/' + encodeURIComponent(wsid));
+  ok(said.length === 1 && m.querySelector('#feedback[aria-live="polite"]'), 'read-aloud: a question is read aloud when the setting is on; feedback is announced to screen readers');
+  if (m.querySelector('#hint') && !m.querySelector('#hint').disabled) { m.querySelector('#hint').click(); await tick(5); }
+  ok(said.length === 1, 'read-aloud: taking a hint doesn’t read the question again');
+  S.setProfile({ autoRead: false });
+  m = await go7('#/practice/' + encodeURIComponent(wsid));
+  ok(said.length === 1, 'read-aloud: off by default');
+  COACH.say = oldSay;
+  S.reset();
+  }
+
+  { // word problems → equations
+  const go8 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  S.reset();
+  const J = SETUP.judge, eqOf = p => p.model.replace(/\{v\}/g, p.v);
+  let tmplOk = true, why = '';
+  SETUP.T.forEach((t, k) => { for (let n = 0; n < 40; n++) {
+    const p = t(RNG.make('tm' + k + ':' + n)), e = eqOf(p), j = J(p, e), pr = STEPS.parse(e);
+    let good = j.ok && !/undefined|NaN/.test(p.story + p.hint + p.check(p.ans + 1)) && Number.isInteger(p.ans) && p.ans > (k === 5 ? -10 : 0);
+    if (good && !p.ineq) { const z = STEPS.zeros(pr.F); good = Array.isArray(z) && z.length === 1 && Math.abs(z[0] - p.ans) < 1e-9; }
+    if (good && p.ineq) good = pr.op === '>=' ? pr.F(p.ans) >= -1e-9 && pr.F(p.ans - 1) < -1e-9 : pr.F(p.ans) <= 1e-9 && pr.F(p.ans + 1) > 1e-9;   // the smallest (or largest) whole number
+    if (!good && !why) { tmplOk = false; why = ` (template ${k}: ${p.story} → ${e}: ${j.msg || ''})`; }
+  } });
+  ok(tmplOk, `word problems: all ${SETUP.T.length} kinds of story make sense, and their own equation and answer check out${why}`);
+  const gym = SETUP.T[0](RNG.make('gym')), [fee, rate, tot] = gym.nums;
+  ok(J(gym, `${fee} + ${rate}m = ${tot}`).ok && J(gym, `${rate}x + ${fee} = ${tot}`).ok && J(gym, `${tot} = ${fee} + ${rate} * m`).ok && J(gym, `$${fee} + $${rate}m = $${tot}`).ok, 'word problems: any correct way of writing the equation counts, in any letter, with or without $');
+  const solved = J(gym, `m = ${gym.ans}`);
+  ok(!solved.ok && /answer, not the equation/.test(solved.msg), 'word problems: the answer on its own is not an equation from the story');
+  ok(/True, but/.test(J(gym, `${rate}m = ${tot - fee}`).msg), 'word problems: an equation that skips the story’s numbers is pointed out');
+  const wrong = J(gym, `${fee}m + ${rate} = ${tot}`);
+  ok(!wrong.ok && /Your equation says m = /.test(wrong.msg) && /Maya paid/.test(wrong.msg), 'word problems: a wrong equation has its own answer checked in the story: ' + wrong.msg);
+  ok(/one letter/.test(J(gym, `${fee} + ${rate}m = ${tot} + x`).msg) && /needs an inequality/.test(J(SETUP.T[10](RNG.make('k')), '50 + 10h = 120').msg), 'word problems: one letter, and an inequality where the story says “at least”');
+  const kai = SETUP.T[10](RNG.make('kai')), [have, krate, goal] = kai.nums;
+  ok(J(kai, `${have} + ${krate}h >= ${goal}`).ok && J(kai, `${have} + ${krate}h ≥ ${goal}`).ok, 'word problems: an inequality story takes ≥ (or >=)');
+  ok(/Nearly/.test(J(kai, `${have} + ${krate}h > ${goal}`).msg) && /direction/.test(J(kai, `${have} + ${krate}h <= ${goal}`).msg), 'word problems: “at least” with > or ≤ gets its own advice');
+  // the page
+  m = await go8('#/setup');
+  const api = m.__setupApi;
+  ok(api && api.get().set.length === 5 && m.querySelector('.setup-story') && m.querySelector('#su-eq') && /Let/.test(text(m.querySelector('.setup-steps li'))), 'word problems: a set of 5 stories, the variable defined for you');
+  const p0 = api.get().set[0];
+  m.querySelector('#su-eq').value = `${p0.v} = ${p0.ans}`; m.querySelector('#su-check').click();
+  ok(m.querySelector('.coach-note') && m.querySelector('#su-eq').value === `${p0.v} = ${p0.ans}` && api.get().phase === 'write', 'word problems: a wrong try keeps what you typed and says why');
+  m.querySelector('#su-eq').value = eqOf(p0); m.querySelector('#su-check').click();
+  const ro = m.querySelector('#su-steps .step-in[readonly]');
+  ok(api.get().phase === 'solve' && ro && ro.value === eqOf(p0) && m.querySelector('#su-ans'), 'word problems: a right equation goes into the step checker to solve');
+  const inputs = m.querySelectorAll('#su-steps .step-in'); inputs[1].value = `${p0.v} = ${p0.ans}`; inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+  m.querySelector('#su-ans').value = String(p0.ans); m.querySelector('#su-ans-check').click();
+  ok(api.get().phase === 'done' && m.querySelector('.setup .feedback.good') && [...m.querySelectorAll('#su-steps .step-in')].some(x => x.value === `${p0.v} = ${p0.ans}`), 'word problems: the right answer is confirmed, and your working stays on screen');
+  for (let k = 1; k < 5; k++) {
+    m.querySelector('#su-next').click();
+    if (k % 2) m.querySelector('#su-show').click(); else { m.querySelector('#su-eq').value = eqOf(api.get().set[k]); m.querySelector('#su-check').click(); }
+    m.querySelector('#su-ans').value = String(api.get().set[k].ans + (k === 4 ? 1 : 0)); m.querySelector('#su-ans-check').click();
+  }
+  m.querySelector('#su-next').click();
+  const lg = S.get().log[0];
+  ok(m.querySelector('.summary') && lg.kind === 'setup' && lg.right === 2 && lg.total === 5 && lg.pts === 2 * 15 + 4 * 10 && /2 \/ 5/.test(text(m.querySelector('.score'))), 'word problems: a summary; only equations right on the first try, without “Show me”, count');
+  S.logEvent({ kind: 'setup', right: 3, total: 5, pts: 0 }); BADGES.check(true);
+  ok(S.get().badges.storyteller, 'word problems: 5 equations right first time earns Story solver');
+  m = await go8('#/');
+  ok(m.querySelector('.tool[href="#/setup"]'), 'word problems: on Home’s tools');
   S.reset();
   }
 

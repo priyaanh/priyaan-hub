@@ -64,6 +64,7 @@
 <script src="../lib/learners.js"></script>
 <script src="../lib/words.js"></script>
 <script src="../lib/vocab.js"></script>
+<script src="../lib/setup.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -79,7 +80,7 @@
   Object.keys(A.skills).forEach(id => routes.push('#/skill/' + encodeURIComponent(id)));
   A.cpm.forEach(b => { routes.push('#/cpm/' + b.id); b.chapters.forEach(ch => ch.lessons.forEach(l => routes.push('#/cpm/' + b.id + '/' + l.id))); });
   // the newer pages: today's practice, the graphing calculator (with sliders), and a worksheet for every unit and some lessons
-  routes.push('#/words', '#/words/cards', '#/words/absolute-value', '#/profile', '#/report', '#/vs/' + DRAW.encode(JSON.stringify({ k: 'p', id: 'math7.add-negatives', seed: 'abc12', score: 6, total: 7, name: 'Sam' })), '#/vs/' + DRAW.encode(JSON.stringify({ k: 's', id: 'times', secs: 60, seed: 'q9', score: 31 })), '#/vs/broken');
+  routes.push('#/setup', '#/words', '#/words/cards', '#/words/absolute-value', '#/profile', '#/report', '#/vs/' + DRAW.encode(JSON.stringify({ k: 'p', id: 'math7.add-negatives', seed: 'abc12', score: 6, total: 7, name: 'Sam' })), '#/vs/' + DRAW.encode(JSON.stringify({ k: 's', id: 'times', secs: 60, seed: 'q9', score: 31 })), '#/vs/broken');
   routes.push('#/sprint', '#/steps', '#/steps/' + DRAW.encode('3(x - 4) = 2x + 5\n3x - 12 = 2x + 5\nx = 17\n-2x + 5 > 11\nx > -3'), '#/prep/cc2/3', '#/prep/int1/2');
   SPRINT.DECKS.forEach(d => routes.push('#/sprint/' + d.id));
   routes.push('#/daily', '#/graph', '#/graph/' + DRAW.encode('y = a(x - h)^2 + k\na = 1\nh = 2\nk = -3\nx^2 + y^2 < 16\ntriangle A(1,1) B(4,1) C(1,3)'));
