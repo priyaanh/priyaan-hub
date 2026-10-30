@@ -66,6 +66,8 @@
 <script src="../lib/words.js"></script>
 <script src="../lib/vocab.js"></script>
 <script src="../lib/setup.js"></script>
+<script src="../lib/tiles.js"></script>
+<script src="../lib/chance.js"></script>
 <script>STORE.useMemory(true); /* the suite never touches real data */</script>
 <script src="../lib/app.js"></script>
 <script>
@@ -902,7 +904,7 @@
   const pt = S.get().profile.prep.tests[0];
   ok(m.querySelector('.prep-result li.miss') && m.querySelectorAll('.prep-result li.ok').length >= 1 && pt && pt.right === tses.items.length - 1 && S.get().profile.prep.done[S.today()], 'test prep: the result goes lesson by lesson, with practice for the lessons missed, and the day is marked done');
   m = await go('#/');
-  ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 6, 'test prep: Home shows the countdown; Home has the tools');
+  ok(m.querySelector('.prep-home') && /test in 3 days/.test(text(m.querySelector('.prep-home'))) && m.querySelectorAll('.tools .tool').length === 8, 'test prep: Home shows the countdown; Home has the tools');
   S.reset(); S.setProfile({ prep: null, enrolled: [] });
   }
 
@@ -1293,6 +1295,124 @@
   ok(S.get().badges.storyteller, 'word problems: 5 equations right first time earns Story solver');
   m = await go8('#/');
   ok(m.querySelector('.tool[href="#/setup"]'), 'word problems: on Home’s tools');
+  S.reset();
+  }
+
+  { // algebra tiles
+  const go9 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  S.reset();
+  const T = TILES, OPP = { xp: 'xn', xn: 'xp', up: 'un', un: 'up' };
+  const b1 = T.build('2x + 3 = x - 4');
+  ok(b1.mat && JSON.stringify(b1.mat) === JSON.stringify([{ xp: 2, xn: 0, up: 3, un: 0 }, { xp: 1, xn: 0, up: 0, un: 4 }]) && T.line(b1.mat) === '2x + 3 = x − 4', 'tiles: a typed equation becomes tiles');
+  ok(T.build('x^2 = 4').error && T.build('2x + 3').error && T.build('20x = 4').error && T.build('x/2 = 3').error && T.build('5 = 5').error, 'tiles: x², no = sign, too many tiles, fractions and no x are turned away');
+  ok(T.apply(b1.mat, { t: 'both', k: 'up' }).error && T.line(T.apply(b1.mat, { t: 'both', k: 'xp' }).mat) === 'x + 3 = −4', 'tiles: matching tiles come off both sides; a tile one side lacks can’t');
+  const zp = T.apply([{ xp: 1, xn: 0, up: 2, un: 1 }, { xp: 0, xn: 0, up: 5, un: 0 }], { t: 'zero', s: 0, k: 'un' });
+  ok(zp.mat && T.line(zp.mat) === 'x + 1 = 5' && /zero pair/.test(zp.says), 'tiles: a tile and its opposite on one side are a zero pair');
+  ok(T.line(T.apply([{ xp: 0, xn: 2, up: 0, un: 0 }, { xp: 0, xn: 0, up: 0, un: 6 }], { t: 'flip' }).mat) === '2x = 6' && T.line(T.apply([T.fromLinear(3, 0), T.fromLinear(0, -12)], { t: 'split' }).mat) === 'x = −4', 'tiles: flipping every tile, and splitting into equal groups');
+  // an automatic solver plays every kind of equation with legal moves; each line must be checked right
+  const solve = m => { const hist = [m]; for (let k = 0; k < 80; k++) { const o = T.outcome(m); if (o) return { o, hist };
+      let mv = null; for (let s = 0; s < 2 && !mv; s++) for (const t of ['xp', 'up']) if (!mv && m[s][t] && m[s][OPP[t]]) mv = { t: 'zero', s, k: t };
+      if (!mv) for (const t of ['xp', 'xn', 'up', 'un']) if (!mv && m[0][t] && m[1][t]) mv = { t: 'both', k: t };
+      const xs = [0, 1].filter(s => m[s].xp || m[s].xn);
+      if (!mv && xs.length === 2) mv = { t: 'add', k: m[0].xn || m[1].xn ? 'xp' : 'xn' };
+      if (!mv) { const s = xs[0]; if (m[s].up) mv = { t: 'add', k: 'un' }; else if (m[s].un) mv = { t: 'add', k: 'up' }; else if (m[s].xn) mv = { t: 'flip' }; else mv = { t: 'split' }; }
+      if (typeof T.hint(m, 'solve') !== 'string') return null;
+      const r = T.apply(m, mv); if (r.error) return { error: r.error + ' at ' + T.line(m) }; m = r.mat; hist.push(m); } return null; };
+  let solvedAll = true, why = '';
+  ['one', 'two', 'both', 'neg', 'mixed'].forEach(kind => { for (let n = 0; n < 40; n++) {
+    const m0 = T.make('solve', kind, kind + n), want = STEPS.zeros(STEPS.parse(T.line(m0, true)).F), r = solve(m0);
+    const lines = r && r.hist ? STEPS.check(r.hist.map(h => T.line(h, true))) : [];
+    const good = r && r.o && r.o.kind === 'solved' && Array.isArray(want) && Math.abs(want[0] - r.o.value) < 1e-9 && Number.isInteger(r.o.value) && lines.slice(1).every(x => x.status === 'ok' || x.status === 'solved') && Object.values(m0[0]).concat(Object.values(m0[1])).every(v => v <= 13);
+    if (!good && solvedAll) { solvedAll = false; why = ` (${kind}: ${T.line(m0)} ${r && r.error || ''})`; }
+  } });
+  ok(solvedAll, 'tiles: 200 made-up equations of every kind solve with legal moves to a whole number, every line checked right' + why);
+  const c1 = T.build('2x + 3 and 2x + 1', 'compare'), c2 = T.build('x + 5 ? 3x + 1', 'compare');
+  ok(T.compareTruth(c1.mat).ans === 'left' && T.compareTruth(c2.mat).ans === 'depends' && T.compareTruth(c2.mat).at === 2 && T.compareTruth(T.build('x - 1 and x + 1', 'compare').mat).ans === 'right', 'tiles: comparisons — which is greater, or it depends on x (equal at x = 2)');
+  let cmpOk = true; for (let n = 0; n < 60; n++) { const m = T.make('compare', n % 2 ? 'depends' : 'same', 'c' + n), ct = T.compareTruth(m); if ((n % 2 ? ct.ans !== 'depends' || !Number.isInteger(ct.at) : ct.ans === 'depends')) cmpOk = false; }
+  ok(cmpOk, 'tiles: made-up comparisons are the kind asked for, and “depends” ones are equal at a whole number');
+  // the page
+  m = await go9('#/tiles/eq/' + DRAW.encode('2x + 3 = x + 7'));
+  ok(m.__tiles && T.line(m.__tiles.mat) === '2x + 3 = x + 7' && m.querySelectorAll('.tl-tile').length === 13 && location.hash === '#/tiles', 'tiles: a link opens an equation on the mat (13 tiles)');
+  const tapT = (s, k) => m.querySelector(`.tl-tile[data-s="${s}"][data-k="${k}"]`).click();
+  tapT(0, 'xp');
+  ok(m.querySelector('.tl-tile.sel[aria-pressed="true"]'), 'tiles: tapping a tile picks it up');
+  tapT(1, 'xp');
+  ok(T.line(m.__tiles.mat) === 'x + 3 = 7' && m.querySelectorAll('#tl-log li').length === 2 && m.querySelector('#tl-log .tl-ok:not(.bad)'), 'tiles: then its match on the other side takes both away, written as algebra and checked ✓');
+  m.querySelector('#tl-undo').click();
+  ok(T.line(m.__tiles.mat) === '2x + 3 = x + 7' && m.querySelectorAll('#tl-log li').length === 1, 'tiles: Undo');
+  m.querySelector('#tl-hint').click();
+  ok(/Tap one on each side/.test(text(m.querySelector('#tl-msg'))), 'tiles: “What next?” suggests a legal move');
+  tapT(0, 'xp'); tapT(1, 'xp');
+  for (let k = 0; k < 3; k++) { tapT(0, 'up'); tapT(1, 'up'); }
+  ok(m.__tiles.done && m.__tiles.done.value === 4 && /x = 4/.test(text(m.querySelector('.tl-mat + .tl-line ~ .feedback, .feedback.good'))) && /2\(4\) \+ 3 = \(4\) \+ 7/.test(text(m)) && S.get().log[0].kind === 'tiles' && S.get().log[0].right === 0, 'tiles: x alone solves it, checked in the first equation (a hint was used, so it isn’t first-try)');
+  ok(S.get().badges.tiles, 'tiles: solving one earns Tile mover');
+  m = await go9('#/tiles/eq/' + DRAW.encode('x - 2 = -x + 4'));
+  tapT(0, 'xp'); tapT(1, 'xn');
+  ok(/aren’t a legal pair/.test(text(m.querySelector('#tl-msg'))) && T.line(m.__tiles.mat) === 'x − 2 = −x + 4', 'tiles: an x and a −x on different sides are not a legal pair');
+  m.querySelector('[data-add="xp"]').click(); tapT(1, 'xp'); tapT(1, 'xn');
+  m.querySelector('[data-add="up"]').click(); m.querySelector('[data-add="up"]').click(); tapT(0, 'up'); tapT(0, 'un'); tapT(0, 'up'); tapT(0, 'un');
+  ok(T.line(m.__tiles.mat) === '2x = 6' && m.querySelector('#tl-split'), 'tiles: adding to both sides and removing zero pairs gets x alone');
+  m.querySelector('#tl-split').click();
+  ok(m.__tiles.done && m.__tiles.done.value === 3 && S.get().log[0].right === 1 && [...m.querySelectorAll('#tl-log .tl-ok')].every(x => !x.classList.contains('bad')), 'tiles: splitting into 2 equal groups gives x = 3, first try, every line ✓');
+  m.querySelector('#tl-next').click();
+  ok(m.__tiles && !m.__tiles.done && m.__tiles.hist === 1, 'tiles: Next equation');
+  const kindSel = m.querySelector('#tl-kind'); kindSel.value = 'neg'; kindSel.dispatchEvent(new Event('change'));
+  ok(m.querySelectorAll('.tl-tile').length > 0, 'tiles: pick a kind of equation');
+  m.querySelector('#tl-eq').value = 'x^2 = 9'; m.querySelector('#tl-own button').click(); await tick(5);
+  ok(/no x²/.test(text(m.querySelector('#tl-msg'))), 'tiles: typing your own equation says why one can’t be built');
+  m = await go9('#/tiles/cmp/' + DRAW.encode('x + 5 and 3x + 1'));
+  ok(m.querySelector('.tab.on[href="#/tiles/compare"]') && /Mat A/.test(text(m)) && !m.querySelector('#tl-flip'), 'tiles: the comparison mat (no flipping there)');
+  m.querySelector('[data-ans="left"]').click();
+  ok(m.querySelector('.coach-note') && !m.__tiles.answered.right, 'tiles: a wrong comparison gets a nudge');
+  m.querySelector('[data-ans="depends"]').click();
+  ok(m.__tiles.answered.right && m.querySelector('#tl-at-in'), 'tiles: “It depends on x” is right here; then: where are they equal?');
+  m.querySelector('#tl-at-in').value = '2'; m.querySelector('#tl-at-go').click();
+  ok(/equal when x = 2/.test(text(m)) && /bigger x, Mat A is less/.test(text(m)), 'tiles: equal at x = 2, and which is greater on each side of it');
+  S.reset();
+  }
+
+  { // probability simulator
+  const go10 = async h => { location.hash = '#/settings'; await tick(15); return go(h); };
+  S.reset();
+  const oldRand = CHANCE.rand; CHANCE.rand = RNG.make('chance-test').next;
+  m = await go10('#/chance/coin');
+  m.querySelector('[data-run="1000"]').click();
+  let st = m.__chance;
+  ok(st.key === 'coin' && st.n === 1000 && st.counts[0] + st.counts[1] === 1000 && st.counts[0] > 430 && st.counts[0] < 570, `chance: 1,000 coin flips come out near half heads (${st.counts[0]})`);
+  ok(m.querySelectorAll('.ch-table tbody tr').length === 2 && /1\/2 ≈ 50%/.test(text(m.querySelector('.ch-table'))) && m.querySelector('.ch-bars rect') && m.querySelector('.ch-line polyline'), 'chance: a table of experimental and theoretical probability, a bar chart, and the settling line');
+  ok(S.get().badges.chance, 'chance: 1,000 trials earns Thousand trials');
+  m = await go10('#/chance/dice');
+  m.querySelector('[data-run="1000"]').click(); st = m.__chance;
+  ok(st.rows.length === 11 && st.counts[5] > st.counts[0] && st.counts[5] > st.counts[10] && /1\/6/.test(text(m.querySelector('.ch-table'))), 'chance: two number cubes — a sum of 7 (1/6) comes up far more than 2 or 12');
+  m = await go10('#/chance/spinner');
+  const cnt = m.querySelector('.ch-count[data-row="0"]'); cnt.value = '6'; cnt.dispatchEvent(new Event('change', { bubbles: true }));
+  st = m.__chance;
+  ok(st.rows[0][1] === 6 && st.n === 0 && /3\/4 ≈ 75%/.test(text(m.querySelector('.ch-table'))) && m.querySelectorAll('.ch-spinner path').length === 3 && /vz2/.test(m.querySelector('.ch-spinner path').getAttribute('style')), 'chance: changing the spinner’s sections changes the theory, and starts over (and “Red” is red)');
+  m.querySelector('#ch-add').click();
+  ok(m.__chance.rows.length === 4 && m.querySelectorAll('.ch-spinner path').length === 4, 'chance: add a section');
+  m.querySelector('[data-del="3"]').click();
+  ok(m.__chance.rows.length === 3, 'chance: remove a section');
+  m.querySelector('[data-run="1"]').click();
+  ok(m.__chance.n === 1 && /Trial 1:/.test(text(m.querySelector('#ch-stage'))) && m.querySelector('.ch-needle'), 'chance: one spin shows where the needle landed');
+  const wsel = m.querySelector('#ch-watch'); wsel.value = '1'; wsel.dispatchEvent(new Event('change', { bubbles: true }));
+  m.querySelector('#ch-guess').value = '12'; m.querySelector('#ch-go').click();
+  st = m.__chance;
+  ok(st.n === 101 && st.predicted && st.predicted.guess === 12 && /You guessed 12/.test(text(m)) && /100 × 1\/8/.test(text(m)), 'chance: predict, then run 100 and compare with the theory');
+  m = await go10('#/chance/bag');
+  let r3 = 0; for (let k = 0; k < 4000; k++) if (CHANCE.trial('bag', [['R', 3], ['B', 1]], CHANCE.rand).i === 0) r3++;
+  ok(m.querySelectorAll('.ch-marble').length === 10 && r3 > 2850 && r3 < 3150, `chance: a bag of marbles; 3 red and 1 blue gives red about 3/4 of the time (${r3} of 4,000)`);
+  CHANCE.rand = oldRand;
+  // where the tools are offered
+  m = await go10('#/skill/math7.experimental-probability');
+  ok(m.querySelector('.hero a[href^="#/chance"]'), 'tools: a probability skill offers the simulator');
+  m = await go10('#/skill/math7.two-step-equations');
+  ok(m.querySelector('.hero a[href="#/tiles"]'), 'tools: an equation skill offers algebra tiles');
+  m = await go10('#/cpm/cc2/6.1.1');
+  ok(m.querySelector('.hero a[href="#/tiles/compare"]'), 'tools: CPM 6.1.1 (comparing expressions) offers the comparison mat');
+  m = await go10('#/cpm/cc2/6.2.1');
+  ok(m.querySelector('.hero a[href="#/tiles"]'), 'tools: CPM 6.2.1 (solving equations) offers the equation mat');
+  m = await go10('#/cpm/cc2/5.2.4');
+  ok(m.querySelector('.hero a[href="#/chance/dice"]'), 'tools: CPM 5.2.4 (probability tables) offers two number cubes');
   S.reset();
   }
 

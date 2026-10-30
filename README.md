@@ -61,6 +61,18 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   story's numbers; the answer on its own is turned away. A wrong one has its own solution checked in the
   story ("your equation says m = 7; $50 + $30 × 7 = $260, but Maya paid $290"), and > for "at least"
   gets its own note. Hint and Show me are there; only equations right on the first try count as right.
+- **Algebra tiles** (`lib/tiles.js`, `#/tiles`, `#/tiles/compare`): CPM's equation mat and expression
+  comparison mat with legal moves — tap a tile and then its match on the other side to take both away, or
+  its opposite on the same side to remove a zero pair; add the same tile to both sides; flip every tile;
+  split into equal groups. Every move is written as algebra beside the mat and checked by the step
+  checker. Made-up equations (one step, two steps, x on both sides, with negatives) or your own typed one;
+  "What next?" suggests a legal move. On the comparison mat: which side is greater, or does it depend on
+  x — and where are they equal? Offered from CPM lessons on the mats and from equation skills.
+- **Probability simulator** (`lib/chance.js`, `#/chance`): a coin, two coins, a number cube, two number
+  cubes (the sum), a spinner and a bag of marbles (the last two with your own sections), run once, 10, 100
+  or 1,000 times; a table and bars of experimental against theoretical probability, a line showing one
+  outcome settle towards its theory as trials add up, and "Predict first" before 100 trials. Offered from
+  CPM probability lessons and probability skills.
 - **Speed sprints** (`lib/sprint.js`, `#/sprint`): one-minute rounds of facts (times tables, division,
   negatives, squares and roots, fractions ↔ decimals ↔ percents, percent of a number, or all mixed),
   checked as they are typed. Missed and slow facts come back more often; the best score per deck is
@@ -71,7 +83,7 @@ Get it right and it comes off the list. Nothing is stored but (skill, seed).
   practice for the misses), a warm-up on the day — with a readiness meter, a countdown on Home, and
   the plan as calendar reminders (.ics).
 - **Goals and badges** (`lib/badges.js`): a daily goal (10–50 questions, every kind of practice and
-  sprints count) shown as a ring on Home, and 25 badges for real milestones — streaks, goals met, a
+  sprints count) shown as a ring on Home, and 27 badges for real milestones — streaks, goals met, a
   perfect set, Proficient and Mastered skills, a unit test ace, a mistake put right, sprint scores, an
   equation solved in the step checker, a CPM practice test passed, equations written from word problems. They are worked out from what is
   already saved, kept with the day earned, and shown on Progress.
@@ -250,6 +262,7 @@ progress is saved online and comes back on any computer: log in and it is there,
 | `lib/learners.js` | several learners on one computer |
 | `lib/words.js`, `lib/vocab.js` | math words: the glossary, tap-to-define in lessons, flashcards |
 | `lib/setup.js` | word problems → equations |
+| `lib/tiles.js`, `lib/chance.js` | algebra tiles (equation and comparison mats), the probability simulator |
 | `lib/boot.js` | sets the theme before the first paint (a file, so no inline script is needed) |
 | `sw.js` | offline support when served over http(s) |
 | `tools/build-offline.js` → `procademy-offline.html` | the one-file offline build (made by the tests; edit the sources, not the file) |
